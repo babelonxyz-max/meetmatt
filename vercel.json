@@ -6,5 +6,6 @@
   "framework": "nextjs",
   "env": {
     "NEXT_PHASE": "phase-production-build"
-  }
+  },
+  "domains": ["meetmatt.xyz"]
 }
