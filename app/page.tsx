@@ -291,9 +291,9 @@ export default function Home() {
   }
 
   return (
-    <main className="h-[100dvh] w-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col lg:flex-row">
+    <main className="fixed inset-0 w-screen h-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col lg:flex-row">
       {/* Left Side - AI Orb Visual - Blended */}
-      <div className="lg:w-5/12 h-[30vh] lg:h-full flex flex-col items-center justify-center relative">
+      <div className="lg:w-[42%] h-[35%] lg:h-full flex flex-col items-center justify-center relative">
         {/* Subtle vignette effect */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--background)]/50 pointer-events-none" />
 
@@ -450,7 +450,7 @@ export default function Home() {
       )}
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 lg:left-auto lg:w-7/12 lg:left-[41.666667%] py-2 px-4 z-40 border-t border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-md">
+      <footer className="fixed bottom-0 left-0 right-0 lg:left-auto lg:w-[58%] lg:left-[42%] py-2 px-4 z-40 border-t border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-sm h-10 flex items-center">
         <div className="flex items-center justify-between text-[10px] font-mono text-[var(--muted)]">
           <span>SECURE CONNECTION</span>
           <span>ENCRYPTED</span>
