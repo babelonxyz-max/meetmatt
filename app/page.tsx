@@ -292,13 +292,10 @@ export default function Home() {
 
   return (
     <main className="h-[100dvh] w-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col lg:flex-row">
-      {/* Left Side - AI Orb Visual */}
-      <div className="lg:w-5/12 h-[30vh] lg:h-full flex flex-col items-center justify-center relative border-b lg:border-b-0 lg:border-r border-[var(--border)]">
-        {/* Decorative corners */}
-        <div className="absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-[#0ea5e9]/30" />
-        <div className="absolute top-4 right-4 w-6 h-6 border-r-2 border-t-2 border-[#0ea5e9]/30" />
-        <div className="absolute bottom-4 left-4 w-6 h-6 border-l-2 border-b-2 border-[#0ea5e9]/30" />
-        <div className="absolute bottom-4 right-4 w-6 h-6 border-r-2 border-b-2 border-[#0ea5e9]/30" />
+      {/* Left Side - AI Orb Visual - Blended */}
+      <div className="lg:w-5/12 h-[30vh] lg:h-full flex flex-col items-center justify-center relative">
+        {/* Subtle vignette effect */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--background)]/50 pointer-events-none" />
 
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
@@ -327,8 +324,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Right Side - Jarvis Interface */}
-      <div className="lg:w-7/12 h-[70vh] lg:h-full bg-[var(--card)]/30">
+      {/* Right Side - Jarvis Interface - Blended */}
+      <div className="lg:w-7/12 h-[70vh] lg:h-full bg-gradient-to-l from-[var(--card)]/20 to-transparent">
         <JarvisInterface
           messages={messages}
           isTyping={isTyping}
