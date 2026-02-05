@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Copy, Check, Loader2, Info, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,29 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Keyboard navigation - Escape to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen && !payment) {
       createPayment();
@@ -75,7 +98,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     return () => clearInterval(interval);
   }, [payment, status, onSuccess]);
 
-  const createPayment = async () => {
+  const createPayment = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -109,17 +132,19 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sessionId, config.tier, selectedCurrency, onSuccess]);
 
-  const copyAddress = () => {
+  const copyAddress = useCallback(() => {
     if (payment?.address) {
       navigator.clipboard.writeText(payment.address);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  };
+  }, [payment?.address]);
 
-  const getCurrencyInfo = (code: string) => CURRENCIES.find((c) => c.code === code) || CURRENCIES[0];
+  const getCurrencyInfo = useCallback((code: string) => {
+    return CURRENCIES.find((c) => c.code === code) || CURRENCIES[0];
+  }, []);
 
   return (
     <AnimatePresence>
@@ -128,26 +153,32 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
           onClick={(e) => e.target === e.currentTarget && onClose()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payment-title"
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
+            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl shadow-black/50"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/5">
               <div>
-                <h3 className="font-semibold text-white">Complete Payment</h3>
+                <h3 id="payment-title" className="font-semibold text-white">Complete Payment</h3>
                 <p className="text-xs text-zinc-500">
                   Deploy {config.agentName} - {config.tier} tier
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/50"
+                aria-label="Close modal"
               >
                 <X className="w-4 h-4 text-zinc-400" />
               </button>
@@ -170,21 +201,30 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
             <div className="p-4 space-y-4">
               {/* Price */}
-              <div className="text-center py-3 bg-white/5 rounded-xl">
-                <span className="text-3xl font-bold text-white">${PRICES[config.tier]}</span>
+              <motion.div 
+                className="text-center py-4 bg-white/5 rounded-xl"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <span className="text-4xl font-bold text-white">${PRICES[config.tier]}</span>
                 <span className="text-zinc-500 text-sm">/mo</span>
-              </div>
+              </motion.div>
 
               {/* Currency selection */}
               {status === "pending" && !payment && (
                 <div>
                   <label className="text-xs text-zinc-500 mb-2 block">Select currency</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {CURRENCIES.map((curr) => (
-                      <button
+                    {CURRENCIES.map((curr, index) => (
+                      <motion.button
                         key={curr.code}
                         onClick={() => setSelectedCurrency(curr.code)}
-                        className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all ${
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/50 ${
                           selectedCurrency === curr.code
                             ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/30"
                             : "bg-white/5 border-white/5 hover:border-white/10"
@@ -195,7 +235,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                           <p className="text-xs font-medium text-white">{curr.name}</p>
                           <p className="text-[10px] text-zinc-500">{curr.chain}</p>
                         </div>
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 </div>
@@ -203,15 +243,23 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
               {/* Error */}
               {error && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-                  <AlertCircle className="w-4 h-4" />
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs"
+                >
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   {error}
-                </div>
+                </motion.div>
               )}
 
               {/* Payment details */}
               {payment && (
-                <div className="space-y-3">
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-3"
+                >
                   {/* Status */}
                   <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
                     <span className="text-xs text-zinc-500">Status</span>
@@ -240,12 +288,13 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                       <Input
                         value={payment.address}
                         readOnly
-                        className="flex-1 bg-black/30 border-white/10 text-xs text-zinc-300 h-10"
+                        className="flex-1 bg-black/30 border-white/10 text-xs text-zinc-300 h-10 font-mono"
                       />
                       <Button
                         onClick={copyAddress}
                         size="sm"
-                        className="h-10 w-10 p-0 bg-white/5 hover:bg-white/10"
+                        className="h-10 w-10 p-0 bg-white/5 hover:bg-white/10 transition-colors"
+                        aria-label="Copy address"
                       >
                         {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                       </Button>
@@ -267,7 +316,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                     <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
                     <p>Send only {getCurrencyInfo(payment.currency).name} on {getCurrencyInfo(payment.currency).chain} network.</p>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* Action button */}
@@ -275,7 +324,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                 <Button
                   onClick={createPayment}
                   disabled={isLoading}
-                  className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-11"
+                  className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-11 transition-all disabled:opacity-50"
                 >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -286,10 +335,14 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
               )}
 
               {status === "confirmed" && (
-                <div className="flex items-center justify-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex items-center justify-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm"
+                >
                   <Check className="w-4 h-4" />
                   Payment confirmed!
-                </div>
+                </motion.div>
               )}
             </div>
           </motion.div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { motion } from "framer-motion";
 
 interface AIOrbProps {
@@ -7,27 +8,34 @@ interface AIOrbProps {
   isThinking?: boolean;
 }
 
-export function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
-  const getState = () => {
-    if (isThinking) return "thinking";
-    if (isListening) return "listening";
-    return "idle";
+// Memoized to prevent unnecessary re-renders
+export const AIOrb = memo(function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
+  const state = isThinking ? "thinking" : isListening ? "listening" : "idle";
+
+  // Pre-computed animation configs for performance
+  const outerGlowConfig = {
+    scale: state === "thinking" ? [1, 1.3, 1] : state === "listening" ? [1, 1.15, 1] : [1, 1.05, 1],
+    opacity: state === "thinking" ? [0.5, 0.8, 0.5] : [0.4, 0.6, 0.4],
   };
 
-  const state = getState();
+  const orbBreathingConfig = {
+    scale: state === "thinking" ? [1, 1.05, 1] : [1, 1.02, 1],
+  };
 
   return (
-    <div className="relative w-40 h-40 sm:w-48 sm:h-48 lg:w-56 lg:h-56">
-      {/* Outer glow rings */}
+    <div 
+      className="relative w-40 h-40 sm:w-48 sm:h-48 lg:w-56 lg:h-56"
+      style={{ willChange: "transform" }}
+    >
+      {/* Outer glow rings - GPU accelerated */}
       <motion.div
         className="absolute inset-0 rounded-full"
         style={{
           background: `radial-gradient(circle, rgba(14,165,233,0.15) 0%, transparent 70%)`,
+          willChange: "transform, opacity",
+          transform: "translateZ(0)",
         }}
-        animate={{
-          scale: state === "thinking" ? [1, 1.3, 1] : state === "listening" ? [1, 1.15, 1] : [1, 1.05, 1],
-          opacity: state === "thinking" ? [0.5, 0.8, 0.5] : [0.4, 0.6, 0.4],
-        }}
+        animate={outerGlowConfig}
         transition={{
           duration: state === "thinking" ? 1.5 : state === "listening" ? 1 : 3,
           repeat: Infinity,
@@ -40,10 +48,12 @@ export function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
         className="absolute inset-4 rounded-full"
         style={{
           background: `radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)`,
+          willChange: "transform",
+          transform: "translateZ(0)",
         }}
         animate={{
           scale: state === "thinking" ? [1, 1.2, 1] : [1, 1.08, 1],
-          rotate: [0, 180, 360],
+          rotate: [0, 360],
         }}
         transition={{
           scale: {
@@ -62,9 +72,8 @@ export function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
       {/* Orb container with breathing animation */}
       <motion.div
         className="absolute inset-8 rounded-full overflow-hidden"
-        animate={{
-          scale: state === "thinking" ? [1, 1.05, 1] : [1, 1.02, 1],
-        }}
+        style={{ willChange: "transform", transform: "translateZ(0)" }}
+        animate={orbBreathingConfig}
         transition={{
           duration: state === "thinking" ? 0.8 : 2,
           repeat: Infinity,
@@ -84,6 +93,7 @@ export function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
           className="absolute inset-0"
           style={{
             background: `radial-gradient(ellipse at 60% 60%, rgba(99,102,241,0.6) 0%, transparent 60%)`,
+            willChange: "transform",
           }}
           animate={{
             x: [-20, 20, -20],
@@ -101,6 +111,7 @@ export function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
           className="absolute inset-0"
           style={{
             background: `radial-gradient(ellipse at 40% 70%, rgba(14,165,233,0.5) 0%, transparent 50%)`,
+            willChange: "transform",
           }}
           animate={{
             x: [15, -15, 15],
@@ -114,17 +125,9 @@ export function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
           }}
         />
 
-        {/* Noise texture overlay */}
-        <div 
-          className="absolute inset-0 opacity-[0.03] mix-blend-overlay"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          }}
-        />
-
         {/* Specular highlight */}
         <div 
-          className="absolute top-[15%] left-[20%] w-[30%] h-[25%] rounded-full"
+          className="absolute top-[15%] left-[20%] w-[30%] h-[25%] rounded-full pointer-events-none"
           style={{
             background: `radial-gradient(ellipse at center, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 40%, transparent 70%)`,
             filter: "blur(8px)",
@@ -133,7 +136,7 @@ export function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
 
         {/* Bottom reflection */}
         <div 
-          className="absolute bottom-[10%] right-[25%] w-[20%] h-[20%] rounded-full"
+          className="absolute bottom-[10%] right-[25%] w-[20%] h-[20%] rounded-full pointer-events-none"
           style={{
             background: `radial-gradient(ellipse at center, rgba(255,255,255,0.15) 0%, transparent 60%)`,
             filter: "blur(4px)",
@@ -143,44 +146,37 @@ export function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
 
       {/* Border ring */}
       <div 
-        className="absolute inset-8 rounded-full border border-white/10"
+        className="absolute inset-8 rounded-full border border-white/10 pointer-events-none"
         style={{
-          boxShadow: `
-            inset 0 0 20px rgba(14,165,233,0.1),
-            0 0 30px rgba(14,165,233,0.1)
-          `,
+          boxShadow: `inset 0 0 20px rgba(14,165,233,0.1), 0 0 30px rgba(14,165,233,0.1)`,
         }}
       />
 
-      {/* Rotating orbital rings */}
+      {/* Rotating orbital rings - simplified for performance */}
       <motion.div
-        className="absolute inset-0 rounded-full border border-white/5"
-        style={{
-          borderStyle: "dashed",
+        className="absolute inset-0 rounded-full border border-white/5 pointer-events-none"
+        style={{ 
+          borderStyle: "dashed", 
           borderWidth: "1px",
+          willChange: "transform",
         }}
         animate={{ rotate: 360 }}
         transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
       />
 
-      <motion.div
-        className="absolute -inset-4 rounded-full border border-white/[0.03]"
-        animate={{ rotate: -360 }}
-        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-      />
-
-      {/* Energy particles */}
-      {[...Array(8)].map((_, i) => {
-        const angle = (i / 8) * 360;
+      {/* Energy particles - reduced count for performance */}
+      {[...Array(6)].map((_, i) => {
+        const angle = (i / 6) * 360;
         return (
           <motion.div
             key={i}
-            className="absolute w-1 h-1 rounded-full bg-[#0ea5e9]"
+            className="absolute w-1 h-1 rounded-full bg-[#0ea5e9] pointer-events-none"
             style={{
               top: "50%",
               left: "50%",
               marginTop: -2,
               marginLeft: -2,
+              willChange: "transform, opacity",
             }}
             animate={{
               x: [
@@ -199,32 +195,38 @@ export function AIOrb({ isListening = false, isThinking = false }: AIOrbProps) {
             transition={{
               duration: 3 + i * 0.3,
               repeat: Infinity,
-              delay: i * 0.4,
+              delay: i * 0.5,
               ease: "easeInOut",
             }}
           />
         );
       })}
 
-      {/* Pulse rings on thinking */}
-      {state === "thinking" && (
-        <>
-          {[...Array(3)].map((_, i) => (
-            <motion.div
-              key={`pulse-${i}`}
-              className="absolute inset-0 rounded-full border border-[#0ea5e9]/30"
-              initial={{ scale: 1, opacity: 0.5 }}
-              animate={{ scale: [1, 1.5, 1.5], opacity: [0.5, 0, 0] }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                delay: i * 0.5,
-                ease: "easeOut",
-              }}
-            />
-          ))}
-        </>
-      )}
+      {/* Pulse rings on thinking - memoized */}
+      {state === "thinking" && <PulseRings />}
     </div>
   );
-}
+});
+
+// Separate component for pulse rings to prevent re-render of main orb
+const PulseRings = memo(function PulseRings() {
+  return (
+    <>
+      {[...Array(3)].map((_, i) => (
+        <motion.div
+          key={`pulse-${i}`}
+          className="absolute inset-0 rounded-full border border-[#0ea5e9]/30 pointer-events-none"
+          style={{ willChange: "transform, opacity" }}
+          initial={{ scale: 1, opacity: 0.5 }}
+          animate={{ scale: [1, 1.5, 1.5], opacity: [0.5, 0, 0] }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            delay: i * 0.5,
+            ease: "easeOut",
+          }}
+        />
+      ))}
+    </>
+  );
+});

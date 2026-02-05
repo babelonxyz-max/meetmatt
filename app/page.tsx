@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaymentModal } from "./components/PaymentModal";
 import { AIOrb } from "./components/AIOrb";
+import { DeploymentProgress } from "./components/DeploymentProgress";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig } from "@/lib/session";
 import { initAudio, playMessageSent, playMessageReceived, playOptionSelected, playSuccess, playHover } from "@/lib/audio";
 import Link from "next/link";
@@ -608,16 +609,7 @@ export default function Home() {
             </motion.div>
           )}
           
-          {isDeploying && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center gap-3 p-4 bg-[#0ea5e9]/10 rounded-xl border border-[#0ea5e9]/20"
-            >
-              <Loader2 className="w-5 h-5 text-[#0ea5e9] animate-spin" />
-              <span className="text-sm text-zinc-300">Setting up your AI assistant...</span>
-            </motion.div>
-          )}
+          {isDeploying && <DeploymentProgress agentName={config.agentName} />}
           
           <div ref={messagesEndRef} />
         </div>
