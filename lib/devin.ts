@@ -3,9 +3,9 @@
 
 interface DevinConfig {
   name: string;
-  purpose: string;
-  features: string[];
-  tier: string;
+  useCase: string;
+  scope: string;
+  contactMethod: string;
 }
 
 interface DevinSession {
@@ -21,13 +21,12 @@ const DEVIN_API_KEY = process.env.DEVIN_API_KEY || "";
  * Create a new Devin session for deploying an AI agent
  */
 export async function createDevinSession(config: DevinConfig): Promise<DevinSession> {
-  if (!DEVIN_API_KEY) {
+  if (!DEVIN_API_KEY || DEVIN_API_KEY === "your-devin-api-key") {
     console.warn("DEVIN_API_KEY not set, using mock session");
     return createMockSession(config);
   }
 
   try {
-    // Construct the prompt for Devin
     const prompt = buildDevinPrompt(config);
 
     const response = await fetch(`${DEVIN_API_URL}/sessions`, {
@@ -56,7 +55,6 @@ export async function createDevinSession(config: DevinConfig): Promise<DevinSess
     };
   } catch (error) {
     console.error("Failed to create Devin session:", error);
-    // Fallback to mock session if API fails
     return createMockSession(config);
   }
 }
@@ -65,11 +63,13 @@ export async function createDevinSession(config: DevinConfig): Promise<DevinSess
  * Get the status of a Devin session
  */
 export async function getSessionStatus(sessionId: string): Promise<DevinSession> {
-  if (!DEVIN_API_KEY) {
+  if (!DEVIN_API_KEY || DEVIN_API_KEY === "your-devin-api-key") {
+    // Simulate progress for mock sessions
+    const mockStatus = Math.random() > 0.7 ? "completed" : "running";
     return {
       sessionId,
       url: `https://preview.devin.ai/devin/${sessionId}`,
-      status: "completed",
+      status: mockStatus as DevinSession["status"],
     };
   }
 
@@ -105,7 +105,7 @@ export async function getSessionStatus(sessionId: string): Promise<DevinSession>
  * Send a message to an active Devin session
  */
 export async function sendMessage(sessionId: string, message: string): Promise<void> {
-  if (!DEVIN_API_KEY) {
+  if (!DEVIN_API_KEY || DEVIN_API_KEY === "your-devin-api-key") {
     console.log("Mock: Would send message to session", sessionId, message);
     return;
   }
@@ -133,20 +133,16 @@ export async function sendMessage(sessionId: string, message: string): Promise<v
  * Build the prompt for Devin based on agent configuration
  */
 function buildDevinPrompt(config: DevinConfig): string {
-  const featureList = config.features.join(", ");
-  
-  return `Create an AI assistant named "${config.name}" with the following specifications:
+  return `Create an AI agent named "${config.name}" with the following specifications:
 
-**Purpose:** ${config.purpose}
-
-**Capabilities:** ${featureList}
-
-**Tier:** ${config.tier}
+**Use Case:** ${config.useCase}
+**Scope:** ${config.scope}
+**Contact Method:** ${config.contactMethod}
 
 Please:
 1. Set up the project structure
-2. Implement the core functionality for the specified capabilities
-3. Add necessary API integrations
+2. Implement the core functionality for: ${config.scope}
+3. Add ${config.contactMethod} integration for communication
 4. Create documentation
 5. Deploy to a working endpoint
 
@@ -159,7 +155,7 @@ The agent should be production-ready and handle the described use case effective
 function mapDevinStatus(devinStatus: string): DevinSession["status"] {
   const statusMap: Record<string, DevinSession["status"]> = {
     "pending": "pending",
-    "running": "running",
+    "running": "running", 
     "completed": "completed",
     "failed": "error",
     "error": "error",
@@ -174,10 +170,7 @@ function mapDevinStatus(devinStatus: string): DevinSession["status"] {
 function createMockSession(config: DevinConfig): DevinSession {
   const sessionId = `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
-  // Simulate a delay then auto-complete
-  setTimeout(() => {
-    console.log(`Mock session ${sessionId} for "${config.name}" would be ready`);
-  }, 5000);
+  console.log(`Creating mock Devin session for "${config.name}"`);
   
   return {
     sessionId,

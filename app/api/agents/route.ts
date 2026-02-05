@@ -83,9 +83,9 @@ async function deployAgent(
     // Create Devin session
     const devinSession = await createDevinSession({
       name: config.name,
-      purpose: `${config.useCase}: ${config.scope}`,
-      features: [config.contactMethod],
-      tier: "matt",
+      useCase: config.useCase,
+      scope: config.scope,
+      contactMethod: config.contactMethod,
     });
 
     // Update agent with Devin session info

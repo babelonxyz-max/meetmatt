@@ -94,11 +94,44 @@ TRONGRID_API_KEY="your_trongrid_api_key"
 
 ## 4. Devin AI (Agent Deployment)
 
+Devin AI builds and deploys your agents automatically.
+
+### Get Your API Key
+
+1. Go to: https://preview.devin.ai/settings
+2. Click "API Keys"
+3. Generate a new key
+4. Copy the key (starts with `devin-`)
+
+### Configuration
+
 ```env
-DEVIN_API_KEY="your_devin_api_key"
+DEVIN_API_KEY="devin_your_api_key_here"
 ```
 
-**Get API key:** https://preview.devin.ai/settings
+### Testing Devin Connection
+
+```bash
+# Test if Devin API is working
+curl -H "Authorization: Bearer $DEVIN_API_KEY" \
+  https://api.devin.ai/v1/sessions
+```
+
+### Without Devin API Key (Demo Mode)
+
+If you don't have a Devin API key yet, the app will:
+- Create mock sessions for testing
+- Simulate deployment progress
+- Show fake "completed" status after ~5 seconds
+
+This is useful for UI testing without using Devin credits.
+
+### Devin Pricing
+
+Devin charges per session:
+- Check current pricing: https://preview.devin.ai/pricing
+- Each agent deployment = 1 session
+- Monitor usage in Devin dashboard
 
 ---
 
