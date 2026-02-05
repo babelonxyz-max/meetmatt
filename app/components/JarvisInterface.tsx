@@ -18,7 +18,7 @@ interface JarvisInterfaceProps {
   canGoBack: boolean;
   onBack: () => void;
   onOptionClick: (option: string) => void;
-  children?: ReactNode; // For custom input or feature selectors
+  children?: ReactNode;
 }
 
 export function JarvisInterface({
@@ -37,16 +37,19 @@ export function JarvisInterface({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  // Show only last 3 messages for no-scroll experience
+  const visibleMessages = messages.slice(-3);
+
   return (
-    <div className="relative h-full flex flex-col overflow-hidden">
-      {/* Header - Jarvis Style */}
-      <div className="flex items-center gap-4 p-4 border-b border-[var(--border)] bg-gradient-to-r from-[var(--card)] to-transparent">
+    <div className="relative h-full flex flex-col">
+      {/* Subtle header - blended */}
+      <div className="flex items-center gap-4 p-3 border-b border-[var(--border)]/50 bg-gradient-to-r from-[var(--card)]/40 to-transparent backdrop-blur-sm">
         {canGoBack && (
           <motion.button
             onClick={onBack}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="p-2 rounded-lg bg-[var(--card)] hover:bg-[var(--card-hover)] transition-colors border border-[var(--border)]"
+            className="p-2 rounded-lg bg-[var(--card)]/50 hover:bg-[var(--card-hover)]/50 transition-colors border border-[var(--border)]/50"
           >
             <ChevronLeft className="w-4 h-4" />
           </motion.button>
@@ -54,155 +57,131 @@ export function JarvisInterface({
         
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0ea5e9] to-[#6366f1] flex items-center justify-center shadow-lg shadow-[#0ea5e9]/20">
-              <Bot className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0ea5e9]/80 to-[#6366f1]/80 flex items-center justify-center shadow-lg shadow-[#0ea5e9]/10">
+              <Bot className="w-4 h-4 text-white" />
             </div>
             <motion.div
-              className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[var(--background)]"
+              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[var(--background)]"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
           </div>
           
           <div>
-            <h3 className="font-medium text-[var(--foreground)]">MATT</h3>
-            <p className="text-xs text-[var(--muted)] font-mono flex items-center gap-1">
-              <Activity className="w-3 h-3" />
-              SYSTEM ONLINE
+            <h3 className="font-medium text-[var(--foreground)] text-sm">MATT</h3>
+            <p className="text-[10px] text-[var(--muted)] font-mono flex items-center gap-1">
+              <Activity className="w-2.5 h-2.5" />
+              ONLINE
             </p>
           </div>
         </div>
 
-        {/* Status indicators */}
-        <div className="ml-auto flex items-center gap-3">
-          <div className="flex items-center gap-2 text-[10px] font-mono text-[var(--muted)]">
-            <Cpu className="w-3 h-3" />
-            <span>AI CORE: ACTIVE</span>
-          </div>
-          <div className="flex items-center gap-2 text-[10px] font-mono text-[var(--muted)]">
-            <Terminal className="w-3 h-3" />
-            <span>V2.1</span>
-          </div>
+        {/* Minimal status */}
+        <div className="ml-auto flex items-center gap-2 text-[9px] font-mono text-[var(--muted)]">
+          <Cpu className="w-3 h-3" />
+          <span>ACTIVE</span>
         </div>
       </div>
 
-      {/* Messages Area - Holographic Style - No scroll */}
-      <div className="flex-1 overflow-hidden p-4 space-y-4 relative">
-        {/* Grid overlay effect */}
+      {/* Messages Area - Blended Video Game Style */}
+      <div className="flex-1 overflow-hidden p-4 space-y-3 relative">
+        {/* Subtle scanline effect */}
         <div 
-          className="absolute inset-0 pointer-events-none opacity-5"
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
           style={{
-            backgroundImage: `
-              linear-gradient(to right, var(--border) 1px, transparent 1px),
-              linear-gradient(to bottom, var(--border) 1px, transparent 1px)
-            `,
-            backgroundSize: '40px 40px',
+            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, var(--foreground) 2px, var(--foreground) 4px)',
           }}
         />
 
         <AnimatePresence mode="popLayout">
-          {messages.map((message, index) => (
+          {visibleMessages.map((message, index) => (
             <motion.div
               key={message.id}
-              initial={{ opacity: 0, x: message.role === "user" ? 20 : -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
               className={`relative flex gap-3 ${
                 message.role === "user" ? "flex-row-reverse" : ""
               }`}
             >
-              {/* Avatar */}
+              {/* Avatar - smaller, more subtle */}
               <div className={`flex-shrink-0 ${message.role === "user" ? "hidden" : ""}`}>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                <div className={`w-7 h-7 rounded-md flex items-center justify-center ${
                   message.role === "assistant"
-                    ? "bg-gradient-to-br from-[#0ea5e9] to-[#6366f1]"
-                    : "bg-[var(--card)]"
+                    ? "bg-gradient-to-br from-[#0ea5e9]/70 to-[#6366f1]/70"
+                    : "bg-[var(--card)]/50"
                 }`}>
                   {message.role === "assistant" ? (
-                    <Bot className="w-4 h-4 text-white" />
+                    <Bot className="w-3.5 h-3.5 text-white" />
                   ) : (
-                    <User className="w-4 h-4 text-[var(--foreground)]" />
+                    <User className="w-3.5 h-3.5 text-[var(--foreground)]" />
                   )}
                 </div>
               </div>
 
-              {/* Message Content */}
-              <div className={`max-w-[85%] ${message.role === "user" ? "items-end" : "items-start"}`}>
+              {/* Message Content - Blended, floating style */}
+              <div className={`max-w-[90%] ${message.role === "user" ? "items-end" : "items-start"}`}>
                 <div
-                  className={`relative p-4 rounded-lg ${
+                  className={`relative px-4 py-3 rounded-xl ${
                     message.role === "user"
-                      ? "bg-[#0ea5e9]/20 border border-[#0ea5e9]/30 text-[var(--foreground)]"
-                      : "bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)]"
+                      ? "bg-[#0ea5e9]/10 border border-[#0ea5e9]/20 text-[var(--foreground)] backdrop-blur-sm"
+                      : "bg-[var(--card)]/30 border border-[var(--border)]/30 text-[var(--foreground)] backdrop-blur-md"
                   }`}
                 >
-                  {/* Corner accent for assistant messages */}
+                  {/* Glow effect for assistant */}
                   {message.role === "assistant" && (
-                    <div className="absolute top-0 left-0 w-2 h-2 border-l-2 border-t-2 border-[#0ea5e9]/50 -translate-x-px -translate-y-px" />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#0ea5e9]/5 to-transparent pointer-events-none" />
                   )}
                   
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <p className="text-sm leading-relaxed relative z-10">{message.content}</p>
 
-                  {/* Options */}
+                  {/* Options - Floating style */}
                   {message.options && message.options.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
+                    <div className="flex flex-wrap gap-2 mt-3">
                       {message.options.map((option) => (
                         <motion.button
                           key={option}
                           onClick={() => onOptionClick(option)}
                           onMouseEnter={() => setHoveredOption(option)}
                           onMouseLeave={() => setHoveredOption(null)}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          className={`relative px-4 py-2 text-xs font-mono rounded border transition-all ${
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                          className={`relative px-3 py-1.5 text-xs font-mono rounded-md border transition-all backdrop-blur-sm ${
                             hoveredOption === option
-                              ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-[#0ea5e9]"
-                              : "bg-[var(--card)] border-[var(--border)] text-[var(--muted)] hover:border-[#0ea5e9]/50 hover:text-[var(--foreground)]"
+                              ? "bg-[#0ea5e9]/20 border-[#0ea5e9]/50 text-[#0ea5e9]"
+                              : "bg-[var(--card)]/40 border-[var(--border)]/40 text-[var(--muted)] hover:border-[#0ea5e9]/30 hover:text-[var(--foreground)]"
                           }`}
                         >
-                          {/* Scan line effect */}
-                          {hoveredOption === option && (
-                            <motion.div
-                              className="absolute inset-0 bg-gradient-to-r from-transparent via-[#0ea5e9]/10 to-transparent"
-                              animate={{ x: ["-100%", "100%"] }}
-                              transition={{ duration: 0.5, repeat: Infinity }}
-                            />
-                          )}
-                          <span className="relative z-10">{option}</span>
+                          {option}
                         </motion.button>
                       ))}
                     </div>
                   )}
                 </div>
-
-                {/* Timestamp */}
-                <span className="text-[10px] font-mono text-[var(--muted)] mt-1 px-1">
-                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
 
-        {/* Typing Indicator - Jarvis Style */}
+        {/* Typing Indicator - Minimal */}
         {isTyping && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3"
+            className="flex items-center gap-2"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0ea5e9] to-[#6366f1] flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
+            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-[#0ea5e9]/70 to-[#6366f1]/70 flex items-center justify-center">
+              <Bot className="w-3.5 h-3.5 text-white" />
             </div>
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-4 py-3 flex items-center gap-2">
-              <span className="text-xs font-mono text-[var(--muted)]">PROCESSING</span>
+            <div className="bg-[var(--card)]/30 border border-[var(--border)]/30 rounded-lg px-3 py-2 flex items-center gap-1.5 backdrop-blur-sm">
+              <span className="text-[10px] font-mono text-[var(--muted)]">thinking</span>
               {[...Array(3)].map((_, i) => (
                 <motion.span
                   key={i}
-                  className="w-1.5 h-1.5 bg-[#0ea5e9] rounded-full"
+                  className="w-1 h-1 bg-[#0ea5e9] rounded-full"
                   animate={{ 
                     opacity: [0.3, 1, 0.3],
-                    scale: [0.8, 1.2, 0.8],
                   }}
                   transition={{
                     duration: 0.8,
@@ -220,17 +199,17 @@ export function JarvisInterface({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-3 p-4 bg-[#0ea5e9]/10 rounded-lg border border-[#0ea5e9]/20"
+            className="flex items-center gap-3 p-3 bg-[#0ea5e9]/5 rounded-lg border border-[#0ea5e9]/10 backdrop-blur-sm"
           >
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             >
-              <Cpu className="w-5 h-5 text-[#0ea5e9]" />
+              <Cpu className="w-4 h-4 text-[#0ea5e9]" />
             </motion.div>
             <div className="flex-1">
-              <p className="text-sm font-mono text-[#0ea5e9]">DEPLOYING AGENT...</p>
-              <div className="mt-2 h-1 bg-[var(--card)] rounded-full overflow-hidden">
+              <p className="text-xs font-mono text-[#0ea5e9]">DEPLOYING...</p>
+              <div className="mt-1.5 h-0.5 bg-[var(--card)]/50 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-[#0ea5e9]"
                   initial={{ width: "0%" }}
@@ -245,9 +224,9 @@ export function JarvisInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Custom Content Area (for inputs, selectors) */}
+      {/* Custom Content Area - Blended */}
       {children && (
-        <div className="border-t border-[var(--border)] bg-[var(--card)]/50 backdrop-blur-sm">
+        <div className="border-t border-[var(--border)]/50 bg-[var(--card)]/20 backdrop-blur-sm">
           {children}
         </div>
       )}
