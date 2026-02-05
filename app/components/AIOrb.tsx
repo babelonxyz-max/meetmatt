@@ -139,7 +139,7 @@ export const AIOrb = memo(function AIOrb({
     },
     spin: {
       rotate: [0, 360],
-      transition: { duration: 0.8, ease: "easeInOut" }
+      transition: { duration: 0.8, ease: "easeInOut" as const }
     },
     bounce: {
       y: [0, -30, 0, -15, 0],
