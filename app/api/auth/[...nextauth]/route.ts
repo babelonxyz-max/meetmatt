@@ -5,20 +5,20 @@ import Google from "next-auth/providers/google";
 import Github from "next-auth/providers/github";
 import { generateAffiliateCode } from "@/lib/affiliate";
 
-const nextAuth = NextAuth({
+const config = {
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     }),
     Github({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      clientId: process.env.GITHUB_CLIENT_ID ?? "",
+      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
+    async session({ session, user }: { session: any; user: any }) {
       if (session.user) {
         session.user.id = user.id;
         session.user.affiliateCode = user.affiliateCode;
@@ -26,12 +26,16 @@ const nextAuth = NextAuth({
       }
       return session;
     },
-    async signIn({ user }) {
+    async signIn({ user }: { user: any }) {
       if (!user.affiliateCode) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { affiliateCode: generateAffiliateCode() },
-        });
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { affiliateCode: generateAffiliateCode() },
+          });
+        } catch (e) {
+          console.error("Failed to generate affiliate code:", e);
+        }
       }
       return true;
     },
@@ -41,10 +45,12 @@ const nextAuth = NextAuth({
     error: "/auth/error",
   },
   session: {
-    strategy: "database",
+    strategy: "database" as const,
   },
-});
+  debug: process.env.NODE_ENV === "development",
+};
 
-export const GET = nextAuth.handlers.GET;
-export const POST = nextAuth.handlers.POST;
-export const auth = nextAuth.auth;
+const nextAuthHandler = NextAuth(config);
+
+export const GET = nextAuthHandler as any;
+export const POST = nextAuthHandler as any;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth";
 import { createPortalSession } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 

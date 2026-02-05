@@ -1,19 +1,10 @@
-import { auth } from "@/app/api/auth/[...nextauth]/route";
-import { prisma } from "@/lib/prisma";
 import { Card, CardBody, CardHeader } from "@/app/components/Card";
 import { Button } from "@/app/components/Button";
 import { Badge } from "@/app/components/Badge";
+import Link from "next/link";
 
 export default async function PricingPage() {
-  const session = await auth();
-  
-  // Get plans from database or use defaults
-  const plans = await prisma.plan.findMany({
-    where: { active: true },
-    orderBy: { priceMonthly: "asc" },
-  });
-
-  const defaultPlans = [
+  const plans = [
     {
       id: "starter",
       name: "Starter",
@@ -27,7 +18,6 @@ export default async function PricingPage() {
         "Basic integrations",
         "Email support",
       ],
-      maxAgents: 1,
       popular: false,
     },
     {
@@ -44,7 +34,6 @@ export default async function PricingPage() {
         "Priority support",
         "Analytics dashboard",
       ],
-      maxAgents: 3,
       popular: true,
     },
     {
@@ -61,18 +50,15 @@ export default async function PricingPage() {
         "SLA guarantee",
         "On-premise option",
       ],
-      maxAgents: 100,
       popular: false,
     },
   ];
-
-  const displayPlans = plans.length > 0 ? plans : defaultPlans;
 
   return (
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white">
             Simple, Transparent Pricing
           </h1>
           <p className="text-xl text-slate-400 max-w-2xl mx-auto">
@@ -82,11 +68,10 @@ export default async function PricingPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {displayPlans.map((plan) => (
+          {plans.map((plan) => (
             <PricingCard
               key={plan.id}
               plan={plan}
-              isAuthenticated={!!session}
             />
           ))}
         </div>
@@ -106,10 +91,8 @@ export default async function PricingPage() {
 
 function PricingCard({
   plan,
-  isAuthenticated,
 }: {
   plan: any;
-  isAuthenticated: boolean;
 }) {
   const priceMonthly = (plan.priceMonthly / 100).toFixed(0);
   const priceYearly = (plan.priceYearly / 100).toFixed(0);
@@ -120,7 +103,6 @@ function PricingCard({
   return (
     <Card
       className={`relative ${plan.popular ? "border-cyan-500/50" : ""}`}
-      glow={plan.popular}
     >
       {plan.popular && (
         <div className="absolute -top-4 left-1/2 -translate-x-1/2">
@@ -128,13 +110,13 @@ function PricingCard({
         </div>
       )}
       <CardHeader>
-        <h3 className="text-xl font-bold">{plan.name}</h3>
+        <h3 className="text-xl font-bold text-white">{plan.name}</h3>
         <p className="text-slate-400 text-sm">{plan.description}</p>
       </CardHeader>
       <CardBody className="space-y-6">
         <div>
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold">${priceMonthly}</span>
+            <span className="text-4xl font-bold text-white">${priceMonthly}</span>
             <span className="text-slate-400">/month</span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
@@ -146,65 +128,18 @@ function PricingCard({
         <ul className="space-y-3">
           {plan.features.map((feature: string, i: number) => (
             <li key={i} className="flex items-start gap-3">
-              <span className="text-cyan-400">✓</span>
+              <span className="text-cyan-400 mt-0.5">✓</span>
               <span className="text-slate-300 text-sm">{feature}</span>
             </li>
           ))}
         </ul>
 
-        <CheckoutButton
-          planId={plan.id}
-          isAuthenticated={isAuthenticated}
-          popular={plan.popular}
-        />
+        <Link href="/auth/signin">
+          <Button variant={plan.popular ? "primary" : "outline"} fullWidth>
+            Get Started
+          </Button>
+        </Link>
       </CardBody>
     </Card>
-  );
-}
-
-function CheckoutButton({
-  planId,
-  isAuthenticated,
-  popular,
-}: {
-  planId: string;
-  isAuthenticated: boolean;
-  popular: boolean;
-}) {
-  if (!isAuthenticated) {
-    return (
-      <a href={`/auth/signin?callbackUrl=/pricing?plan=${planId}`}>
-        <Button variant={popular ? "primary" : "outline"} fullWidth>
-          Get Started
-        </Button>
-      </a>
-    );
-  }
-
-  return (
-    <form action="/api/stripe/checkout" method="POST" className="space-y-2">
-      <input type="hidden" name="planId" value={planId} />
-      <input type="hidden" name="interval" value="monthly" />
-      <Button
-        type="submit"
-        variant={popular ? "primary" : "outline"}
-        fullWidth
-      >
-        Subscribe Monthly
-      </Button>
-      <Button
-        type="submit"
-        variant="ghost"
-        fullWidth
-        onClick={(e) => {
-          const input = e.currentTarget.form?.querySelector(
-            'input[name="interval"]'
-          ) as HTMLInputElement;
-          if (input) input.value = "yearly";
-        }}
-      >
-        Subscribe Yearly (Save 20%)
-      </Button>
-    </form>
   );
 }

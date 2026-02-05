@@ -13,7 +13,7 @@ export function Navbar() {
   const isLoading = status === "loading";
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-slate-800 bg-[var(--background)]/80 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -21,7 +21,7 @@ export function Navbar() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
               <span className="text-white font-bold text-sm">M</span>
             </div>
-            <span className="text-xl font-bold">Meet Matt</span>
+            <span className="text-xl font-bold text-white">Meet Matt</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -29,15 +29,17 @@ export function Navbar() {
             <Link href="/pricing" className="text-slate-300 hover:text-white transition-colors">
               Pricing
             </Link>
-            <Link href="/dashboard" className="text-slate-300 hover:text-white transition-colors">
-              Dashboard
-            </Link>
+            {isAuthenticated && (
+              <Link href="/dashboard" className="text-slate-300 hover:text-white transition-colors">
+                Dashboard
+              </Link>
+            )}
             
             {!isLoading && (
               <>
                 {isAuthenticated ? (
                   <div className="flex items-center gap-4">
-                    <span className="text-slate-400 text-sm">
+                    <span className="text-slate-400 text-sm truncate max-w-[150px]">
                       {session.user?.email}
                     </span>
                     <Button
@@ -68,7 +70,7 @@ export function Navbar() {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden p-2 text-white"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -108,13 +110,15 @@ export function Navbar() {
               >
                 Pricing
               </Link>
-              <Link
-                href="/dashboard"
-                className="text-slate-300 hover:text-white transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
+              {isAuthenticated && (
+                <Link
+                  href="/dashboard"
+                  className="text-slate-300 hover:text-white transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+              )}
               
               {!isLoading && (
                 <>
@@ -135,13 +139,13 @@ export function Navbar() {
                     </>
                   ) : (
                     <div className="flex flex-col gap-2 pt-2">
-                      <Link href="/auth/signin" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="ghost" fullWidth>
+                      <Link href="/auth/signin">
+                        <Button variant="ghost" fullWidth onClick={() => setMobileMenuOpen(false)}>
                           Sign In
                         </Button>
                       </Link>
-                      <Link href="/pricing" onClick={() => setMobileMenuOpen(false)}>
-                        <Button fullWidth>
+                      <Link href="/pricing">
+                        <Button fullWidth onClick={() => setMobileMenuOpen(false)}>
                           Get Started
                         </Button>
                       </Link>

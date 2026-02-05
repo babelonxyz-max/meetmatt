@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -8,35 +8,55 @@ import { Button } from "@/app/components/Button";
 import { Input } from "@/app/components/Input";
 import { Card, CardBody, CardHeader } from "@/app/components/Card";
 
-export default function SignIn() {
+function SignInForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setIsLoading(true);
-    await signIn("email", { email, callbackUrl });
-    setIsLoading(false);
+    
+    try {
+      await signIn("email", { email, callbackUrl });
+    } catch (err) {
+      setError("Failed to send magic link. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOAuthSignIn = (provider: string) => {
+    setIsLoading(true);
+    signIn(provider, { callbackUrl });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <h1 className="text-2xl font-bold text-center">Welcome Back</h1>
+          <h1 className="text-2xl font-bold text-center text-white">Welcome Back</h1>
           <p className="text-slate-400 text-center text-sm mt-1">
             Sign in to manage your AI agents
           </p>
         </CardHeader>
         <CardBody className="space-y-6">
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+          
           {/* Social Sign In */}
           <div className="space-y-3">
             <Button
               variant="secondary"
               fullWidth
-              onClick={() => signIn("google", { callbackUrl })}
+              onClick={() => handleOAuthSignIn("google")}
+              disabled={isLoading}
               leftIcon={<GoogleIcon />}
             >
               Continue with Google
@@ -44,7 +64,8 @@ export default function SignIn() {
             <Button
               variant="secondary"
               fullWidth
-              onClick={() => signIn("github", { callbackUrl })}
+              onClick={() => handleOAuthSignIn("github")}
+              disabled={isLoading}
               leftIcon={<GithubIcon />}
             >
               Continue with GitHub
@@ -83,13 +104,25 @@ export default function SignIn() {
 
           <p className="text-center text-sm text-slate-400">
             Don&apos;t have an account?{" "}
-            <Link href="/auth/signup" className="text-cyan-400 hover:underline">
-              Sign up
+            <Link href="/pricing" className="text-cyan-400 hover:underline">
+              Get Started
             </Link>
           </p>
         </CardBody>
       </Card>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-slate-400 animate-pulse">Loading...</div>
+      </div>
+    }>
+      <SignInForm />
+    </Suspense>
   );
 }
 
