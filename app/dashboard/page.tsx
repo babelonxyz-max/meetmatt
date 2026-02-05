@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   const isSubscribed = false;
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
@@ -44,7 +44,7 @@ export default async function DashboardPage() {
         <StatCard
           title="Affiliate Earnings"
           value={`$${user.affiliateEarnings.toFixed(2)}`}
-          href="/pricing"
+          href="/dashboard/affiliate"
         />
       </div>
 
@@ -94,13 +94,18 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardBody>
           <p className="text-slate-400 mb-4">
-            Share your referral link and earn 20% commission on every payment
+            Share your referral link and earn <span className="text-cyan-400 font-semibold">20% commission</span> on every payment
             made by users you refer.
           </p>
-          <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg">
+          <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-slate-800/50 rounded-lg">
             <code className="flex-1 text-sm text-cyan-400">
               https://meetmatt.xyz/?ref={user.affiliateCode}
             </code>
+            <Link href="/dashboard/affiliate">
+              <Button variant="outline" size="sm">
+                View Details
+              </Button>
+            </Link>
           </div>
         </CardBody>
       </Card>
