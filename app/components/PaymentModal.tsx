@@ -2,9 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, Check, Loader2, ExternalLink, Info, AlertCircle } from "lucide-react";
+import { X, Copy, Check, Loader2, Info, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+interface PaymentData {
+  id: string;
+  address: string;
+  amount: number;
+  currency: string;
+  isDemo?: boolean;
+}
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -37,7 +45,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
   const [selectedCurrency, setSelectedCurrency] = useState("USDT_BSC");
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState<"pending" | "checking" | "confirmed" | "demo">("pending");
-  const [payment, setPayment] = useState<any>(null);
+  const [payment, setPayment] = useState<PaymentData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +73,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [payment, status]);
+  }, [payment, status, onSuccess]);
 
   const createPayment = async () => {
     setIsLoading(true);
@@ -90,7 +98,6 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
       setPayment(data);
       setStatus(data.isDemo ? "demo" : "pending");
       
-      // Auto-confirm in demo mode
       if (data.isDemo) {
         setTimeout(() => {
           setStatus("confirmed");
