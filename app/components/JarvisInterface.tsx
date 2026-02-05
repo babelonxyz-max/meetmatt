@@ -31,19 +31,21 @@ export function JarvisInterface({
   children,
 }: JarvisInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
 
+  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // Show last messages for context
-  const visibleMessages = messages.slice(-4);
+  // Show messages from beginning (not just last few)
+  const visibleMessages = messages;
 
   return (
-    <div className="relative h-full flex flex-col overflow-hidden">
+    <div ref={containerRef} className="relative h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 p-3 lg:p-4 border-b border-[var(--border)]/50 bg-gradient-to-r from-[var(--card)]/40 to-transparent backdrop-blur-sm flex-shrink-0">
+      <div className="flex items-center gap-3 p-3 border-b border-[var(--border)]/50 bg-gradient-to-r from-[var(--card)]/40 to-transparent backdrop-blur-sm flex-shrink-0">
         {canGoBack && (
           <motion.button
             onClick={onBack}
@@ -57,7 +59,7 @@ export function JarvisInterface({
         
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0ea5e9]/80 to-[#6366f1]/80 flex items-center justify-center shadow-lg shadow-[#0ea5e9]/10">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0ea5e9]/80 to-[#6366f1]/80 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
             <motion.div
@@ -66,7 +68,6 @@ export function JarvisInterface({
               transition={{ duration: 2, repeat: Infinity }}
             />
           </div>
-          
           <div>
             <h3 className="font-medium text-[var(--foreground)] text-sm">MATT</h3>
             <p className="text-[10px] text-[var(--muted)] font-mono flex items-center gap-1">
@@ -82,27 +83,17 @@ export function JarvisInterface({
         </div>
       </div>
 
-      {/* Messages Area - With proper padding and safe areas */}
-      <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 relative">
-        {/* Subtle scanline effect */}
-        <div 
-          className="absolute inset-0 pointer-events-none opacity-[0.03]"
-          style={{
-            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, var(--foreground) 2px, var(--foreground) 4px)',
-          }}
-        />
-
+      {/* Messages Area - Starts from top, scrolls down */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         <AnimatePresence mode="popLayout">
           {visibleMessages.map((message, index) => (
             <motion.div
               key={message.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              className={`relative flex gap-3 ${
-                message.role === "user" ? "flex-row-reverse" : ""
-              }`}
+              transition={{ duration: 0.2, delay: index === messages.length - 1 ? 0 : 0 }}
+              className={`relative flex gap-3 ${message.role === "user" ? "flex-row-reverse" : ""}`}
             >
               {/* Avatar */}
               <div className={`flex-shrink-0 ${message.role === "user" ? "hidden" : ""}`}>
@@ -124,8 +115,8 @@ export function JarvisInterface({
                 <div
                   className={`relative px-4 py-3 rounded-2xl ${
                     message.role === "user"
-                      ? "bg-[#0ea5e9]/10 border border-[#0ea5e9]/20 text-[var(--foreground)] backdrop-blur-sm"
-                      : "bg-[var(--card)]/30 border border-[var(--border)]/30 text-[var(--foreground)] backdrop-blur-md"
+                      ? "bg-[#0ea5e9]/10 border border-[#0ea5e9]/20 text-[var(--foreground)]"
+                      : "bg-[var(--card)]/30 border border-[var(--border)]/30 text-[var(--foreground)]"
                   }`}
                 >
                   {message.role === "assistant" && (
@@ -134,7 +125,7 @@ export function JarvisInterface({
                   
                   <p className="text-sm leading-relaxed relative z-10 whitespace-pre-wrap">{message.content}</p>
 
-                  {/* Unified Suggestions - Pill Style */}
+                  {/* Options - Unified pill style */}
                   {message.options && message.options.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">
                       {message.options.map((option) => (
@@ -145,7 +136,7 @@ export function JarvisInterface({
                           onMouseLeave={() => setHoveredOption(null)}
                           whileHover={{ scale: 1.03 }}
                           whileTap={{ scale: 0.97 }}
-                          className={`relative px-4 py-2 text-xs font-medium rounded-full border transition-all ${
+                          className={`relative px-4 py-2 text-xs font-medium rounded-full border transition-all flex items-center gap-1.5 ${
                             hoveredOption === option
                               ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-[#0ea5e9]"
                               : "bg-[var(--card)]/60 border-[var(--border)] text-[var(--foreground)] hover:border-[#0ea5e9]/50"
@@ -172,20 +163,14 @@ export function JarvisInterface({
             <div className="w-7 h-7 rounded-md bg-gradient-to-br from-[#0ea5e9]/70 to-[#6366f1]/70 flex items-center justify-center">
               <Bot className="w-3.5 h-3.5 text-white" />
             </div>
-            <div className="bg-[var(--card)]/30 border border-[var(--border)]/30 rounded-lg px-3 py-2 flex items-center gap-1.5 backdrop-blur-sm">
+            <div className="bg-[var(--card)]/30 border border-[var(--border)]/30 rounded-lg px-3 py-2 flex items-center gap-1.5">
               <span className="text-[10px] font-mono text-[var(--muted)]">thinking</span>
               {[...Array(3)].map((_, i) => (
                 <motion.span
                   key={i}
                   className="w-1 h-1 bg-[#0ea5e9] rounded-full"
-                  animate={{ 
-                    opacity: [0.3, 1, 0.3],
-                  }}
-                  transition={{
-                    duration: 0.8,
-                    repeat: Infinity,
-                    delay: i * 0.15,
-                  }}
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
                 />
               ))}
             </div>
@@ -197,12 +182,9 @@ export function JarvisInterface({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-3 p-3 bg-[#0ea5e9]/5 rounded-lg border border-[#0ea5e9]/10 backdrop-blur-sm"
+            className="flex items-center gap-3 p-3 bg-[#0ea5e9]/5 rounded-lg border border-[#0ea5e9]/10"
           >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            >
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
               <Cpu className="w-4 h-4 text-[#0ea5e9]" />
             </motion.div>
             <div className="flex-1">
@@ -222,9 +204,9 @@ export function JarvisInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Custom Content Area - Steps UI */}
+      {/* Input Area - Fixed at bottom */}
       {children && (
-        <div className="border-t border-[var(--border)]/50 bg-[var(--card)]/20 backdrop-blur-sm flex-shrink-0 max-h-[45%] lg:max-h-[50%] overflow-y-auto">
+        <div className="border-t border-[var(--border)]/50 bg-[var(--card)]/20 backdrop-blur-sm flex-shrink-0">
           {children}
         </div>
       )}
