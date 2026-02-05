@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, Check, Loader2, Info, AlertCircle } from "lucide-react";
+import { X, Copy, Check, Loader2, AlertCircle, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { createPayment, getPaymentStatus, SUPPORTED_CRYPTO, createMockPayment } from "@/lib/nowpayments";
+import { playPaymentSuccess } from "@/lib/audio";
 
 interface PaymentData {
   id: string;
   address: string;
   amount: number;
   currency: string;
-  isDemo?: boolean;
+  status: string;
 }
 
 interface PaymentModalProps {
@@ -33,106 +35,117 @@ const PRICES = {
   enterprise: 299,
 };
 
-const CURRENCIES = [
-  { code: "USDT_BSC", name: "USDT", chain: "BSC", icon: "💎" },
-  { code: "USDT_SOL", name: "USDT", chain: "Solana", icon: "💎" },
-  { code: "USDT_TRON", name: "USDT", chain: "TRON", icon: "💎" },
-  { code: "USDC_BASE", name: "USDC", chain: "Base", icon: "💵" },
-  { code: "USDC_SOL", name: "USDC", chain: "Solana", icon: "💵" },
-];
-
 export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: PaymentModalProps) {
-  const [selectedCurrency, setSelectedCurrency] = useState("USDT_BSC");
+  const [selectedCurrency, setSelectedCurrency] = useState("usdt");
   const [copied, setCopied] = useState(false);
-  const [status, setStatus] = useState<"pending" | "checking" | "confirmed" | "demo">("pending");
+  const [status, setStatus] = useState<"selecting" | "creating" | "waiting" | "confirming" | "confirmed" | "error">("selecting");
   const [payment, setPayment] = useState<PaymentData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState(3600); // 1 hour in seconds
 
-  // Keyboard navigation - Escape to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  // Lock body scroll when modal is open
+  // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen && !payment) {
-      createPayment();
+      setStatus("selecting");
+      setPayment(null);
+      setError(null);
+      setTimeLeft(3600);
     }
   }, [isOpen]);
 
+  // Countdown timer
   useEffect(() => {
-    if (!payment || status === "confirmed" || status === "demo") return;
+    if (status === "waiting" && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [status, timeLeft]);
+
+  // Poll for payment status
+  useEffect(() => {
+    if (!payment || status !== "waiting") return;
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/payment?id=${payment.id}`);
-        const data = await response.json();
+        // For demo mode, auto-confirm after 10 seconds
+        if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+          if (timeLeft < 3590) {
+            setStatus("confirming");
+            playPaymentSuccess();
+            setTimeout(() => {
+              setStatus("confirmed");
+              setTimeout(onSuccess, 1000);
+            }, 1500);
+          }
+          return;
+        }
+
+        const data = await getPaymentStatus(payment.id);
         
-        if (data.status === "confirmed") {
+        if (data.payment_status === "finished" || data.payment_status === "confirmed") {
           setStatus("confirmed");
-          setTimeout(() => onSuccess(), 1500);
+          playPaymentSuccess();
+          setTimeout(onSuccess, 1000);
+          clearInterval(interval);
+        } else if (data.payment_status === "failed" || data.payment_status === "expired") {
+          setStatus("error");
+          setError("Payment failed or expired. Please try again.");
+          clearInterval(interval);
         }
       } catch (e) {
         console.error("Payment check failed:", e);
       }
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [payment, status, onSuccess]);
+  }, [payment, status, timeLeft, onSuccess]);
 
-  const createPayment = useCallback(async () => {
-    setIsLoading(true);
+  const createNewPayment = useCallback(async () => {
+    setStatus("creating");
     setError(null);
+
     try {
-      const response = await fetch("/api/payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          tier: config.tier,
+      const amount = PRICES[config.tier];
+      
+      // Check if we're in demo mode or missing API keys
+      if (process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !process.env.NOWPAYMENTS_API_KEY) {
+        // Simulate payment creation
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const mockPayment = createMockPayment(amount, selectedCurrency);
+        setPayment({
+          id: mockPayment.payment_id,
+          address: mockPayment.pay_address,
+          amount: mockPayment.pay_amount,
           currency: selectedCurrency,
-        }),
+          status: "waiting",
+        });
+        setStatus("waiting");
+        return;
+      }
+
+      const response = await createPayment({
+        price_amount: amount,
+        price_currency: "usd",
+        pay_currency: selectedCurrency,
+        order_id: `${sessionId}-${Date.now()}`,
+        order_description: `Deploy ${config.agentName} (${config.tier} tier)`,
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create payment");
-      }
-
-      const data = await response.json();
-      setPayment(data);
-      setStatus(data.isDemo ? "demo" : "pending");
-      
-      if (data.isDemo) {
-        setTimeout(() => {
-          setStatus("confirmed");
-          setTimeout(() => onSuccess(), 1000);
-        }, 3000);
-      }
+      setPayment({
+        id: response.payment_id,
+        address: response.pay_address,
+        amount: response.pay_amount,
+        currency: response.pay_currency,
+        status: response.payment_status,
+      });
+      setStatus("waiting");
     } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setIsLoading(false);
+      setError(e.message || "Failed to create payment");
+      setStatus("error");
     }
-  }, [sessionId, config.tier, selectedCurrency, onSuccess]);
+  }, [config.tier, config.agentName, selectedCurrency, sessionId]);
 
   const copyAddress = useCallback(() => {
     if (payment?.address) {
@@ -142,9 +155,13 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     }
   }, [payment?.address]);
 
-  const getCurrencyInfo = useCallback((code: string) => {
-    return CURRENCIES.find((c) => c.code === code) || CURRENCIES[0];
-  }, []);
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const selectedCrypto = SUPPORTED_CRYPTO.find(c => c.code === selectedCurrency);
 
   return (
     <AnimatePresence>
@@ -153,196 +170,155 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={(e) => e.target === e.currentTarget && onClose()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="payment-title"
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl shadow-black/50"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/5">
-              <div>
-                <h3 id="payment-title" className="font-semibold text-white">Complete Payment</h3>
-                <p className="text-xs text-zinc-500">
-                  Deploy {config.agentName} - {config.tier} tier
-                </p>
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-gradient-to-r from-[#0ea5e9]/10 to-transparent">
+              <div className="flex items-center gap-3">
+                <Wallet className="w-5 h-5 text-[#0ea5e9]" />
+                <div>
+                  <h3 className="font-semibold">PAYMENT</h3>
+                  <p className="text-xs text-[var(--muted)] font-mono">{config.agentName} // {config.tier.toUpperCase()}</p>
+                </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/50"
-                aria-label="Close modal"
+                className="p-2 hover:bg-[var(--card-hover)] rounded-lg transition-colors"
               >
-                <X className="w-4 h-4 text-zinc-400" />
+                <X className="w-4 h-4 text-[var(--muted)]" />
               </button>
             </div>
 
-            {/* Demo mode banner */}
-            {status === "demo" && (
-              <div className="px-4 pt-4">
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs font-medium">Demo Mode</p>
-                    <p className="text-[11px] text-amber-400/70 mt-1">
-                      This is a demo. Payments are simulated and auto-confirmed after 3 seconds.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div className="p-4 space-y-4">
-              {/* Price */}
-              <motion.div 
-                className="text-center py-4 bg-white/5 rounded-xl"
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.2 }}
-              >
-                <span className="text-4xl font-bold text-white">${PRICES[config.tier]}</span>
-                <span className="text-zinc-500 text-sm">/mo</span>
-              </motion.div>
+              {/* Amount Display */}
+              <div className="text-center py-4 bg-gradient-to-b from-[var(--card)] to-transparent rounded-xl border border-[var(--border)]">
+                <span className="text-4xl font-bold text-[#0ea5e9]">${PRICES[config.tier]}</span>
+                <span className="text-[var(--muted)] text-sm">/month</span>
+              </div>
 
-              {/* Currency selection */}
-              {status === "pending" && !payment && (
-                <div>
-                  <label className="text-xs text-zinc-500 mb-2 block">Select currency</label>
+              {/* Currency Selection */}
+              {status === "selecting" && (
+                <div className="space-y-3">
+                  <label className="text-xs font-mono text-[var(--muted)]">SELECT CRYPTOCURRENCY</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {CURRENCIES.map((curr, index) => (
+                    {SUPPORTED_CRYPTO.slice(0, 6).map((crypto) => (
                       <motion.button
-                        key={curr.code}
-                        onClick={() => setSelectedCurrency(curr.code)}
+                        key={crypto.code}
+                        onClick={() => setSelectedCurrency(crypto.code)}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/50 ${
-                          selectedCurrency === curr.code
-                            ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/30"
-                            : "bg-white/5 border-white/5 hover:border-white/10"
+                        className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
+                          selectedCurrency === crypto.code
+                            ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-[#0ea5e9]"
+                            : "bg-[var(--card)] border-[var(--border)] hover:border-[#0ea5e9]/50"
                         }`}
                       >
-                        <span className="text-lg">{curr.icon}</span>
-                        <div>
-                          <p className="text-xs font-medium text-white">{curr.name}</p>
-                          <p className="text-[10px] text-zinc-500">{curr.chain}</p>
+                        <span className="text-lg">{crypto.icon}</span>
+                        <div className="text-left">
+                          <p className="text-xs font-semibold">{crypto.name}</p>
+                          <p className="text-[10px] text-[var(--muted)]">{crypto.network}</p>
                         </div>
                       </motion.button>
                     ))}
                   </div>
+                  
+                  <Button
+                    onClick={createNewPayment}
+                    className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-12"
+                  >
+                    PROCEED TO PAYMENT
+                  </Button>
                 </div>
               )}
 
-              {/* Error */}
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs"
-                >
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {error}
-                </motion.div>
+              {/* Creating */}
+              {status === "creating" && (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <Loader2 className="w-8 h-8 text-[#0ea5e9] animate-spin" />
+                  <p className="text-sm text-[var(--muted)] font-mono">GENERATING PAYMENT ADDRESS...</p>
+                </div>
               )}
 
-              {/* Payment details */}
-              {payment && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="space-y-3"
-                >
-                  {/* Status */}
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                    <span className="text-xs text-zinc-500">Status</span>
-                    <span className={`text-xs font-medium flex items-center gap-1 ${
-                      status === "confirmed" ? "text-green-400" : 
-                      status === "demo" ? "text-amber-400" :
-                      "text-[#0ea5e9]"
-                    }`}>
-                      {status === "confirmed" ? (
-                        <><Check className="w-3 h-3" /> Confirmed</>
-                      ) : status === "demo" ? (
-                        <><Info className="w-3 h-3" /> Auto-confirming...</>
-                      ) : (
-                        <><Loader2 className="w-3 h-3 animate-spin" /> Awaiting payment...</>
-                      )}
-                    </span>
+              {/* Waiting for Payment */}
+              {status === "waiting" && payment && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <p className="text-xs text-amber-400 font-mono text-center">
+                      AWAITING PAYMENT // EXPIRES IN {formatTime(timeLeft)}
+                    </p>
                   </div>
 
-                  {/* Address */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-zinc-500">Send to this address</span>
-                      <span className="text-[10px] text-zinc-600">{getCurrencyInfo(payment.currency).chain}</span>
-                    </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-mono text-[var(--muted)]">SEND {selectedCrypto?.name.toUpperCase()} TO:</label>
                     <div className="flex gap-2">
                       <Input
                         value={payment.address}
                         readOnly
-                        className="flex-1 bg-black/30 border-white/10 text-xs text-zinc-300 h-10 font-mono"
+                        className="flex-1 bg-[var(--card)] border-[var(--border)] text-xs font-mono h-12"
                       />
                       <Button
                         onClick={copyAddress}
                         size="sm"
-                        className="h-10 w-10 p-0 bg-white/5 hover:bg-white/10 transition-colors"
-                        aria-label="Copy address"
+                        className="h-12 w-12 p-0 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)]"
                       >
                         {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                       </Button>
                     </div>
                   </div>
 
-                  {/* Amount */}
-                  <div className="p-3 bg-black/30 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-zinc-500">Amount</span>
-                      <span className="text-sm font-medium text-white">
-                        ${PRICES[config.tier]} {getCurrencyInfo(payment.currency).name}
-                      </span>
+                  <div className="p-3 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-[var(--muted)]">Amount:</span>
+                      <span className="font-mono">{payment.amount} {selectedCrypto?.code.toUpperCase()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[var(--muted)]">Network:</span>
+                      <span className="font-mono">{selectedCrypto?.network}</span>
                     </div>
                   </div>
 
-                  {/* Warning */}
-                  <div className="flex items-start gap-2 text-[11px] text-zinc-500">
-                    <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                    <p>Send only {getCurrencyInfo(payment.currency).name} on {getCurrencyInfo(payment.currency).chain} network.</p>
+                  <div className="text-xs text-[var(--muted)] text-center">
+                    Payment will be detected automatically.
                   </div>
-                </motion.div>
+                </div>
               )}
 
-              {/* Action button */}
-              {!payment && (
-                <Button
-                  onClick={createPayment}
-                  disabled={isLoading}
-                  className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-11 transition-all disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Get Payment Address"
-                  )}
-                </Button>
+              {/* Confirming */}
+              {status === "confirming" && (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <Loader2 className="w-8 h-8 text-green-400 animate-spin" />
+                  <p className="text-sm text-green-400 font-mono">CONFIRMING PAYMENT...</p>
+                </div>
               )}
 
+              {/* Confirmed */}
               {status === "confirmed" && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center justify-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm"
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  className="flex flex-col items-center gap-4 py-8"
                 >
-                  <Check className="w-4 h-4" />
-                  Payment confirmed!
+                  <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <Check className="w-8 h-8 text-green-400" />
+                  </div>
+                  <p className="text-lg font-semibold text-green-400">PAYMENT CONFIRMED</p>
+                  <p className="text-xs text-[var(--muted)] font-mono">DEPLOYING YOUR AGENT...</p>
                 </motion.div>
+              )}
+
+              {/* Error */}
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {error}
+                </div>
               )}
             </div>
           </motion.div>
