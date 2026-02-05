@@ -5,10 +5,9 @@ const PENDING_CONFIG_KEY = "matt_pending_config";
 
 export function getOrCreateSessionId(): string {
   if (typeof window === "undefined") {
-    // Server-side: return a temporary ID that will be replaced client-side
     return "server-temp-" + Math.random().toString(36).substr(2, 9);
   }
-  
+
   let sessionId = localStorage.getItem(SESSION_KEY);
   if (!sessionId || sessionId.startsWith("server-temp-")) {
     sessionId = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -24,8 +23,9 @@ export function getSessionId(): string | null {
 
 export interface PendingConfig {
   agentName: string;
-  purpose: string;
-  features: string[];
+  useCase: string;
+  scope: string;
+  contactMethod: string;
   createdAt: number;
 }
 

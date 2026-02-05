@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, Check, ArrowRight, Zap } from "lucide-react";
+import { ArrowRight, Check, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaymentModal } from "./components/PaymentModal";
@@ -10,13 +10,7 @@ import { AIOrb, type AIOrbProps } from "./components/AIOrb";
 import { JarvisInterface } from "./components/JarvisInterface";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig } from "@/lib/session";
-import { 
-  initAudio, 
-  playMessageSent, 
-  playMessageReceived, 
-  playOptionSelected, 
-  playSuccess
-} from "@/lib/audio";
+import { initAudio, playMessageSent, playMessageReceived, playOptionSelected, playSuccess } from "@/lib/audio";
 
 interface Message {
   id: string;
@@ -25,32 +19,49 @@ interface Message {
   options?: string[];
 }
 
-type Step = "intro" | "name" | "purpose" | "features" | "confirm" | "deploying" | "success";
+type Step = "intro" | "name" | "usecase" | "scope" | "contact" | "confirm" | "deploying" | "success";
 
 interface SetupConfig {
   agentName: string;
-  purpose: string;
-  features: string[];
+  useCase: string;
+  scope: string;
+  contactMethod: string;
 }
 
-// Single plan
-const PLAN_PRICE = 150;
-
-const PURPOSE_OPTIONS = [
-  { id: "web-app", label: "Build a web app", icon: "🌐" },
-  { id: "data-analysis", label: "Analyze data", icon: "📊" },
-  { id: "automation", label: "Automation", icon: "⚡" },
-  { id: "research", label: "Research", icon: "🔍" },
-  { id: "support", label: "Customer support", icon: "💬" },
-  { id: "content", label: "Content creation", icon: "✍️" },
+const USE_CASE_OPTIONS = [
+  { id: "assistant", label: "AI Assistant", icon: "🤖", desc: "Personal helper for daily tasks" },
+  { id: "coworker", label: "Coworker", icon: "👥", desc: "Team member for collaboration" },
+  { id: "employee", label: "Digital Employee", icon: "💼", desc: "Autonomous worker for your business" },
 ];
 
-const FEATURE_OPTIONS = [
-  { id: "Code generation", label: "Code generation", icon: "⚡" },
-  { id: "Web browsing", label: "Web browsing", icon: "🌐" },
-  { id: "API integration", label: "API integration", icon: "🔌" },
-  { id: "File management", label: "File management", icon: "📁" },
-  { id: "Database", label: "Database", icon: "🗄️" },
+const SCOPE_OPTIONS: Record<string, { id: string; label: string; icon: string }[]> = {
+  assistant: [
+    { id: "scheduling", label: "Schedule management", icon: "📅" },
+    { id: "email", label: "Email handling", icon: "📧" },
+    { id: "research", label: "Research & summaries", icon: "🔍" },
+    { id: "writing", label: "Writing & editing", icon: "✍️" },
+    { id: "reminders", label: "Reminders & tasks", icon: "⏰" },
+  ],
+  coworker: [
+    { id: "brainstorm", label: "Brainstorming", icon: "💡" },
+    { id: "documents", label: "Document collaboration", icon: "📄" },
+    { id: "meetings", label: "Meeting notes", icon: "📝" },
+    { id: "planning", label: "Project planning", icon: "🎯" },
+    { id: "analysis", label: "Data analysis", icon: "📊" },
+  ],
+  employee: [
+    { id: "customers", label: "Customer support", icon: "🎧" },
+    { id: "leads", label: "Lead generation", icon: "🎯" },
+    { id: "content", label: "Content creation", icon: "📱" },
+    { id: "sales", label: "Sales outreach", icon: "💰" },
+    { id: "operations", label: "Operations", icon: "⚙️" },
+  ],
+};
+
+const CONTACT_OPTIONS = [
+  { id: "telegram", label: "Telegram", icon: "✈️", available: true },
+  { id: "whatsapp", label: "WhatsApp", icon: "💬", available: false },
+  { id: "slack", label: "Slack", icon: "💻", available: false },
 ];
 
 export default function Home() {
@@ -61,19 +72,20 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [config, setConfig] = useState<SetupConfig>({
     agentName: "",
-    purpose: "",
-    features: [],
+    useCase: "",
+    scope: "",
+    contactMethod: "",
   });
   const [step, setStep] = useState<Step>("intro");
   const [showPayment, setShowPayment] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const getWizardState = (): AIOrbProps["wizardState"] => {
     if (step === "intro") return "idle";
     if (step === "name") return "initializing";
-    if (step === "purpose" || step === "features") return "processing";
+    if (step === "usecase" || step === "scope" || step === "contact") return "processing";
     if (step === "deploying") return "deploying";
     if (step === "success") return "success";
     return "idle";
@@ -96,64 +108,56 @@ export default function Home() {
       setMessages([{
         id: "welcome",
         role: "assistant",
-        content: "Hello. I am MATT, your AI deployment assistant. I can help you create and deploy AI agents in minutes. No signup required.",
-        options: ["Initialize deployment"],
+        content: "Hello! I'm MATT. I'll help you create your AI agent in minutes. Ready to get started?",
+        options: ["Start creating"],
       }]);
-    }, 800);
+    }, 600);
     return () => clearTimeout(timer);
   }, []);
 
-  // Auto-focus name input
   useEffect(() => {
-    if (step === "name" && nameInputRef.current) {
-      setTimeout(() => nameInputRef.current?.focus(), 300);
+    if ((step === "name" || step === "scope") && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [step]);
 
   const addMessage = (role: "assistant" | "user", content: string, options?: string[]) => {
     setMessages((prev) => [...prev, { id: Date.now().toString(), role, content, options }]);
-    if (role === "assistant" && audioEnabled) {
-      playMessageReceived();
-    }
+    if (role === "assistant" && audioEnabled) playMessageReceived();
   };
 
   const simulateTyping = async (content: string, options?: string[]) => {
     setIsTyping(true);
-    await new Promise((resolve) => setTimeout(resolve, 600 + Math.random() * 400));
+    await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 300));
     setIsTyping(false);
     addMessage("assistant", content, options);
   };
 
   const handleBack = async () => {
     await enableAudio();
-    const stepOrder: Step[] = ["intro", "name", "purpose", "features", "confirm"];
+    const stepOrder: Step[] = ["intro", "name", "usecase", "scope", "contact", "confirm"];
     const currentIndex = stepOrder.indexOf(step);
     if (currentIndex > 0) {
       const prevStep = stepOrder[currentIndex - 1];
       setStep(prevStep);
+      // Remove last user and assistant messages
       setMessages((prev) => {
         const newMessages = [...prev];
-        while (newMessages.length > 0 && newMessages[newMessages.length - 1].role === "user") {
-          newMessages.pop();
-        }
-        if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === "assistant") {
+        while (newMessages.length > 0 && (newMessages[newMessages.length - 1].role === "user" || newMessages[newMessages.length - 1].options)) {
           newMessages.pop();
         }
         return newMessages;
       });
-      if (prevStep === "name") setConfig(prev => ({ ...prev, agentName: "" }));
-      if (prevStep === "purpose") setConfig(prev => ({ ...prev, purpose: "" }));
-      if (prevStep === "features") setConfig(prev => ({ ...prev, features: [] }));
     }
   };
 
-  const startDeployment = async () => {
+  const startCreating = async () => {
     await enableAudio();
     playOptionSelected();
     setStep("name");
     setTimeout(() => {
-      simulateTyping("Let's create your AI agent! What would you like to name it?");
-    }, 600);
+      simulateTyping("What should be the name of your agent?");
+    }, 400);
   };
 
   const handleNameSubmit = async () => {
@@ -164,46 +168,64 @@ export default function Home() {
     setConfig((prev) => ({ ...prev, agentName: name }));
     addMessage("user", name);
     setInput("");
-    setStep("purpose");
+    setStep("usecase");
     await simulateTyping(
-      `Great! ${name} it is. What would you like ${name} to help you with?`,
-      PURPOSE_OPTIONS.map(o => `${o.icon} ${o.label}`)
+      `Nice to meet ${name}! What's the use case for ${name}?`,
+      USE_CASE_OPTIONS.map((o) => `${o.icon} ${o.label}`)
     );
   };
 
-  const handlePurposeSelect = async (option: string) => {
+  const handleUseCaseSelect = async (option: string) => {
     await enableAudio();
     playOptionSelected();
-    // Extract label from option (remove emoji)
-    const label = option.replace(/^\S+\s/, "");
-    setConfig((prev) => ({ ...prev, purpose: label }));
-    addMessage("user", label);
-    setStep("features");
+    const useCaseId = USE_CASE_OPTIONS.find((o) => option.includes(o.label))?.id || "";
+    setConfig((prev) => ({ ...prev, useCase: useCaseId }));
+    addMessage("user", option.replace(/^\S+\s/, ""));
+    setStep("scope");
+    const scopeOptions = SCOPE_OPTIONS[useCaseId] || [];
     await simulateTyping(
-      "Perfect! Select all capabilities your agent should have:",
-      FEATURE_OPTIONS.map(o => `${o.icon} ${o.label}`)
+      "What should your agent help with? Select all that apply:",
+      scopeOptions.map((o) => `${o.icon} ${o.label}`)
     );
   };
 
-  const handleFeatureToggle = async (option: string) => {
+  const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
+
+  const handleScopeToggle = async (option: string) => {
     await enableAudio();
-    const featureId = option.replace(/^\S+\s/, "");
-    setConfig((prev) => ({
-      ...prev,
-      features: prev.features.includes(featureId)
-        ? prev.features.filter((f) => f !== featureId)
-        : [...prev.features, featureId],
-    }));
+    const scopeLabel = option.replace(/^\S+\s/, "");
+    setSelectedScopes((prev) =>
+      prev.includes(scopeLabel) ? prev.filter((s) => s !== scopeLabel) : [...prev, scopeLabel]
+    );
   };
 
-  const handleFeaturesConfirm = async () => {
-    if (config.features.length === 0) return;
+  const handleScopeConfirm = async () => {
+    if (selectedScopes.length === 0) return;
     await enableAudio();
     playOptionSelected();
-    addMessage("user", config.features.join(", "));
+    setConfig((prev) => ({ ...prev, scope: selectedScopes.join(", ") }));
+    addMessage("user", selectedScopes.join(", "));
+    setSelectedScopes([]);
+    setStep("contact");
+    await simulateTyping(
+      "How would you like to contact your agent?",
+      CONTACT_OPTIONS.map((o) => `${o.icon} ${o.label}${o.available ? "" : " (soon)"}`)
+    );
+  };
+
+  const handleContactSelect = async (option: string) => {
+    await enableAudio();
+    playOptionSelected();
+    const contactId = option.replace(/^\S+\s/, "").replace(" (soon)", "").toLowerCase();
+    if (contactId !== "telegram") {
+      await simulateTyping("This option will be available soon. Please select Telegram for now.");
+      return;
+    }
+    setConfig((prev) => ({ ...prev, contactMethod: contactId }));
+    addMessage("user", "Telegram");
     setStep("confirm");
     await simulateTyping(
-      `Ready to deploy **${config.agentName}**! 🚀\n\nPlan: $${PLAN_PRICE}/mo (unlimited everything)`,
+      `Ready to deploy **${config.agentName}**! 🚀\n\nUse case: ${USE_CASE_OPTIONS.find((u) => u.id === config.useCase)?.label}\nScope: ${config.scope}${selectedScopes.length > 0 ? `, ${selectedScopes.join(", ")}` : ""}\nContact: Telegram`,
       ["Proceed to payment"]
     );
   };
@@ -212,12 +234,7 @@ export default function Home() {
     await enableAudio();
     if (action === "Proceed to payment") {
       playOptionSelected();
-      savePendingConfig({
-        agentName: config.agentName,
-        purpose: config.purpose,
-        features: config.features,
-        createdAt: Date.now(),
-      });
+      savePendingConfig({ ...config, createdAt: Date.now() });
       setShowPayment(true);
     }
   };
@@ -230,20 +247,18 @@ export default function Home() {
     addMessage("assistant", "Initializing deployment...", []);
 
     try {
-      const response = await fetch('/api/agents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...config, sessionId }),
       });
 
-      if (!response.ok) {
-        throw new Error('Deployment failed');
-      }
+      if (!response.ok) throw new Error("Deployment failed");
 
       clearPendingConfig();
       setIsDeploying(false);
       setStep("success");
-      addMessage("assistant", `🎉 ${config.agentName} is now live!`, ["View Dashboard", "Deploy another"]);
+      addMessage("assistant", `🎉 ${config.agentName} is now live! Check your Telegram.`, ["Create another"]);
     } catch (error: any) {
       setIsDeploying(false);
       setStep("confirm");
@@ -265,23 +280,24 @@ export default function Home() {
 
   const handleOptionClick = async (option: string) => {
     await enableAudio();
-    if (option === "Initialize deployment") {
-      startDeployment();
-    } else if (step === "purpose") {
-      handlePurposeSelect(option);
-    } else if (step === "features") {
-      handleFeatureToggle(option);
+    if (option === "Start creating") {
+      startCreating();
+    } else if (step === "usecase") {
+      handleUseCaseSelect(option);
+    } else if (step === "scope") {
+      handleScopeToggle(option);
+    } else if (step === "contact") {
+      handleContactSelect(option);
     } else if (step === "confirm" || step === "success") {
-      if (option === "View Dashboard") {
-        window.location.href = '/dashboard';
-      } else if (option === "Deploy another") {
+      if (option === "Create another") {
         setStep("intro");
-        setConfig({ agentName: "", purpose: "", features: [] });
+        setConfig({ agentName: "", useCase: "", scope: "", contactMethod: "" });
+        setSelectedScopes([]);
         setMessages([{
           id: "restart",
           role: "assistant",
-          content: "Hello. I am MATT, your AI deployment assistant.",
-          options: ["Initialize deployment"],
+          content: "Hello! I'm MATT. I'll help you create your AI agent in minutes. Ready to get started?",
+          options: ["Start creating"],
         }]);
       } else {
         handleConfirm(option);
@@ -294,8 +310,8 @@ export default function Home() {
   if (isLoading) {
     return (
       <div className="h-screen w-screen bg-[var(--background)] flex items-center justify-center safe-area-padding">
-        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-[var(--muted)] font-mono">
-          INITIALIZING...
+        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-[var(--muted)] font-mono text-sm">
+          Initializing...
         </motion.div>
       </div>
     );
@@ -305,20 +321,13 @@ export default function Home() {
     <main className="fixed inset-0 pt-14 pb-safe bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col lg:flex-row">
       {/* Left Side - AI Orb */}
       <div className="lg:w-[42%] h-[35%] lg:h-full flex flex-col items-center justify-center relative">
-        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1 }} className="relative z-10 w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64">
-          <AIOrb 
-            isListening={isTyping} 
-            isThinking={isDeploying} 
-            intensity={isDeploying ? "high" : "medium"}
-            wizardState={getWizardState()}
-          />
+        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }} className="relative z-10 w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56">
+          <AIOrb isListening={isTyping} isThinking={isDeploying} intensity={isDeploying ? "high" : "medium"} wizardState={getWizardState()} />
         </motion.div>
 
-        <motion.div className="mt-4 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+        <motion.div className="mt-4 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           <h1 className="text-xl lg:text-2xl font-semibold mb-1 tracking-wider">MATT</h1>
-          <p className="text-[10px] lg:text-xs font-mono text-[var(--muted)]">
-            {isTyping ? "PROCESSING..." : isDeploying ? "DEPLOYING..." : "SYSTEM READY"}
-          </p>
+          <p className="text-[10px] lg:text-xs font-mono text-[var(--muted)]">{isTyping ? "PROCESSING..." : isDeploying ? "DEPLOYING..." : "SYSTEM READY"}</p>
         </motion.div>
 
         <div className="absolute bottom-4 left-4 z-20">
@@ -328,151 +337,106 @@ export default function Home() {
 
       {/* Right Side - Chat Interface */}
       <div className="lg:w-[58%] h-[65%] lg:h-full flex flex-col bg-gradient-to-l from-[var(--card)]/20 to-transparent">
-        <JarvisInterface
-          messages={messages}
-          isTyping={isTyping}
-          isDeploying={isDeploying}
-          canGoBack={canGoBack}
-          onBack={handleBack}
-          onOptionClick={handleOptionClick}
-        >
+        <JarvisInterface messages={messages} isTyping={isTyping} isDeploying={isDeploying} canGoBack={canGoBack} onBack={handleBack} onOptionClick={handleOptionClick}>
           <AnimatePresence mode="wait">
-            {/* NAME STEP - Starts at top, input below messages */}
+            {/* NAME INPUT */}
             {step === "name" && (
-              <motion.div
-                key="name-step"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="p-4 border-t border-[var(--border)]"
-              >
+              <motion.div key="name-step" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="p-4 border-t border-[var(--border)]">
                 <div className="max-w-md mx-auto">
-                  <p className="text-xs text-[var(--muted)] mb-3 text-center">Enter your agent's name</p>
-                  <div className="flex gap-2">
-                    <Input
-                      ref={nameInputRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      onFocus={() => enableAudio()}
-                      placeholder="e.g., Jarvis, Helper..."
-                      className="flex-1 bg-[var(--card)] border-[var(--border)] h-12 text-base"
-                    />
-                    <Button
-                      onClick={handleNameSubmit}
-                      disabled={!input.trim()}
-                      className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-12 px-5 disabled:opacity-50"
-                    >
-                      <ArrowRight className="w-5 h-5" />
-                    </Button>
-                  </div>
+                  <Input
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => enableAudio()}
+                    placeholder="e.g., Jarvis, Maya, Helper..."
+                    className="flex-1 bg-[var(--card)] border-[var(--border)] h-12 text-base mb-3"
+                  />
+                  <Button onClick={handleNameSubmit} disabled={!input.trim()} className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-11 disabled:opacity-50">
+                    Continue <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               </motion.div>
             )}
 
-            {/* PURPOSE STEP - Multi-select style */}
-            {step === "purpose" && (
-              <motion.div
-                key="purpose-step"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="p-4 border-t border-[var(--border)]"
-              >
-                <p className="text-xs text-[var(--muted)] mb-3 text-center">Select what you need help with</p>
-                <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto">
-                  {PURPOSE_OPTIONS.map((option) => (
+            {/* USE CASE SELECTION */}
+            {step === "usecase" && (
+              <motion.div key="usecase-step" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="p-4 border-t border-[var(--border)]">
+                <div className="grid grid-cols-1 gap-2 max-w-md mx-auto">
+                  {USE_CASE_OPTIONS.map((option) => (
                     <motion.button
                       key={option.id}
-                      onClick={() => handlePurposeSelect(`${option.icon} ${option.label}`)}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="px-4 py-2.5 rounded-full bg-[var(--card)] border border-[var(--border)] hover:border-[#0ea5e9] hover:bg-[#0ea5e9]/10 text-sm transition-all flex items-center gap-2"
+                      onClick={() => handleUseCaseSelect(`${option.icon} ${option.label}`)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[#0ea5e9]/50 text-left transition-all"
                     >
-                      <span>{option.icon}</span>
-                      <span>{option.label}</span>
+                      <span className="text-2xl">{option.icon}</span>
+                      <div>
+                        <p className="font-medium">{option.label}</p>
+                        <p className="text-xs text-[var(--muted)]">{option.desc}</p>
+                      </div>
                     </motion.button>
                   ))}
                 </div>
               </motion.div>
             )}
 
-            {/* FEATURES STEP - Multi-select with confirm */}
-            {step === "features" && (
-              <motion.div
-                key="features-step"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="p-4 border-t border-[var(--border)]"
-              >
-                <p className="text-xs text-[var(--muted)] mb-3 text-center">
-                  {config.features.length === 0 ? "Select capabilities (choose multiple)" : `${config.features.length} selected`}
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto mb-4">
-                  {FEATURE_OPTIONS.map((option) => {
-                    const isSelected = config.features.includes(option.id);
+            {/* SCOPE MULTI-SELECT */}
+            {step === "scope" && (
+              <motion.div key="scope-step" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="p-4 border-t border-[var(--border)]">
+                <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto mb-3">
+                  {(SCOPE_OPTIONS[config.useCase] || []).map((option) => {
+                    const isSelected = selectedScopes.includes(option.label);
                     return (
                       <motion.button
                         key={option.id}
-                        onClick={() => handleFeatureToggle(`${option.icon} ${option.id}`)}
+                        onClick={() => handleScopeToggle(`${option.icon} ${option.label}`)}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className={`px-4 py-2.5 rounded-full border text-sm transition-all flex items-center gap-2 ${
-                          isSelected
-                            ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-[#0ea5e9]"
-                            : "bg-[var(--card)] border-[var(--border)] hover:border-[#0ea5e9]/50"
+                        className={`px-4 py-2 rounded-full border text-sm transition-all flex items-center gap-2 ${
+                          isSelected ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-[#0ea5e9]" : "bg-[var(--card)] border-[var(--border)] hover:border-[#0ea5e9]/50"
                         }`}
                       >
                         <span>{option.icon}</span>
                         <span>{option.label}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 ml-1" />}
+                        {isSelected && <Check className="w-3.5 h-3.5" />}
                       </motion.button>
                     );
                   })}
                 </div>
-                
-                {config.features.length > 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }} 
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex justify-center"
-                  >
-                    <Button
-                      onClick={handleFeaturesConfirm}
-                      className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-6"
-                    >
-                      Continue ({config.features.length})
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                {selectedScopes.length > 0 && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
+                    <Button onClick={handleScopeConfirm} className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-6">
+                      Continue ({selectedScopes.length}) <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </motion.div>
                 )}
               </motion.div>
             )}
 
-            {/* CONFIRM STEP */}
-            {step === "confirm" && (
-              <motion.div
-                key="confirm-step"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="p-4 border-t border-[var(--border)]"
-              >
-                <div className="max-w-sm mx-auto bg-[var(--card)] rounded-xl p-4 border border-[var(--border)]">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0ea5e9] to-[#6366f1] flex items-center justify-center">
-                      <Zap className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">MATT Plan</h3>
-                      <p className="text-xs text-[var(--muted)]">Unlimited everything</p>
-                    </div>
-                  </div>
-                  <div className="text-center py-2 border-t border-[var(--border)]">
-                    <span className="text-3xl font-bold text-[#0ea5e9]">${PLAN_PRICE}</span>
-                    <span className="text-sm text-[var(--muted)]">/mo</span>
-                  </div>
+            {/* CONTACT METHOD */}
+            {step === "contact" && (
+              <motion.div key="contact-step" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="p-4 border-t border-[var(--border)]">
+                <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
+                  {CONTACT_OPTIONS.map((option) => (
+                    <motion.button
+                      key={option.id}
+                      onClick={() => handleContactSelect(`${option.icon} ${option.label}`)}
+                      whileHover={{ scale: option.available ? 1.05 : 1 }}
+                      whileTap={{ scale: option.available ? 0.95 : 1 }}
+                      disabled={!option.available}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
+                        option.available
+                          ? "bg-[var(--card)] border-[var(--border)] hover:border-[#0ea5e9]/50 cursor-pointer"
+                          : "bg-[var(--card)]/50 border-[var(--border)]/50 opacity-50 cursor-not-allowed"
+                      }`}
+                    >
+                      <span className="text-2xl">{option.icon}</span>
+                      <span className="text-sm font-medium">{option.label}</span>
+                      {!option.available && <span className="text-[10px] text-[var(--muted)]">Soon</span>}
+                    </motion.button>
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -480,16 +444,7 @@ export default function Home() {
         </JarvisInterface>
       </div>
 
-      {/* Payment Modal */}
-      {showPayment && (
-        <PaymentModal
-          isOpen={showPayment}
-          onClose={() => setShowPayment(false)}
-          config={config}
-          sessionId={sessionId}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
+      {showPayment && <PaymentModal isOpen={showPayment} onClose={() => setShowPayment(false)} config={config} sessionId={sessionId} onSuccess={handlePaymentSuccess} />}
     </main>
   );
 }

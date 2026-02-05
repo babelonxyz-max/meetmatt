@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, Check, Loader2, AlertCircle, Wallet, Zap } from "lucide-react";
+import { X, Copy, Check, Loader2, AlertCircle, Wallet, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createPayment, getPaymentStatus, SUPPORTED_CRYPTO, createMockPayment } from "@/lib/nowpayments";
@@ -21,14 +21,14 @@ interface PaymentModalProps {
   onClose: () => void;
   config: {
     agentName: string;
-    purpose: string;
-    features: string[];
+    useCase: string;
+    scope: string;
+    contactMethod: string;
   };
   sessionId: string;
   onSuccess: () => void;
 }
 
-// Single plan: $150 (first month includes setup)
 const PLAN_PRICE = 150;
 
 export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: PaymentModalProps) {
@@ -37,9 +37,8 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
   const [status, setStatus] = useState<"selecting" | "creating" | "waiting" | "confirming" | "confirmed" | "error">("selecting");
   const [payment, setPayment] = useState<PaymentData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState(3600); // 1 hour in seconds
+  const [timeLeft, setTimeLeft] = useState(3600);
 
-  // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setStatus("selecting");
@@ -49,24 +48,19 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     }
   }, [isOpen]);
 
-  // Countdown timer
   useEffect(() => {
     if (status === "waiting" && timeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
+      const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
       return () => clearInterval(timer);
     }
   }, [status, timeLeft]);
 
-  // Poll for payment status
   useEffect(() => {
     if (!payment || status !== "waiting") return;
 
     const interval = setInterval(async () => {
       try {
-        // For demo mode, auto-confirm after 10 seconds
-        if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+        if (process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !process.env.NOWPAYMENTS_API_KEY) {
           if (timeLeft < 3590) {
             setStatus("confirming");
             playPaymentSuccess();
@@ -79,7 +73,6 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
         }
 
         const data = await getPaymentStatus(payment.id);
-        
         if (data.payment_status === "finished" || data.payment_status === "confirmed") {
           setStatus("confirmed");
           playPaymentSuccess();
@@ -87,7 +80,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
           clearInterval(interval);
         } else if (data.payment_status === "failed" || data.payment_status === "expired") {
           setStatus("error");
-          setError("Payment failed or expired. Please try again.");
+          setError("Payment failed or expired.");
           clearInterval(interval);
         }
       } catch (e) {
@@ -103,10 +96,8 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     setError(null);
 
     try {
-      // Check if we're in demo mode or missing API keys
       if (process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !process.env.NOWPAYMENTS_API_KEY) {
-        // Simulate payment creation
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
         const mockPayment = createMockPayment(PLAN_PRICE, selectedCurrency);
         setPayment({
           id: mockPayment.payment_id,
@@ -124,7 +115,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
         price_currency: "usd",
         pay_currency: selectedCurrency,
         order_id: `${sessionId}-${Date.now()}`,
-        order_description: `Deploy ${config.agentName} (MATT Plan)`,
+        order_description: `Deploy ${config.agentName}`,
       });
 
       setPayment({
@@ -155,7 +146,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const selectedCrypto = SUPPORTED_CRYPTO.find(c => c.code === selectedCurrency);
+  const selectedCrypto = SUPPORTED_CRYPTO.find((c) => c.code === selectedCurrency);
 
   return (
     <AnimatePresence>
@@ -178,41 +169,29 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
               <div className="flex items-center gap-3">
                 <Wallet className="w-5 h-5 text-[#0ea5e9]" />
                 <div>
-                  <h3 className="font-semibold">PAYMENT</h3>
+                  <h3 className="font-semibold">Payment</h3>
                   <p className="text-xs text-[var(--muted)] font-mono">{config.agentName}</p>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-[var(--card-hover)] rounded-lg transition-colors"
-              >
+              <button onClick={onClose} className="p-2 hover:bg-[var(--card-hover)] rounded-lg transition-colors">
                 <X className="w-4 h-4 text-[var(--muted)]" />
               </button>
             </div>
 
             <div className="p-4 space-y-4">
-              {/* Amount Display */}
+              {/* Amount */}
               <div className="text-center py-4 bg-gradient-to-b from-[var(--card)] to-transparent rounded-xl border border-[var(--border)]">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <Zap className="w-5 h-5 text-[#0ea5e9]" />
-                  <span className="text-lg font-medium">MATT Plan</span>
-                </div>
                 <span className="text-4xl font-bold text-[#0ea5e9]">${PLAN_PRICE}</span>
-                <div className="text-[var(--muted)] text-xs mt-1">
-                  <span className="line-through opacity-50">$250</span>
-                  <span className="ml-2 text-green-400">SAVE 40%</span>
-                </div>
-                <p className="text-xs text-[var(--muted)] mt-2">First month (includes setup) • Then $150/month</p>
+                <p className="text-xs text-[var(--muted)] mt-1">First month • Unlimited usage</p>
               </div>
 
-              {/* Features */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {["Unlimited agents", "Unlimited requests", "All features", "Priority support"].map((feature) => (
-                  <div key={feature} className="flex items-center gap-1.5 text-[var(--muted)]">
-                    <Check className="w-3 h-3 text-green-400" />
-                    {feature}
-                  </div>
-                ))}
+              {/* Agent Summary */}
+              <div className="bg-[var(--card)] rounded-xl p-3 border border-[var(--border)] text-sm space-y-1">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-[#0ea5e9]" />
+                  <span className="text-[var(--muted)]">Contact:</span>
+                  <span className="capitalize">{config.contactMethod}</span>
+                </div>
               </div>
 
               {/* Currency Selection */}
@@ -235,16 +214,12 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                         <span className="text-lg">{crypto.icon}</span>
                         <div className="text-left">
                           <p className="text-xs font-semibold">{crypto.name}</p>
-                          <p className="text-[10px] text-[var(--muted)]">{crypto.network}</p>
                         </div>
                       </motion.button>
                     ))}
                   </div>
-                  
-                  <Button
-                    onClick={createNewPayment}
-                    className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-12"
-                  >
+
+                  <Button onClick={createNewPayment} className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-12">
                     PROCEED TO PAYMENT
                   </Button>
                 </div>
@@ -254,32 +229,22 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
               {status === "creating" && (
                 <div className="flex flex-col items-center gap-4 py-8">
                   <Loader2 className="w-8 h-8 text-[#0ea5e9] animate-spin" />
-                  <p className="text-sm text-[var(--muted)] font-mono">GENERATING PAYMENT ADDRESS...</p>
+                  <p className="text-sm text-[var(--muted)] font-mono">GENERATING ADDRESS...</p>
                 </div>
               )}
 
-              {/* Waiting for Payment */}
+              {/* Waiting */}
               {status === "waiting" && payment && (
                 <div className="space-y-4">
                   <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                    <p className="text-xs text-amber-400 font-mono text-center">
-                      AWAITING PAYMENT // EXPIRES IN {formatTime(timeLeft)}
-                    </p>
+                    <p className="text-xs text-amber-400 font-mono text-center">AWAITING PAYMENT // {formatTime(timeLeft)}</p>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-xs font-mono text-[var(--muted)]">SEND {selectedCrypto?.name.toUpperCase()} TO:</label>
                     <div className="flex gap-2">
-                      <Input
-                        value={payment.address}
-                        readOnly
-                        className="flex-1 bg-[var(--card)] border-[var(--border)] text-xs font-mono h-12"
-                      />
-                      <Button
-                        onClick={copyAddress}
-                        size="sm"
-                        className="h-12 w-12 p-0 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)]"
-                      >
+                      <Input value={payment.address} readOnly className="flex-1 bg-[var(--card)] border-[var(--border)] text-xs font-mono h-12" />
+                      <Button onClick={copyAddress} size="sm" className="h-12 w-12 p-0 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)]">
                         {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                       </Button>
                     </div>
@@ -288,16 +253,10 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                   <div className="p-3 bg-[var(--card)] rounded-lg border border-[var(--border)]">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-[var(--muted)]">Amount:</span>
-                      <span className="font-mono">{payment.amount} {selectedCrypto?.code.toUpperCase()}</span>
+                      <span className="font-mono">
+                        {payment.amount} {selectedCrypto?.code.toUpperCase()}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[var(--muted)]">Network:</span>
-                      <span className="font-mono">{selectedCrypto?.network}</span>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-[var(--muted)] text-center">
-                    Payment will be detected automatically.
                   </div>
                 </div>
               )}
@@ -306,22 +265,17 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
               {status === "confirming" && (
                 <div className="flex flex-col items-center gap-4 py-8">
                   <Loader2 className="w-8 h-8 text-green-400 animate-spin" />
-                  <p className="text-sm text-green-400 font-mono">CONFIRMING PAYMENT...</p>
+                  <p className="text-sm text-green-400 font-mono">CONFIRMING...</p>
                 </div>
               )}
 
               {/* Confirmed */}
               {status === "confirmed" && (
-                <motion.div
-                  initial={{ scale: 0.9 }}
-                  animate={{ scale: 1 }}
-                  className="flex flex-col items-center gap-4 py-8"
-                >
+                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex flex-col items-center gap-4 py-8">
                   <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
                     <Check className="w-8 h-8 text-green-400" />
                   </div>
-                  <p className="text-lg font-semibold text-green-400">PAYMENT CONFIRMED</p>
-                  <p className="text-xs text-[var(--muted)] font-mono">DEPLOYING YOUR AGENT...</p>
+                  <p className="text-lg font-semibold text-green-400">CONFIRMED</p>
                 </motion.div>
               )}
 
