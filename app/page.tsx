@@ -194,17 +194,57 @@ export default function Home() {
   const handleScopeToggle = async (option: string) => {
     await enableAudio();
     const scopeLabel = option.replace(/^\S+\s/, "");
-    setSelectedScopes((prev) =>
-      prev.includes(scopeLabel) ? prev.filter((s) => s !== scopeLabel) : [...prev, scopeLabel]
-    );
+    const newScopes = selectedScopes.includes(scopeLabel) 
+      ? selectedScopes.filter((s) => s !== scopeLabel) 
+      : [...selectedScopes, scopeLabel];
+    setSelectedScopes(newScopes);
+    
+    // Update or add user message showing current selections
+    setMessages((prev) => {
+      const newMessages = [...prev];
+      // Remove previous selection message if exists
+      const lastIdx = newMessages.length - 1;
+      if (newMessages[lastIdx]?.role === "user" && newMessages[lastIdx]?.id.startsWith("selection-")) {
+        newMessages.pop();
+      }
+      // Add new selection message
+      if (newScopes.length > 0) {
+        newMessages.push({
+          id: `selection-${Date.now()}`,
+          role: "user",
+          content: newScopes.join(", "),
+        });
+      }
+      return newMessages;
+    });
   };
 
   const handleScopeConfirm = async () => {
     if (selectedScopes.length === 0) return;
     await enableAudio();
     playOptionSelected();
-    setConfig((prev) => ({ ...prev, scope: selectedScopes.join(", ") }));
-    addMessage("user", selectedScopes.join(", "));
+    const scopeString = selectedScopes.join(", ");
+    setConfig((prev) => ({ ...prev, scope: scopeString }));
+    // Replace the temporary selection message with final confirm
+    setMessages((prev) => {
+      const newMessages = [...prev];
+      // Remove the last selection message if it exists
+      const lastIdx = newMessages.length - 1;
+      if (newMessages[lastIdx]?.role === "user" && newMessages[lastIdx]?.id.startsWith("selection-")) {
+        newMessages[lastIdx] = {
+          id: `confirm-${Date.now()}`,
+          role: "user",
+          content: scopeString,
+        };
+      } else {
+        newMessages.push({
+          id: `confirm-${Date.now()}`,
+          role: "user",
+          content: scopeString,
+        });
+      }
+      return newMessages;
+    });
     setSelectedScopes([]);
     setStep("contact");
     await simulateTyping(
