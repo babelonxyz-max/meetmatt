@@ -9,7 +9,6 @@ import { ThemeToggle } from "./ThemeToggle";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "#pricing", label: "Pricing" },
 ];
 
 export function Navbar() {

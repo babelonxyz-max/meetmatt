@@ -12,7 +12,7 @@ interface AIOrbProps {
 
 type ReactionType = "giggle" | "spin" | "bounce" | "wink" | "pulse" | null;
 
-// Enhanced AI Orb with click reactions, eye tracking, and speech bubbles
+// Enhanced AI Orb with original animations + click reactions + white eyeballs (no pupils)
 export const AIOrb = memo(function AIOrb({ 
   isListening = false, 
   isThinking = false,
@@ -155,19 +155,20 @@ export const AIOrb = memo(function AIOrb({
 
   return (
     <div className="relative">
-      {/* Speech Bubble */}
+      {/* Speech Bubble - Fully blended, no stroke */}
       <AnimatePresence>
         {showBubble && (
           <motion.div
             initial={{ opacity: 0, scale: 0.5, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.5, y: -10 }}
-            className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap"
+            className="absolute -top-20 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap"
           >
-            <div className="bg-[var(--card)]/60 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg">
+            <div className="bg-[var(--background)]/80 backdrop-blur-md px-4 py-2 rounded-xl shadow-xl">
               <p className="text-sm font-medium text-[var(--foreground)]">{bubbleText}</p>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[var(--card)]/60 rotate-45" />
             </div>
+            {/* Triangle pointer */}
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-[var(--background)]/80" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -182,7 +183,7 @@ export const AIOrb = memo(function AIOrb({
         }}
         className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 cursor-pointer"
         animate={reaction ? reactionVariants[reaction] : {}}
-        whileHover={{ scale: 1.08 }}
+        whileHover={{ scale: 1.05 }}
         onHoverStart={handleHoverStart}
         onHoverEnd={() => setIsHovered(false)}
         onClick={handleClick}
@@ -320,6 +321,22 @@ export const AIOrb = memo(function AIOrb({
             }}
           />
 
+          {/* White Eyeballs (no pupils) */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="relative w-14 h-8">
+              {/* Left Eye */}
+              <motion.div 
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/80"
+                animate={reaction === "wink" ? { scaleY: [1, 0.1, 1] } : {}}
+                transition={{ duration: 0.3 }}
+              />
+              
+              {/* Right Eye */}
+              <motion.div 
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/80"
+              />
+            </div>
+          </div>
 
           {/* Specular highlights */}
           <div 
@@ -395,16 +412,6 @@ export const AIOrb = memo(function AIOrb({
 
         {/* Shockwave effect when thinking */}
         {state === "thinking" && <Shockwaves />}
-
-        {/* Hover ripple effect */}
-        {isHovered && (
-          <motion.div
-            className="absolute inset-0 rounded-full border-2 border-[#0ea5e9]/30 pointer-events-none"
-            initial={{ scale: 0.8, opacity: 0.5 }}
-            animate={{ scale: [0.8, 1.2, 1.2], opacity: [0.5, 0, 0] }}
-            transition={{ duration: 1, repeat: Infinity }}
-          />
-        )}
 
         {/* Status glow */}
         <motion.div
