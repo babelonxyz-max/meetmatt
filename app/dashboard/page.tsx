@@ -1,238 +1,221 @@
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Plus, Search, Activity, Sparkles, ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getSessionId } from "@/lib/session";
-import { DashboardSkeleton } from "@/app/components/Skeleton";
+import { Card, CardBody, CardHeader } from "@/app/components/Card";
+import { Button } from "@/app/components/Button";
+import { Badge } from "@/app/components/Badge";
 
-interface Agent {
-  id: string;
-  name: string;
-  status: string;
-  tier: string;
-  createdAt: string;
-  devinUrl?: string;
-}
-
-export default function Dashboard() {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchAgents = useCallback(async () => {
-    const sessionId = getSessionId();
-    if (!sessionId) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/agents?sessionId=${sessionId}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`);
-      }
-      const data = await response.json();
-      setAgents(data.agents || []);
-      setError(null);
-    } catch (e) {
-      console.error("Failed to fetch agents:", e);
-      setError("Failed to load agents. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Poll for status updates every 5 seconds
-  useEffect(() => {
-    fetchAgents();
-    
-    const interval = setInterval(() => {
-      // Only poll if there are agents with pending/deploying status
-      const hasPendingAgents = agents.some(
-        a => a.status === "pending" || a.status === "deploying"
-      );
-      if (hasPendingAgents) {
-        fetchAgents();
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [fetchAgents, agents]);
-
-  const filteredAgents = agents.filter((agent) =>
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-500/10 text-green-400 border-green-500/20";
-      case "deploying":
-        return "bg-[#0ea5e9]/10 text-[#0ea5e9] border-[#0ea5e9]/20";
-      case "pending":
-        return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-      case "error":
-        return "bg-red-500/10 text-red-400 border-red-500/20";
-      default:
-        return "bg-zinc-500/10 text-zinc-400 border-zinc-500/20";
-    }
-  };
-
-  if (loading) {
-    return <DashboardSkeleton />;
+export default async function DashboardPage() {
+  const session = await auth();
+  
+  if (!session?.user?.id) {
+    redirect("/auth/signin");
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: {
+      subscriptions: {
+        include: { plan: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+      agents: {
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      },
+      _count: {
+        select: { agents: true },
+      },
+    },
+  });
+
+  if (!user) {
+    redirect("/auth/signin");
+  }
+
+  const activeSubscription = user.subscriptions[0];
+  const isSubscribed = activeSubscription?.status === "active";
+
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white">
-      {/* Navigation */}
-      <nav className="border-b border-white/5 bg-[#0a0a0b]/80 backdrop-blur-md fixed top-0 left-0 right-0 z-50">
-        <div className="h-14 px-4 flex items-center justify-between max-w-6xl mx-auto">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <ArrowLeft className="w-4 h-4 text-zinc-500" />
-            <Sparkles className="w-5 h-5 text-[#0ea5e9]" />
-            <span className="font-semibold">Meet Matt</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link 
-              href="/" 
-              className="text-sm text-zinc-400 hover:text-white transition-colors"
-            >
-              Create new agent
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-slate-400 mt-1">
+          Welcome back, {user.name || user.email}
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          title="Active Agents"
+          value={user._count.agents}
+          href="/dashboard/agents"
+        />
+        <StatCard
+          title="Subscription"
+          value={isSubscribed ? activeSubscription.plan.name : "Free"}
+          badge={isSubscribed ? <Badge variant="success">Active</Badge> : null}
+          href="/dashboard/billing"
+        />
+        <StatCard
+          title="Affiliate Earnings"
+          value={`$${user.affiliateEarnings.toFixed(2)}`}
+          href="/dashboard/affiliate"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Recent Agents */}
+        <Card>
+          <CardHeader className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold">Recent Agents</h2>
+            <Link href="/dashboard/agents">
+              <Button variant="ghost" size="sm">View All</Button>
             </Link>
-          </div>
-        </div>
-      </nav>
-
-      <main className="pt-20 pb-12 px-4 max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold">Your Agents</h1>
-            <p className="text-sm text-zinc-500 mt-1">
-              {agents.length === 0 
-                ? "No agents yet. Create your first one." 
-                : `You have ${agents.length} agent${agents.length !== 1 ? 's' : ''} deployed.`}
-            </p>
-          </div>
-          <Link href="/">
-            <Button className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              New Agent
-            </Button>
-          </Link>
-        </div>
-
-        {/* Error message */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm"
-          >
-            {error}
-            <button 
-              onClick={() => { setLoading(true); fetchAgents(); }}
-              className="ml-2 underline hover:no-underline"
-            >
-              Retry
-            </button>
-          </motion.div>
-        )}
-
-        {/* Search */}
-        {agents.length > 0 && (
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search agents..."
-              className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-zinc-600 focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9]"
-            />
-          </div>
-        )}
-
-        {/* Agents Grid */}
-        {filteredAgents.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-20"
-          >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/5 flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-zinc-600" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">
-              {searchQuery ? "No agents found" : "No agents yet"}
-            </h3>
-            <p className="text-sm text-zinc-500 mb-6 max-w-md mx-auto">
-              {searchQuery 
-                ? "No agents match your search. Try different keywords." 
-                : "Create your first AI assistant to get started. It only takes a few minutes."}
-            </p>
-            <Link href="/">
-              <Button className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Agent
-              </Button>
-            </Link>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredAgents.map((agent, index) => (
-              <motion.div
-                key={agent.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.02, y: -2 }}
-                className="group p-4 bg-white/5 border border-white/5 rounded-xl hover:border-white/10 hover:bg-white/[0.07] transition-all"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0ea5e9] to-[#6366f1] flex items-center justify-center shadow-lg shadow-[#0ea5e9]/20">
-                    <span className="text-lg font-bold text-white">
-                      {agent.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className={`px-2 py-1 rounded-full text-[10px] font-medium border ${getStatusColor(agent.status)}`}>
-                    {agent.status === "deploying" && (
-                      <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />
-                    )}
-                    {agent.status}
-                  </div>
-                </div>
-                
-                <h3 className="font-medium text-white mb-1 truncate">{agent.name}</h3>
-                <p className="text-xs text-zinc-500 mb-4 capitalize">{agent.tier} tier</p>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-zinc-400">
-                    <Activity className="w-3 h-3" />
-                    <span>{new Date(agent.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  
-                  {agent.devinUrl && agent.status === "active" && (
-                    <a
-                      href={agent.devinUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs text-[#0ea5e9] hover:text-[#0284c7] transition-colors"
+          </CardHeader>
+          <CardBody>
+            {user.agents.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-400">No agents yet</p>
+                <Link href="/deploy">
+                  <Button className="mt-4">Deploy Your First Agent</Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {user.agents.map((agent) => (
+                  <div
+                    key={agent.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50"
+                  >
+                    <div>
+                      <p className="font-medium">{agent.name}</p>
+                      <p className="text-sm text-slate-400">{agent.type}</p>
+                    </div>
+                    <Badge
+                      variant={
+                        agent.status === "running"
+                          ? "success"
+                          : agent.status === "deploying"
+                          ? "warning"
+                          : "error"
+                      }
                     >
-                      <ExternalLink className="w-3 h-3" />
-                      Open
-                    </a>
-                  )}
+                      {agent.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+
+        {/* Subscription */}
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Subscription</h2>
+          </CardHeader>
+          <CardBody className="space-y-4">
+            {isSubscribed ? (
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Plan</span>
+                  <span className="font-medium">
+                    {activeSubscription.plan.name}
+                  </span>
                 </div>
-              </motion.div>
-            ))}
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Billing</span>
+                  <span className="font-medium capitalize">
+                    {activeSubscription.interval}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Renews on</span>
+                  <span className="font-medium">
+                    {new Date(
+                      activeSubscription.currentPeriodEnd
+                    ).toLocaleDateString()}
+                  </span>
+                </div>
+                <form action="/api/stripe/portal" method="POST">
+                  <Button type="submit" variant="outline" fullWidth>
+                    Manage Subscription
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-slate-400 mb-4">
+                  You don&apos;t have an active subscription
+                </p>
+                <Link href="/pricing">
+                  <Button>View Plans</Button>
+                </Link>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Affiliate Program */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-lg font-semibold">Affiliate Program</h2>
+        </CardHeader>
+        <CardBody>
+          <p className="text-slate-400 mb-4">
+            Share your referral link and earn 20% commission on every payment
+            made by users you refer.
+          </p>
+          <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg">
+            <code className="flex-1 text-sm text-cyan-400">
+              {process.env.NEXT_PUBLIC_APP_URL}/?ref={user.affiliateCode}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `${process.env.NEXT_PUBLIC_APP_URL}/?ref=${user.affiliateCode}`
+                );
+              }}
+            >
+              Copy
+            </Button>
           </div>
-        )}
-      </main>
+        </CardBody>
+      </Card>
     </div>
+  );
+}
+
+function StatCard({
+  title,
+  value,
+  href,
+  badge,
+}: {
+  title: string;
+  value: string | number;
+  href: string;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <Link href={href}>
+      <Card className="hover:border-cyan-500/30 transition-colors cursor-pointer h-full">
+        <CardBody>
+          <p className="text-slate-400 text-sm">{title}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <p className="text-2xl font-bold">{value}</p>
+            {badge}
+          </div>
+        </CardBody>
+      </Card>
+    </Link>
   );
 }

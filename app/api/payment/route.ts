@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/app/api/auth/[...nextauth]/route";
 
 const PRICES = {
-  starter: 29,
-  pro: 99,
-  enterprise: 299,
+  starter: 4900,
+  pro: 9900,
+  enterprise: 29900,
 };
 
 const SUPPORTED_CURRENCIES: Record<string, { name: string; chain: string }> = {
@@ -45,42 +46,43 @@ function getPaymentAddress(currency: string): { address: string; isDemo: boolean
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { sessionId, tier, currency } = body;
+    const session = await auth();
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
-    if (!sessionId || !tier || !currency) {
+    const body = await req.json();
+    const { planId, currency, cryptoCurrency } = body;
+
+    if (!planId || !currency) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    if (!PRICES[tier as keyof typeof PRICES]) {
+    const amount = PRICES[planId as keyof typeof PRICES];
+    if (!amount) {
       return NextResponse.json(
-        { error: "Invalid tier" },
+        { error: "Invalid plan" },
         { status: 400 }
       );
     }
 
-    if (!SUPPORTED_CURRENCIES[currency]) {
-      return NextResponse.json(
-        { error: "Invalid currency" },
-        { status: 400 }
-      );
-    }
-
-    const { address, isDemo } = getPaymentAddress(currency);
-    const amount = PRICES[tier as keyof typeof PRICES];
+    const { address, isDemo } = cryptoCurrency ? getPaymentAddress(cryptoCurrency) : { address: "", isDemo: true };
 
     const payment = await prisma.payment.create({
       data: {
-        sessionId,
-        tier,
-        currency,
+        userId: session.user.id,
         amount,
-        address,
-        status: isDemo ? "confirmed" : "pending",
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+        currency,
+        status: isDemo ? "completed" : "pending",
+        paymentMethod: cryptoCurrency ? "crypto" : "stripe",
+        cryptoCurrency: cryptoCurrency || null,
       },
     });
 
@@ -88,8 +90,8 @@ export async function POST(req: NextRequest) {
       id: payment.id,
       address,
       currency,
-      amount,
-      status: isDemo ? "confirmed" : "pending",
+      amount: amount / 100, // Convert cents to dollars
+      status: isDemo ? "completed" : "pending",
       isDemo,
     });
   } catch (error: any) {
@@ -102,42 +104,46 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-
-  if (id) {
-    try {
-      const payment = await prisma.payment.findUnique({
-        where: { id },
-      });
-
-      if (!payment) {
-        return NextResponse.json(
-          { error: "Payment not found" },
-          { status: 404 }
-        );
-      }
-
-      return NextResponse.json({
-        id: payment.id,
-        status: payment.status,
-        amount: payment.amount,
-        currency: payment.currency,
-      });
-    } catch (error: any) {
+  try {
+    const session = await auth();
+    
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
-  }
 
-  // Return payment config
-  const hasRealAddresses = process.env.EVM_PAYMENT_ADDRESS || process.env.SOL_PAYMENT_ADDRESS;
-  
-  return NextResponse.json({
-    prices: PRICES,
-    currencies: SUPPORTED_CURRENCIES,
-    demo: !hasRealAddresses,
-  });
+    const { searchParams } = new URL(req.url);
+    const paymentId = searchParams.get("id");
+
+    if (!paymentId) {
+      return NextResponse.json(
+        { error: "Payment ID required" },
+        { status: 400 }
+      );
+    }
+
+    const payment = await prisma.payment.findFirst({
+      where: {
+        id: paymentId,
+        userId: session.user.id,
+      },
+    });
+
+    if (!payment) {
+      return NextResponse.json(
+        { error: "Payment not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ payment });
+  } catch (error: any) {
+    console.error("Payment fetch error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to fetch payment" },
+      { status: 500 }
+    );
+  }
 }

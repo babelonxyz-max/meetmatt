@@ -4,58 +4,325 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Agent {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
+// User model with authentication
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  agents        Agent[]
+  subscriptions Subscription[]
+  payments      Payment[]
+  referrals     Referral[] @relation("Referrer")
+  referredBy    Referral[] @relation("Referred")
+  coupons       Coupon[]
+  
+  // Affiliate system
+  affiliateCode String?   @unique
+  affiliateEarnings Float @default(0)
+  affiliatePaid   Float   @default(0)
+  
+  // Stripe customer
+  stripeCustomerId String? @unique
+  
+  @@map("users")
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Subscription plans
+model Plan {
+  id          String   @id @default(cuid())
+  name        String
   description String?
-  purpose   String
-  features  String[] // Array of feature strings
-  tier      String   // scout, ranger, commander, overlord
   
-  // Customer info
-  customerName  String? @map("customer_name")
-  customerEmail String? @map("customer_email")
+  // Pricing
+  priceMonthly  Int
+  priceYearly   Int
   
-  // Devin integration fields
-  devinSessionId   String? @map("devin_session_id")
-  devinUrl         String? @map("devin_url")
-  status           String  @default("pending") // pending, deploying, live, error, stopped
-  deployedAt       DateTime? @map("deployed_at")
+  // Features
+  features    String[]
+  maxAgents   Int
   
-  // Payment reference
-  paymentSessionId String? @map("payment_session_id")
+  // Stripe product/price IDs
+  stripeProductId       String?
+  stripePriceIdMonthly  String?
+  stripePriceIdYearly   String?
   
-  // Legacy field (kept for compatibility)
-  sessionId String? @map("session_id")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  // Relations
+  subscriptions Subscription[]
   
-  @@index([status])
-  @@index([devinSessionId])
-  @@index([paymentSessionId])
-  @@index([slug])
+  @@map("plans")
+}
+
+// User subscriptions
+model Subscription {
+  id     String @id @default(cuid())
+  userId String
+  planId String
+  
+  // Subscription details
+  status        SubscriptionStatus @default(incomplete)
+  interval      SubscriptionInterval @default(monthly)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  
+  // Stripe IDs
+  stripeSubscriptionId String? @unique
+  stripePriceId        String?
+  
+  // Cancellation
+  cancelAtPeriodEnd Boolean @default(false)
+  canceledAt        DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+  payments Payment[]
+  
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  incomplete
+  incomplete_expired
+  trialing
+  active
+  past_due
+  canceled
+  unpaid
+  paused
+}
+
+enum SubscriptionInterval {
+  monthly
+  yearly
+}
+
+// Payments
+model Payment {
+  id          String        @id @default(cuid())
+  userId      String
+  subscriptionId String?
+  
+  // Payment details
+  amount      Int
+  currency    String        @default("usd")
+  status      PaymentStatus @default(pending)
+  
+  // Payment method
+  paymentMethod PaymentMethod @default(stripe)
+  cryptoCurrency String?
+  
+  // Stripe payment intent
+  stripePaymentIntentId String? @unique
+  
+  // Referral tracking
+  referralCode String?
+  discountAmount Int @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+  
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  pending
+  processing
+  completed
+  failed
+  refunded
+}
+
+enum PaymentMethod {
+  stripe
+  crypto
+}
+
+// Referral system
+model Referral {
+  id           String @id @default(cuid())
+  referrerId   String
+  referredId   String?
+  
+  // Referral code used
+  code         String
+  
+  // Status
+  status       ReferralStatus @default(pending)
+  
+  // Commission
+  commissionPercent Float @default(20)
+  commissionEarned  Float @default(0)
+  
+  // Payments
+  paymentCount Int @default(0)
+  totalRevenue Float @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  referrer User @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred User? @relation("Referred", fields: [referredId], references: [id], onDelete: SetNull)
+  
+  @@unique([referrerId, referredId])
+  @@map("referrals")
+}
+
+enum ReferralStatus {
+  pending
+  active
+  expired
+}
+
+// Discount coupons
+model Coupon {
+  id          String @id @default(cuid())
+  code        String @unique
+  
+  // Discount type
+  type        CouponType @default(percentage)
+  value       Int
+  
+  // Limits
+  maxUses     Int?
+  usedCount   Int @default(0)
+  maxUsesPerUser Int @default(1)
+  
+  // Validity
+  validFrom   DateTime @default(now())
+  validUntil  DateTime?
+  
+  // Applicability
+  applicablePlans String[]
+  newCustomersOnly Boolean @default(false)
+  
+  // Referral tracking
+  referrerId  String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  referrer User? @relation(fields: [referrerId], references: [id])
+  
+  @@map("coupons")
+}
+
+enum CouponType {
+  percentage
+  fixed_amount
+}
+
+// AI Agents
+model Agent {
+  id          String @id @default(cuid())
+  userId      String
+  
+  name        String
+  slug        String @unique
+  purpose     String
+  features    String[]
+  type        String
+  
+  status      AgentStatus @default(deploying)
+  
+  // Devin integration
+  devinSessionId String?
+  devinUrl       String?
+  devinStatus    String?
+  
+  // Deployment
+  deployedAt  DateTime?
+  lastActiveAt DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   @@map("agents")
 }
 
-model Payment {
-  id          String    @id @default(cuid())
-  sessionId   String    @map("session_id")
-  tier        String
-  currency    String
-  amount      Float
-  address     String
-  status      String    @default("pending") // pending, confirming, confirmed, expired
-  txHash      String?   @map("tx_hash")
-  confirmedAt DateTime? @map("confirmed_at")
-  expiresAt   DateTime  @map("expires_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
+enum AgentStatus {
+  deploying
+  running
+  stopped
+  error
+}
+
+// Devin deployment logs
+model DeploymentLog {
+  id        String   @id @default(cuid())
+  agentId   String
   
-  @@index([sessionId])
-  @@index([address])
-  @@index([status])
-  @@map("payments")
+  status    String
+  message   String
+  details   String?  @db.Text
+  
+  createdAt DateTime @default(now())
+  
+  @@map("deployment_logs")
 }
