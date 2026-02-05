@@ -28,10 +28,6 @@ export const AIOrb = memo(function AIOrb({
   const [clickCount, setClickCount] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   
-  // Eye tracking
-  const eyeX = useTransform(mouseX, [-150, 150], [-8, 8]);
-  const eyeY = useTransform(mouseY, [-150, 150], [-6, 6]);
-  
   // Smooth mouse following for 3D effect
   const rotateX = useTransform(mouseY, [-300, 300], [15, -15]);
   const rotateY = useTransform(mouseX, [-300, 300], [-15, 15]);
@@ -168,9 +164,9 @@ export const AIOrb = memo(function AIOrb({
             exit={{ opacity: 0, scale: 0.5, y: -10 }}
             className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap"
           >
-            <div className="bg-[var(--card)]/90 backdrop-blur-md border border-[var(--border)]/50 px-4 py-2 rounded-xl shadow-lg">
+            <div className="bg-[var(--card)]/60 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg">
               <p className="text-sm font-medium text-[var(--foreground)]">{bubbleText}</p>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[var(--card)]/90 border-r border-b border-[var(--border)]/50 rotate-45" />
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[var(--card)]/60 rotate-45" />
             </div>
           </motion.div>
         )}
@@ -324,35 +320,6 @@ export const AIOrb = memo(function AIOrb({
             }}
           />
 
-          {/* Eye/Face - NEW */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <motion.div 
-              className="relative w-16 h-10"
-              style={{ x: eyeX, y: eyeY }}
-            >
-              {/* Left Eye */}
-              <motion.div 
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/90"
-                animate={reaction === "wink" ? { scaleY: [1, 0.1, 1] } : {}}
-                transition={{ duration: 0.3 }}
-              >
-                <motion.div 
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-900"
-                  style={{ x: useTransform(eyeX, v => v * 0.3), y: useTransform(eyeY, v => v * 0.3) }}
-                />
-              </motion.div>
-              
-              {/* Right Eye */}
-              <motion.div 
-                className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/90"
-              >
-                <motion.div 
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-slate-900"
-                  style={{ x: useTransform(eyeX, v => v * 0.3), y: useTransform(eyeY, v => v * 0.3) }}
-                />
-              </motion.div>
-            </motion.div>
-          </div>
 
           {/* Specular highlights */}
           <div 

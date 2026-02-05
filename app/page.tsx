@@ -291,7 +291,7 @@ export default function Home() {
   }
 
   return (
-    <main className="fixed inset-0 w-screen h-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col lg:flex-row">
+    <main className="fixed top-14 bottom-0 left-0 right-0 w-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col lg:flex-row">
       {/* Left Side - AI Orb Visual - Blended */}
       <div className="lg:w-[42%] h-[35%] lg:h-full flex flex-col items-center justify-center relative">
         {/* Subtle vignette effect */}
