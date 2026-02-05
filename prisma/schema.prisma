@@ -3,37 +3,45 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model Agent {
   id        String   @id @default(cuid())
-  sessionId String
+  sessionId String   @map("session_id")
   name      String
   purpose   String
   features  String   // JSON array of features
   tier      String   // starter, pro, enterprise
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  
+  // Devin integration fields
+  devinSessionId String? @map("devin_session_id")
+  devinUrl       String? @map("devin_url")
+  status         String  @default("pending") // pending, deploying, active, error
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
   @@index([sessionId])
+  @@index([status])
+  @@map("agents")
 }
 
 model Payment {
   id          String    @id @default(cuid())
-  sessionId   String
+  sessionId   String    @map("session_id")
   tier        String
   currency    String
   amount      Float
   address     String
-  status      String    @default("pending")
-  txHash      String?
-  confirmedAt DateTime?
-  expiresAt   DateTime
-  createdAt   DateTime  @default(now())
-
+  status      String    @default("pending") // pending, confirming, confirmed, expired
+  txHash      String?   @map("tx_hash")
+  confirmedAt DateTime? @map("confirmed_at")
+  expiresAt   DateTime  @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
   @@index([sessionId])
   @@index([address])
   @@index([status])
+  @@map("payments")
 }
