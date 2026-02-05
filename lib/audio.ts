@@ -175,6 +175,14 @@ export function playOrbPulse() {
   } catch (e) {}
 }
 
+// Orb hover - subtle feedback
+export function playOrbHover() {
+  if (!synth || !isInitialized) return;
+  try {
+    synth.triggerAttackRelease("E5", "64n", undefined, 0.05);
+  } catch (e) {}
+}
+
 // Payment success - cash register / coin sound
 export function playPaymentSuccess() {
   if (!successSynth || !isInitialized) return;
