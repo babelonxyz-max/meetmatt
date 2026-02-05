@@ -6,7 +6,7 @@ import { Sparkles, Send, Check, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaymentModal } from "./components/PaymentModal";
-import { AIOrb } from "./components/AIOrb";
+import { AIOrb, type AIOrbProps } from "./components/AIOrb";
 import { JarvisInterface } from "./components/JarvisInterface";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig } from "@/lib/session";
@@ -27,7 +27,7 @@ interface Message {
   options?: string[];
 }
 
-type Step = "intro" | "name" | "purpose" | "features" | "tier" | "confirm";
+type Step = "intro" | "name" | "purpose" | "features" | "tier" | "confirm" | "deploying" | "success";
 
 interface SetupConfig {
   agentName: string;
@@ -84,6 +84,16 @@ export default function Home() {
   const [showPayment, setShowPayment] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
+
+  // Map step to wizard state for orb reactions
+  const getWizardState = (): AIOrbProps["wizardState"] => {
+    if (step === "intro") return "idle";
+    if (step === "name") return "initializing";
+    if (step === "purpose" || step === "features" || step === "tier") return "processing";
+    if (step === "deploying") return "deploying";
+    if (step === "success") return "success";
+    return "idle";
+  };
 
   const enableAudio = useCallback(async () => {
     if (!audioEnabled) {
@@ -145,11 +155,12 @@ export default function Home() {
 
   const startDeployment = async () => {
     await enableAudio();
-    setStep("name");
     playOptionSelected();
+    setStep("name");
+    // Small delay to allow orb animation to trigger
     setTimeout(() => {
       simulateTyping("What shall we name your AI agent?");
-    }, 200);
+    }, 600);
   };
 
   const handleNameSubmit = async () => {
@@ -226,6 +237,7 @@ export default function Home() {
     playSuccess();
     setShowPayment(false);
     setIsDeploying(true);
+    setStep("deploying");
     addMessage("assistant", "Initializing deployment sequence...", []);
 
     try {
@@ -241,9 +253,11 @@ export default function Home() {
 
       clearPendingConfig();
       setIsDeploying(false);
+      setStep("success");
       addMessage("assistant", `Deployment successful. ${config.agentName} is now active and ready for operation.`, []);
     } catch (error: any) {
       setIsDeploying(false);
+      setStep("confirm");
       addMessage("assistant", `Deployment error: ${error.message}. Retry?`, ["Retry deployment"]);
     }
   };
@@ -303,7 +317,12 @@ export default function Home() {
           transition={{ duration: 1 }}
           className="relative z-10"
         >
-          <AIOrb isListening={isTyping} isThinking={isDeploying} intensity={isDeploying ? "high" : "medium"} />
+          <AIOrb 
+            isListening={isTyping} 
+            isThinking={isDeploying} 
+            intensity={isDeploying ? "high" : "medium"}
+            wizardState={getWizardState()}
+          />
         </motion.div>
 
         <motion.div 
