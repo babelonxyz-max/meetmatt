@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Agent {
+  id        String   @id @default(cuid())
+  sessionId String
+  name      String
+  purpose   String
+  features  String   // JSON array of features
+  tier      String   // starter, pro, enterprise
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  sessionId   String
+  tier        String
+  currency    String
+  amount      Float
+  address     String
+  status      String    @default("pending")
+  txHash      String?
+  confirmedAt DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([sessionId])
+  @@index([address])
+  @@index([status])
+}
