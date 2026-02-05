@@ -86,8 +86,8 @@ export function JarvisInterface({
         </div>
       </div>
 
-      {/* Messages Area - Holographic Style */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
+      {/* Messages Area - Holographic Style - No scroll */}
+      <div className="flex-1 overflow-hidden p-4 space-y-4 relative">
         {/* Grid overlay effect */}
         <div 
           className="absolute inset-0 pointer-events-none opacity-5"
