@@ -74,21 +74,27 @@ meetmatt/
 
 **Documentation:** [docs/AI_ORB_V2.md](docs/AI_ORB_V2.md)
 
-### 2. Deployment Wizard
-- Chat-based interface
-- 5-step flow: Name → Purpose → Features → Tier → Confirm
+### 2. Deployment Wizard V3
+- Chat-based interface with smooth animations
+- 5-step flow: Name → Use Case → Scope → Contact → Confirm
+- Real-life oriented options (AI Assistant, Coworker, Digital Employee)
+- Multi-select scope capabilities
+- Contact method selection (Telegram active, WhatsApp/Slack coming)
 - Real-time AI orb reactions
 - Persistent session
 
+**Documentation:** [docs/CHAT_FLOW_V3.md](docs/CHAT_FLOW_V3.md)
+
 ### 3. Pricing
-- **$5/day** model ($150 setup + $50/mo care plan)
+- **$150/month** unlimited plan (first month includes setup)
+- No tier confusion - single plan only
 - Agency comparison table
 - ROI calculator
-- Use cases with time saved metrics
 
 ### 4. Payments
 - Crypto payments via NOWPayments
 - USDT/USDC support
+- Clean payment modal (no oversized plan cards)
 - Payment status polling
 - Webhook integration
 
