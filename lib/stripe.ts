@@ -1,9 +1,21 @@
 import Stripe from "stripe";
 import { prisma } from "./prisma";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover" as any,
-});
+// Lazy initialization of Stripe client
+let stripeInstance: Stripe | null = null;
+
+function getStripe() {
+  if (!stripeInstance) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) {
+      throw new Error("STRIPE_SECRET_KEY is not set");
+    }
+    stripeInstance = new Stripe(key, {
+      apiVersion: "2024-12-18.acacia" as any,
+    });
+  }
+  return stripeInstance;
+}
 
 // Create or get Stripe customer
 export async function getOrCreateCustomer(userId: string, email: string) {
@@ -16,7 +28,7 @@ export async function getOrCreateCustomer(userId: string, email: string) {
       return user.stripeCustomerId;
     }
 
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       email,
       metadata: {
         userId,
@@ -98,7 +110,7 @@ export async function createCheckoutSession({
       },
     };
 
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    const session = await getStripe().checkout.sessions.create(sessionConfig);
 
     // Create pending subscription record
     await prisma.subscription.create({
@@ -123,7 +135,7 @@ export async function createCheckoutSession({
 // Create customer portal session
 export async function createPortalSession(customerId: string, returnUrl: string) {
   try {
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
     });
@@ -182,7 +194,7 @@ async function handleCheckoutCompleted(session: any) {
 
   if (!userId || !planId) return;
 
-  const subscription = await stripe.subscriptions.retrieve(
+  const subscription = await getStripe().subscriptions.retrieve(
     session.subscription as string
   );
 
