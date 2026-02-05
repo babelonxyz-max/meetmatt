@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Activity, Sparkles, ArrowLeft, ExternalLink, Trash2, MoreVertical } from "lucide-react";
+import { Plus, Search, Activity, Sparkles, ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { getSessionId } from "@/lib/session";
-import { DashboardSkeleton, Skeleton } from "@/app/components/Skeleton";
+import { DashboardSkeleton } from "@/app/components/Skeleton";
 
 interface Agent {
   id: string;
@@ -15,6 +15,7 @@ interface Agent {
   status: string;
   tier: string;
   createdAt: string;
+  devinUrl?: string;
 }
 
 export default function Dashboard() {
@@ -46,13 +47,41 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Poll for status updates every 5 seconds
   useEffect(() => {
     fetchAgents();
-  }, [fetchAgents]);
+    
+    const interval = setInterval(() => {
+      // Only poll if there are agents with pending/deploying status
+      const hasPendingAgents = agents.some(
+        a => a.status === "pending" || a.status === "deploying"
+      );
+      if (hasPendingAgents) {
+        fetchAgents();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [fetchAgents, agents]);
 
   const filteredAgents = agents.filter((agent) =>
     agent.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-500/10 text-green-400 border-green-500/20";
+      case "deploying":
+        return "bg-[#0ea5e9]/10 text-[#0ea5e9] border-[#0ea5e9]/20";
+      case "pending":
+        return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+      case "error":
+        return "bg-red-500/10 text-red-400 border-red-500/20";
+      default:
+        return "bg-zinc-500/10 text-zinc-400 border-zinc-500/20";
+    }
+  };
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -162,7 +191,7 @@ export default function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ scale: 1.02, y: -2 }}
-                className="group p-4 bg-white/5 border border-white/5 rounded-xl hover:border-white/10 hover:bg-white/[0.07] transition-all cursor-pointer"
+                className="group p-4 bg-white/5 border border-white/5 rounded-xl hover:border-white/10 hover:bg-white/[0.07] transition-all"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0ea5e9] to-[#6366f1] flex items-center justify-center shadow-lg shadow-[#0ea5e9]/20">
@@ -170,11 +199,10 @@ export default function Dashboard() {
                       {agent.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
-                  <div className={`px-2 py-1 rounded-full text-[10px] font-medium ${
-                    agent.status === "active" 
-                      ? "bg-green-500/10 text-green-400 border border-green-500/20" 
-                      : "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
-                  }`}>
+                  <div className={`px-2 py-1 rounded-full text-[10px] font-medium border ${getStatusColor(agent.status)}`}>
+                    {agent.status === "deploying" && (
+                      <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />
+                    )}
                     {agent.status}
                   </div>
                 </div>
@@ -187,14 +215,18 @@ export default function Dashboard() {
                     <Activity className="w-3 h-3" />
                     <span>{new Date(agent.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-                      <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-                    </button>
-                    <button className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-                      <MoreVertical className="w-3.5 h-3.5 text-zinc-400" />
-                    </button>
-                  </div>
+                  
+                  {agent.devinUrl && agent.status === "active" && (
+                    <a
+                      href={agent.devinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs text-[#0ea5e9] hover:text-[#0284c7] transition-colors"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Open
+                    </a>
+                  )}
                 </div>
               </motion.div>
             ))}
