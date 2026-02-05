@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, Check, Loader2, AlertCircle, Wallet } from "lucide-react";
+import { X, Copy, Check, Loader2, AlertCircle, Wallet, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createPayment, getPaymentStatus, SUPPORTED_CRYPTO, createMockPayment } from "@/lib/nowpayments";
@@ -23,17 +23,13 @@ interface PaymentModalProps {
     agentName: string;
     purpose: string;
     features: string[];
-    tier: "starter" | "pro" | "enterprise";
   };
   sessionId: string;
   onSuccess: () => void;
 }
 
-const PRICES = {
-  starter: 29,
-  pro: 99,
-  enterprise: 299,
-};
+// Single plan: $150 (first month includes setup)
+const PLAN_PRICE = 150;
 
 export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: PaymentModalProps) {
   const [selectedCurrency, setSelectedCurrency] = useState("usdt");
@@ -107,13 +103,11 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     setError(null);
 
     try {
-      const amount = PRICES[config.tier];
-      
       // Check if we're in demo mode or missing API keys
       if (process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !process.env.NOWPAYMENTS_API_KEY) {
         // Simulate payment creation
         await new Promise(resolve => setTimeout(resolve, 1500));
-        const mockPayment = createMockPayment(amount, selectedCurrency);
+        const mockPayment = createMockPayment(PLAN_PRICE, selectedCurrency);
         setPayment({
           id: mockPayment.payment_id,
           address: mockPayment.pay_address,
@@ -126,11 +120,11 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
       }
 
       const response = await createPayment({
-        price_amount: amount,
+        price_amount: PLAN_PRICE,
         price_currency: "usd",
         pay_currency: selectedCurrency,
         order_id: `${sessionId}-${Date.now()}`,
-        order_description: `Deploy ${config.agentName} (${config.tier} tier)`,
+        order_description: `Deploy ${config.agentName} (MATT Plan)`,
       });
 
       setPayment({
@@ -145,7 +139,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
       setError(e.message || "Failed to create payment");
       setStatus("error");
     }
-  }, [config.tier, config.agentName, selectedCurrency, sessionId]);
+  }, [config.agentName, selectedCurrency, sessionId]);
 
   const copyAddress = useCallback(() => {
     if (payment?.address) {
@@ -170,14 +164,14 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm safe-area-padding"
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
+            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-gradient-to-r from-[#0ea5e9]/10 to-transparent">
@@ -185,7 +179,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                 <Wallet className="w-5 h-5 text-[#0ea5e9]" />
                 <div>
                   <h3 className="font-semibold">PAYMENT</h3>
-                  <p className="text-xs text-[var(--muted)] font-mono">{config.agentName} // {config.tier.toUpperCase()}</p>
+                  <p className="text-xs text-[var(--muted)] font-mono">{config.agentName}</p>
                 </div>
               </div>
               <button
@@ -199,8 +193,26 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
             <div className="p-4 space-y-4">
               {/* Amount Display */}
               <div className="text-center py-4 bg-gradient-to-b from-[var(--card)] to-transparent rounded-xl border border-[var(--border)]">
-                <span className="text-4xl font-bold text-[#0ea5e9]">${PRICES[config.tier]}</span>
-                <span className="text-[var(--muted)] text-sm">/month</span>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <Zap className="w-5 h-5 text-[#0ea5e9]" />
+                  <span className="text-lg font-medium">MATT Plan</span>
+                </div>
+                <span className="text-4xl font-bold text-[#0ea5e9]">${PLAN_PRICE}</span>
+                <div className="text-[var(--muted)] text-xs mt-1">
+                  <span className="line-through opacity-50">$250</span>
+                  <span className="ml-2 text-green-400">SAVE 40%</span>
+                </div>
+                <p className="text-xs text-[var(--muted)] mt-2">First month (includes setup) • Then $150/month</p>
+              </div>
+
+              {/* Features */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {["Unlimited agents", "Unlimited requests", "All features", "Priority support"].map((feature) => (
+                  <div key={feature} className="flex items-center gap-1.5 text-[var(--muted)]">
+                    <Check className="w-3 h-3 text-green-400" />
+                    {feature}
+                  </div>
+                ))}
               </div>
 
               {/* Currency Selection */}

@@ -19,7 +19,7 @@ const features = [
 ];
 
 const comparisonData = [
-  { metric: "Cost (Monthly)", matt: "$150 + $50/mo", agency: "$5,000-15,000/mo" },
+  { metric: "Cost (Monthly)", matt: "$150/mo (unlimited)", agency: "$5,000-15,000/mo" },
   { metric: "Setup Time", matt: "15 minutes", agency: "2-4 weeks" },
   { metric: "Time Saved/Week", matt: "12+ hours", agency: "N/A" },
   { metric: "Email Reduction", matt: "60% less", agency: "Variable" },
@@ -115,8 +115,8 @@ export default function PricingPage() {
 
               <div className="pt-4 border-t border-[var(--border)]">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[var(--muted)]">After first month:</span>
-                  <span className="text-[#0ea5e9] font-mono">$50/mo Care Plan</span>
+                  <span className="text-[var(--muted)]">Monthly recurring:</span>
+                  <span className="text-[#0ea5e9] font-mono">$150/mo</span>
                 </div>
               </div>
             </motion.div>
@@ -318,7 +318,7 @@ export default function PricingPage() {
               </motion.button>
             </Link>
             <p className="mt-4 text-sm text-[var(--muted)]">
-              $150 setup • First month included • $50/mo after
+              $150 first month (includes setup) • $150/mo recurring
             </p>
           </motion.div>
         </div>

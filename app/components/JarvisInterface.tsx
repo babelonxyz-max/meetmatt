@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, User, ChevronLeft, Terminal, Cpu, Activity } from "lucide-react";
+import { Bot, User, ChevronLeft, Cpu, Activity } from "lucide-react";
 
 interface Message {
   id: string;
@@ -37,13 +37,13 @@ export function JarvisInterface({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // Show only last 3 messages for no-scroll experience
-  const visibleMessages = messages.slice(-3);
+  // Show last messages for context
+  const visibleMessages = messages.slice(-4);
 
   return (
-    <div className="relative h-full flex flex-col">
-      {/* Subtle header - blended */}
-      <div className="flex items-center gap-4 p-3 border-b border-[var(--border)]/50 bg-gradient-to-r from-[var(--card)]/40 to-transparent backdrop-blur-sm">
+    <div className="relative h-full flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 p-3 lg:p-4 border-b border-[var(--border)]/50 bg-gradient-to-r from-[var(--card)]/40 to-transparent backdrop-blur-sm flex-shrink-0">
         {canGoBack && (
           <motion.button
             onClick={onBack}
@@ -76,15 +76,14 @@ export function JarvisInterface({
           </div>
         </div>
 
-        {/* Minimal status */}
         <div className="ml-auto flex items-center gap-2 text-[9px] font-mono text-[var(--muted)]">
           <Cpu className="w-3 h-3" />
           <span>ACTIVE</span>
         </div>
       </div>
 
-      {/* Messages Area - Blended Video Game Style */}
-      <div className="flex-1 overflow-hidden p-4 space-y-3 relative">
+      {/* Messages Area - With proper padding and safe areas */}
+      <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-3 relative">
         {/* Subtle scanline effect */}
         <div 
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -105,7 +104,7 @@ export function JarvisInterface({
                 message.role === "user" ? "flex-row-reverse" : ""
               }`}
             >
-              {/* Avatar - smaller, more subtle */}
+              {/* Avatar */}
               <div className={`flex-shrink-0 ${message.role === "user" ? "hidden" : ""}`}>
                 <div className={`w-7 h-7 rounded-md flex items-center justify-center ${
                   message.role === "assistant"
@@ -120,23 +119,22 @@ export function JarvisInterface({
                 </div>
               </div>
 
-              {/* Message Content - Blended, floating style */}
-              <div className={`max-w-[90%] ${message.role === "user" ? "items-end" : "items-start"}`}>
+              {/* Message Content */}
+              <div className={`max-w-[85%] ${message.role === "user" ? "items-end" : "items-start"}`}>
                 <div
-                  className={`relative px-4 py-3 rounded-xl ${
+                  className={`relative px-4 py-3 rounded-2xl ${
                     message.role === "user"
                       ? "bg-[#0ea5e9]/10 border border-[#0ea5e9]/20 text-[var(--foreground)] backdrop-blur-sm"
                       : "bg-[var(--card)]/30 border border-[var(--border)]/30 text-[var(--foreground)] backdrop-blur-md"
                   }`}
                 >
-                  {/* Glow effect for assistant */}
                   {message.role === "assistant" && (
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#0ea5e9]/5 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#0ea5e9]/5 to-transparent pointer-events-none" />
                   )}
                   
-                  <p className="text-sm leading-relaxed relative z-10">{message.content}</p>
+                  <p className="text-sm leading-relaxed relative z-10 whitespace-pre-wrap">{message.content}</p>
 
-                  {/* Options - Floating style */}
+                  {/* Unified Suggestions - Pill Style */}
                   {message.options && message.options.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">
                       {message.options.map((option) => (
@@ -147,10 +145,10 @@ export function JarvisInterface({
                           onMouseLeave={() => setHoveredOption(null)}
                           whileHover={{ scale: 1.03 }}
                           whileTap={{ scale: 0.97 }}
-                          className={`relative px-3 py-1.5 text-xs font-mono rounded-md border transition-all backdrop-blur-sm ${
+                          className={`relative px-4 py-2 text-xs font-medium rounded-full border transition-all ${
                             hoveredOption === option
-                              ? "bg-[#0ea5e9]/20 border-[#0ea5e9]/50 text-[#0ea5e9]"
-                              : "bg-[var(--card)]/40 border-[var(--border)]/40 text-[var(--muted)] hover:border-[#0ea5e9]/30 hover:text-[var(--foreground)]"
+                              ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-[#0ea5e9]"
+                              : "bg-[var(--card)]/60 border-[var(--border)] text-[var(--foreground)] hover:border-[#0ea5e9]/50"
                           }`}
                         >
                           {option}
@@ -164,7 +162,7 @@ export function JarvisInterface({
           ))}
         </AnimatePresence>
 
-        {/* Typing Indicator - Minimal */}
+        {/* Typing Indicator */}
         {isTyping && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -224,9 +222,9 @@ export function JarvisInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Custom Content Area - Blended */}
+      {/* Custom Content Area - Steps UI */}
       {children && (
-        <div className="border-t border-[var(--border)]/50 bg-[var(--card)]/20 backdrop-blur-sm">
+        <div className="border-t border-[var(--border)]/50 bg-[var(--card)]/20 backdrop-blur-sm flex-shrink-0 max-h-[45%] lg:max-h-[50%] overflow-y-auto">
           {children}
         </div>
       )}

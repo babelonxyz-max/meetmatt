@@ -21,14 +21,10 @@ interface SetupConfig {
   agentName: string;
   purpose: string;
   features: string[];
-  tier: "starter" | "pro" | "enterprise";
 }
 
-const TIER_PRICES = {
-  starter: 29,
-  pro: 99,
-  enterprise: 299,
-};
+// Single plan pricing
+const PLAN_PRICE = 150;
 
 export function LaunchWizard({ onClose }: { onClose: () => void }) {
   const [sessionId, setSessionId] = useState<string>("");
@@ -39,9 +35,8 @@ export function LaunchWizard({ onClose }: { onClose: () => void }) {
     agentName: "",
     purpose: "",
     features: [],
-    tier: "starter",
   });
-  const [step, setStep] = useState<"name" | "purpose" | "features" | "tier" | "confirm" | "deploying" | "success">("name");
+  const [step, setStep] = useState<"name" | "purpose" | "features" | "confirm" | "deploying" | "success">("name");
   const [showPayment, setShowPayment] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -58,7 +53,6 @@ export function LaunchWizard({ onClose }: { onClose: () => void }) {
         agentName: pending.agentName,
         purpose: pending.purpose,
         features: pending.features,
-        tier: pending.tier,
       });
     }
 
@@ -131,22 +125,10 @@ export function LaunchWizard({ onClose }: { onClose: () => void }) {
   const handleFeaturesConfirm = async () => {
     if (config.features.length === 0) return;
     addMessage("user", `Selected: ${config.features.join(", ")}`);
-    setStep("tier");
-
-    await simulateTyping(
-      "Perfect! 💎\n\nChoose your plan. All plans include Kimi k2.5 by default:",
-      ["Starter ($29/mo)", "Pro ($99/mo)", "Enterprise ($299/mo)"]
-    );
-  };
-
-  const handleTierSelect = async (tier: string) => {
-    const tierKey = tier.split(" ")[0].toLowerCase() as "starter" | "pro" | "enterprise";
-    setConfig((prev) => ({ ...prev, tier: tierKey }));
-    addMessage("user", tier);
     setStep("confirm");
 
     await simulateTyping(
-      `Awesome! Here's your setup:\n\n🤖 **${config.agentName}**\n🎯 ${config.purpose}\n⚡ ${config.features.join(", ")}\n💎 ${tierKey.charAt(0).toUpperCase() + tierKey.slice(1)} Plan ($${TIER_PRICES[tierKey]}/mo)\n\nReady to deploy? 🚀`,
+      `Ready to deploy **${config.agentName}**! 🚀\n\n🎯 ${config.purpose}\n⚡ ${config.features.join(", ")}\n\n💎 MATT Plan: $${PLAN_PRICE}/mo (unlimited everything)\n\nProceed to payment?`,
       ["Pay with Crypto", "Modify Setup"]
     );
   };
@@ -155,13 +137,15 @@ export function LaunchWizard({ onClose }: { onClose: () => void }) {
     if (action === "Pay with Crypto") {
       // Save config to localStorage before payment
       savePendingConfig({
-        ...config,
+        agentName: config.agentName,
+        purpose: config.purpose,
+        features: config.features,
         createdAt: Date.now(),
       });
       setShowPayment(true);
     } else {
       setStep("name");
-      setConfig({ agentName: "", purpose: "", features: [], tier: "starter" });
+      setConfig({ agentName: "", purpose: "", features: [] });
       clearPendingConfig();
       setMessages([{
         id: "restart",
@@ -248,13 +232,9 @@ export function LaunchWizard({ onClose }: { onClose: () => void }) {
   const handleOptionClick = (option: string) => {
     if (step === "features") {
       handleFeatureSelect(option);
-    } else if (step === "tier") {
-      handleTierSelect(option);
     } else if (step === "confirm") {
-      // Only handleConfirm - handleAction is only for post-success actions
       handleConfirm(option);
     } else if (step === "success") {
-      // Only handleAction for success screen options (View Dashboard, Open Devin, Close)
       handleAction(option);
     }
   };

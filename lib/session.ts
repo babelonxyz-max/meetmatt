@@ -26,7 +26,6 @@ export interface PendingConfig {
   agentName: string;
   purpose: string;
   features: string[];
-  tier: "starter" | "pro" | "enterprise";
   createdAt: number;
 }
 
