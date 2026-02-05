@@ -1,8 +1,8 @@
 "use client";
 
-import { memo, useEffect, useRef, useState, useCallback } from "react";
-import { motion, useAnimation, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
-import { playOrbActivate, playOrbPulse, playOrbHover } from "@/lib/audio";
+import { memo, useEffect, useRef } from "react";
+import { motion, useAnimation, useMotionValue, useTransform } from "framer-motion";
+import { playOrbActivate, playOrbPulse } from "@/lib/audio";
 
 interface AIOrbProps {
   isListening?: boolean;
@@ -10,9 +10,7 @@ interface AIOrbProps {
   intensity?: "low" | "medium" | "high";
 }
 
-type ReactionType = "giggle" | "spin" | "bounce" | "wink" | "pulse" | null;
-
-// Enhanced AI Orb with original animations + click reactions + white eyeballs (no pupils)
+// More dynamic AI Orb with enhanced visuals and audio feedback
 export const AIOrb = memo(function AIOrb({ 
   isListening = false, 
   isThinking = false,
@@ -22,17 +20,12 @@ export const AIOrb = memo(function AIOrb({
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const orbRef = useRef<HTMLDivElement>(null);
-  const [reaction, setReaction] = useState<ReactionType>(null);
-  const [showBubble, setShowBubble] = useState(false);
-  const [bubbleText, setBubbleText] = useState("");
-  const [clickCount, setClickCount] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
   
   // Smooth mouse following for 3D effect
   const rotateX = useTransform(mouseY, [-300, 300], [15, -15]);
   const rotateY = useTransform(mouseX, [-300, 300], [-15, 15]);
 
-  // Mouse tracking
+  // Mouse tracking for interactive effect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (orbRef.current) {
@@ -66,57 +59,6 @@ export const AIOrb = memo(function AIOrb({
     }
   }, [isThinking, isListening]);
 
-  // Clear reaction after animation
-  useEffect(() => {
-    if (reaction) {
-      const timer = setTimeout(() => setReaction(null), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [reaction]);
-
-  // Clear bubble after display
-  useEffect(() => {
-    if (showBubble) {
-      const timer = setTimeout(() => setShowBubble(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showBubble]);
-
-  const handleClick = useCallback(() => {
-    const newCount = clickCount + 1;
-    setClickCount(newCount);
-    
-    // Cycle through reactions
-    const reactions: ReactionType[] = ["giggle", "spin", "bounce", "wink", "pulse"];
-    const nextReaction = reactions[(newCount - 1) % reactions.length];
-    setReaction(nextReaction);
-    
-    // Show speech bubble with random text
-    const bubbleTexts = [
-      "Hello! 👋",
-      "I'm listening...",
-      "Click me again!",
-      "Ready to deploy! 🚀",
-      "AI power activated! ⚡",
-      "Need help? 🤔",
-      "System optimal ✓",
-      "Let's build something!",
-    ];
-    setBubbleText(bubbleTexts[Math.floor(Math.random() * bubbleTexts.length)]);
-    setShowBubble(true);
-    
-    playOrbActivate();
-  }, [clickCount]);
-
-  const handleHoverStart = () => {
-    setIsHovered(true);
-    playOrbHover();
-    if (!showBubble && Math.random() > 0.7) {
-      setBubbleText("Click me! 👆");
-      setShowBubble(true);
-    }
-  };
-
   const state = isThinking ? "thinking" : isListening ? "listening" : "idle";
 
   // Dynamic intensity multipliers
@@ -126,329 +68,250 @@ export const AIOrb = memo(function AIOrb({
     high: 1.4,
   }[intensity];
 
-  // Reaction animations
-  const reactionVariants = {
-    giggle: {
-      rotate: [0, -5, 5, -5, 5, 0],
-      scale: [1, 0.95, 1.05, 0.95, 1.05, 1],
-      transition: { duration: 0.6 }
-    },
-    spin: {
-      rotate: [0, 360],
-      transition: { duration: 0.8, ease: "easeInOut" as const }
-    },
-    bounce: {
-      y: [0, -30, 0, -15, 0],
-      scale: [1, 1.1, 0.9, 1.05, 1],
-      transition: { duration: 0.8 }
-    },
-    wink: {
-      scaleY: [1, 0.1, 1],
-      transition: { duration: 0.3, times: [0, 0.5, 1] }
-    },
-    pulse: {
-      scale: [1, 1.3, 1, 1.2, 1],
-      opacity: [1, 0.8, 1, 0.9, 1],
-      transition: { duration: 0.6 }
-    }
-  };
-
   return (
-    <div className="relative">
-      {/* Speech Bubble - Fully blended, no stroke */}
-      <AnimatePresence>
-        {showBubble && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.5, y: -10 }}
-            className="absolute -top-20 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap"
-          >
-            <div className="bg-[var(--background)]/80 backdrop-blur-md px-4 py-2 rounded-xl shadow-xl">
-              <p className="text-sm font-medium text-[var(--foreground)]">{bubbleText}</p>
-            </div>
-            {/* Triangle pointer */}
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-[var(--background)]/80" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <motion.div
-        ref={orbRef}
-        style={{
-          rotateX,
-          rotateY,
-          transformStyle: "preserve-3d",
-          perspective: 1000,
-        }}
-        className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 cursor-pointer"
-        animate={reaction ? reactionVariants[reaction] : {}}
-        whileHover={{ scale: 1.05 }}
-        onHoverStart={handleHoverStart}
-        onHoverEnd={() => setIsHovered(false)}
-        onClick={handleClick}
-      >
-        {/* Outer energy field - pulsating rings */}
-        {[...Array(3)].map((_, i) => (
-          <motion.div
-            key={`field-${i}`}
-            className="absolute inset-0 rounded-full"
-            style={{
-              background: `radial-gradient(circle, rgba(14,165,233,${0.1 - i * 0.02}) 0%, transparent 70%)`,
-              transform: `translateZ(${-20 - i * 10}px)`,
-            }}
-            animate={{
-              scale: state === "thinking" 
-                ? [1, 1.4 * intensityMultiplier, 1] 
-                : state === "listening" 
-                ? [1, 1.2 * intensityMultiplier, 1] 
-                : isHovered
-                ? [1, 1.15, 1]
-                : [1, 1.1, 1],
-              opacity: state === "thinking" 
-                ? [0.3, 0.7, 0.3] 
-                : isHovered
-                ? [0.3, 0.5, 0.3]
-                : [0.2, 0.4, 0.2],
-            }}
-            transition={{
-              duration: 2 + i * 0.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: i * 0.3,
-            }}
-          />
-        ))}
-
-        {/* Rotating orbital rings */}
-        {[...Array(2)].map((_, i) => (
-          <motion.div
-            key={`orbit-${i}`}
-            className="absolute inset-0 rounded-full border-2 border-dashed"
-            style={{
-              borderColor: `rgba(14,165,233,${0.2 - i * 0.1})`,
-              transform: `rotateX(${60 + i * 15}deg)`,
-            }}
-            animate={{ rotate: i % 2 === 0 ? 360 : -360 }}
-            transition={{
-              duration: 15 + i * 5,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          />
-        ))}
-
-        {/* Main orb container */}
+    <motion.div
+      ref={orbRef}
+      style={{
+        rotateX,
+        rotateY,
+        transformStyle: "preserve-3d",
+        perspective: 1000,
+      }}
+      className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 cursor-pointer"
+      whileHover={{ scale: 1.05 }}
+      onHoverStart={() => playOrbActivate()}
+    >
+      {/* Outer energy field - pulsating rings */}
+      {[...Array(3)].map((_, i) => (
         <motion.div
-          className="absolute inset-6 rounded-full overflow-hidden"
-          style={{ transform: "translateZ(0)" }}
+          key={`field-${i}`}
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: `radial-gradient(circle, rgba(14,165,233,${0.1 - i * 0.02}) 0%, transparent 70%)`,
+            transform: `translateZ(${-20 - i * 10}px)`,
+          }}
           animate={{
             scale: state === "thinking" 
-              ? [1, 1.08, 1] 
+              ? [1, 1.4 * intensityMultiplier, 1] 
               : state === "listening" 
-              ? [1, 1.04, 1] 
-              : isHovered
-              ? [1, 1.03, 1]
-              : [1, 1.02, 1],
+              ? [1, 1.2 * intensityMultiplier, 1] 
+              : [1, 1.1, 1],
+            opacity: state === "thinking" 
+              ? [0.3, 0.7, 0.3] 
+              : [0.2, 0.4, 0.2],
           }}
           transition={{
-            duration: state === "thinking" ? 0.6 : state === "listening" ? 1 : 2,
+            duration: 2 + i * 0.5,
             repeat: Infinity,
             ease: "easeInOut",
+            delay: i * 0.3,
           }}
-        >
-          {/* Base gradient */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(ellipse at 30% 30%, 
-                rgba(14,165,233,1) 0%, 
-                rgba(6,182,212,0.9) 20%, 
-                rgba(99,102,241,0.7) 50%, 
-                rgba(139,92,246,0.5) 70%,
-                rgba(0,0,0,0.9) 100%)`,
-            }}
-          />
+        />
+      ))}
 
-          {/* Animated liquid layers */}
-          <motion.div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(ellipse at 70% 70%, rgba(99,102,241,0.6) 0%, transparent 60%)`,
-            }}
-            animate={{
-              x: [-30, 30, -30],
-              y: [-20, 20, -20],
-              scale: [1, 1.2, 1],
-            }}
-            transition={{
-              duration: state === "thinking" ? 3 : 8,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-
-          <motion.div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(ellipse at 40% 80%, rgba(14,165,233,0.5) 0%, transparent 50%)`,
-            }}
-            animate={{
-              x: [20, -20, 20],
-              y: [15, -15, 15],
-              rotate: [0, 180, 360],
-            }}
-            transition={{
-              duration: state === "thinking" ? 4 : 12,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-
-          {/* Core glow */}
-          <motion.div
-            className="absolute inset-0"
-            animate={{
-              opacity: state === "thinking" ? [0.5, 1, 0.5] : [0.3, 0.6, 0.3],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            style={{
-              background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)`,
-            }}
-          />
-
-          {/* White Eyeballs (no pupils) */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative w-14 h-8">
-              {/* Left Eye */}
-              <motion.div 
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/80"
-                animate={reaction === "wink" ? { scaleY: [1, 0.1, 1] } : {}}
-                transition={{ duration: 0.3 }}
-              />
-              
-              {/* Right Eye */}
-              <motion.div 
-                className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/80"
-              />
-            </div>
-          </div>
-
-          {/* Specular highlights */}
-          <div 
-            className="absolute top-[10%] left-[15%] w-[35%] h-[30%] rounded-full pointer-events-none"
-            style={{
-              background: `radial-gradient(ellipse at center, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 40%, transparent 70%)`,
-              filter: "blur(6px)",
-            }}
-          />
-          
-          <div 
-            className="absolute bottom-[15%] right-[20%] w-[25%] h-[25%] rounded-full pointer-events-none"
-            style={{
-              background: `radial-gradient(ellipse at center, rgba(255,255,255,0.2) 0%, transparent 60%)`,
-              filter: "blur(4px)",
-            }}
-          />
-        </motion.div>
-
-        {/* Inner ring */}
-        <div 
-          className="absolute inset-6 rounded-full border-2 pointer-events-none"
+      {/* Rotating orbital rings */}
+      {[...Array(2)].map((_, i) => (
+        <motion.div
+          key={`orbit-${i}`}
+          className="absolute inset-0 rounded-full border-2 border-dashed"
           style={{
-            borderColor: "rgba(14,165,233,0.3)",
-            boxShadow: `
-              inset 0 0 30px rgba(14,165,233,0.2),
-              0 0 40px rgba(14,165,233,0.2)
-            `,
+            borderColor: `rgba(14,165,233,${0.2 - i * 0.1})`,
+            transform: `rotateX(${60 + i * 15}deg)`,
+          }}
+          animate={{ rotate: i % 2 === 0 ? 360 : -360 }}
+          transition={{
+            duration: 15 + i * 5,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+        />
+      ))}
+
+      {/* Main orb container */}
+      <motion.div
+        className="absolute inset-6 rounded-full overflow-hidden"
+        style={{ transform: "translateZ(0)" }}
+        animate={{
+          scale: state === "thinking" 
+            ? [1, 1.08, 1] 
+            : state === "listening" 
+            ? [1, 1.04, 1] 
+            : [1, 1.02, 1],
+        }}
+        transition={{
+          duration: state === "thinking" ? 0.6 : state === "listening" ? 1 : 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      >
+        {/* Base gradient */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(ellipse at 30% 30%, 
+              rgba(14,165,233,1) 0%, 
+              rgba(6,182,212,0.9) 20%, 
+              rgba(99,102,241,0.7) 50%, 
+              rgba(139,92,246,0.5) 70%,
+              rgba(0,0,0,0.9) 100%)`,
           }}
         />
 
-        {/* Energy particles */}
-        {[...Array(8)].map((_, i) => {
-          const angle = (i / 8) * 360;
-          const distance = 70 + (i % 3) * 15;
-          return (
-            <motion.div
-              key={`particle-${i}`}
-              className="absolute w-1.5 h-1.5 rounded-full pointer-events-none"
-              style={{
-                top: "50%",
-                left: "50%",
-                marginLeft: -3,
-                marginTop: -3,
-                background: i % 2 === 0 
-                  ? "rgba(14,165,233,0.8)" 
-                  : "rgba(139,92,246,0.8)",
-                boxShadow: `0 0 10px ${i % 2 === 0 ? "rgba(14,165,233,0.8)" : "rgba(139,92,246,0.8)"}`,
-              }}
-              animate={{
-                x: [
-                  Math.cos((angle * Math.PI) / 180) * 60,
-                  Math.cos((angle * Math.PI) / 180) * distance,
-                  Math.cos((angle * Math.PI) / 180) * 60,
-                ],
-                y: [
-                  Math.sin((angle * Math.PI) / 180) * 60,
-                  Math.sin((angle * Math.PI) / 180) * distance,
-                  Math.sin((angle * Math.PI) / 180) * 60,
-                ],
-                opacity: [0, 1, 0],
-                scale: [0.5, 1.5, 0.5],
-              }}
-              transition={{
-                duration: 2.5 + i * 0.3,
-                repeat: Infinity,
-                delay: i * 0.2,
-                ease: "easeInOut",
-              }}
-            />
-          );
-        })}
-
-        {/* Shockwave effect when thinking */}
-        {state === "thinking" && <Shockwaves />}
-
-        {/* Status glow */}
+        {/* Animated liquid layers */}
         <motion.div
-          className="absolute -inset-4 rounded-full pointer-events-none"
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(ellipse at 70% 70%, rgba(99,102,241,0.6) 0%, transparent 60%)`,
+          }}
           animate={{
-            boxShadow: state === "thinking"
-              ? [
-                  "0 0 60px rgba(14,165,233,0.3)",
-                  "0 0 100px rgba(14,165,233,0.5)",
-                  "0 0 60px rgba(14,165,233,0.3)",
-                ]
-              : state === "listening"
-              ? [
-                  "0 0 40px rgba(99,102,241,0.2)",
-                  "0 0 60px rgba(99,102,241,0.4)",
-                  "0 0 40px rgba(99,102,241,0.2)",
-                ]
-              : isHovered
-              ? [
-                  "0 0 50px rgba(14,165,233,0.3)",
-                  "0 0 70px rgba(14,165,233,0.4)",
-                  "0 0 50px rgba(14,165,233,0.3)",
-                ]
-              : [
-                  "0 0 30px rgba(14,165,233,0.1)",
-                  "0 0 50px rgba(14,165,233,0.2)",
-                  "0 0 30px rgba(14,165,233,0.1)",
-                ],
+            x: [-30, 30, -30],
+            y: [-20, 20, -20],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{
+            duration: state === "thinking" ? 3 : 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(ellipse at 40% 80%, rgba(14,165,233,0.5) 0%, transparent 50%)`,
+          }}
+          animate={{
+            x: [20, -20, 20],
+            y: [15, -15, 15],
+            rotate: [0, 180, 360],
+          }}
+          transition={{
+            duration: state === "thinking" ? 4 : 12,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        {/* Core glow */}
+        <motion.div
+          className="absolute inset-0"
+          animate={{
+            opacity: state === "thinking" ? [0.5, 1, 0.5] : [0.3, 0.6, 0.3],
           }}
           transition={{
             duration: 1.5,
             repeat: Infinity,
             ease: "easeInOut",
           }}
+          style={{
+            background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)`,
+          }}
+        />
+
+        {/* Specular highlights */}
+        <div 
+          className="absolute top-[10%] left-[15%] w-[35%] h-[30%] rounded-full pointer-events-none"
+          style={{
+            background: `radial-gradient(ellipse at center, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 40%, transparent 70%)`,
+            filter: "blur(6px)",
+          }}
+        />
+        
+        <div 
+          className="absolute bottom-[15%] right-[20%] w-[25%] h-[25%] rounded-full pointer-events-none"
+          style={{
+            background: `radial-gradient(ellipse at center, rgba(255,255,255,0.2) 0%, transparent 60%)`,
+            filter: "blur(4px)",
+          }}
         />
       </motion.div>
-    </div>
+
+      {/* Inner ring */}
+      <div 
+        className="absolute inset-6 rounded-full border-2 pointer-events-none"
+        style={{
+          borderColor: "rgba(14,165,233,0.3)",
+          boxShadow: `
+            inset 0 0 30px rgba(14,165,233,0.2),
+            0 0 40px rgba(14,165,233,0.2)
+          `,
+        }}
+      />
+
+      {/* Energy particles */}
+      {[...Array(8)].map((_, i) => {
+        const angle = (i / 8) * 360;
+        const distance = 70 + (i % 3) * 15;
+        return (
+          <motion.div
+            key={`particle-${i}`}
+            className="absolute w-1.5 h-1.5 rounded-full pointer-events-none"
+            style={{
+              top: "50%",
+              left: "50%",
+              marginLeft: -3,
+              marginTop: -3,
+              background: i % 2 === 0 
+                ? "rgba(14,165,233,0.8)" 
+                : "rgba(139,92,246,0.8)",
+              boxShadow: `0 0 10px ${i % 2 === 0 ? "rgba(14,165,233,0.8)" : "rgba(139,92,246,0.8)"}`,
+            }}
+            animate={{
+              x: [
+                Math.cos((angle * Math.PI) / 180) * 60,
+                Math.cos((angle * Math.PI) / 180) * distance,
+                Math.cos((angle * Math.PI) / 180) * 60,
+              ],
+              y: [
+                Math.sin((angle * Math.PI) / 180) * 60,
+                Math.sin((angle * Math.PI) / 180) * distance,
+                Math.sin((angle * Math.PI) / 180) * 60,
+              ],
+              opacity: [0, 1, 0],
+              scale: [0.5, 1.5, 0.5],
+            }}
+            transition={{
+              duration: 2.5 + i * 0.3,
+              repeat: Infinity,
+              delay: i * 0.2,
+              ease: "easeInOut",
+            }}
+          />
+        );
+      })}
+
+      {/* Shockwave effect when thinking */}
+      {state === "thinking" && <Shockwaves />}
+
+      {/* Status glow */}
+      <motion.div
+        className="absolute -inset-4 rounded-full pointer-events-none"
+        animate={{
+          boxShadow: state === "thinking"
+            ? [
+                "0 0 60px rgba(14,165,233,0.3)",
+                "0 0 100px rgba(14,165,233,0.5)",
+                "0 0 60px rgba(14,165,233,0.3)",
+              ]
+            : state === "listening"
+            ? [
+                "0 0 40px rgba(99,102,241,0.2)",
+                "0 0 60px rgba(99,102,241,0.4)",
+                "0 0 40px rgba(99,102,241,0.2)",
+              ]
+            : [
+                "0 0 30px rgba(14,165,233,0.1)",
+                "0 0 50px rgba(14,165,233,0.2)",
+                "0 0 30px rgba(14,165,233,0.1)",
+              ],
+        }}
+        transition={{
+          duration: 1.5,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+    </motion.div>
   );
 });
 
