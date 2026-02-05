@@ -4,58 +4,69 @@ import { useState, ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface TooltipProps {
+  content: ReactNode;
   children: ReactNode;
-  content: string;
   position?: "top" | "bottom" | "left" | "right";
   delay?: number;
+  className?: string;
 }
 
 export function Tooltip({
-  children,
   content,
+  children,
   position = "top",
   delay = 0.3,
+  className = "",
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
-  const positions = {
+  const show = () => {
+    const id = setTimeout(() => setIsVisible(true), delay * 1000);
+    setTimeoutId(id);
+  };
+
+  const hide = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    setIsVisible(false);
+  };
+
+  const positionClasses = {
     top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
     bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
     left: "right-full top-1/2 -translate-y-1/2 mr-2",
     right: "left-full top-1/2 -translate-y-1/2 ml-2",
   };
 
-  const arrowPositions = {
-    top: "top-full left-1/2 -translate-x-1/2 border-t-white/10",
-    bottom: "bottom-full left-1/2 -translate-x-1/2 border-b-white/10",
-    left: "left-full top-1/2 -translate-y-1/2 border-l-white/10",
-    right: "right-full top-1/2 -translate-y-1/2 border-r-white/10",
+  const arrowClasses = {
+    top: "top-full left-1/2 -translate-x-1/2 -mt-1 border-l-transparent border-r-transparent border-b-transparent",
+    bottom: "bottom-full left-1/2 -translate-x-1/2 -mb-1 border-l-transparent border-r-transparent border-t-transparent",
+    left: "left-full top-1/2 -translate-y-1/2 -ml-1 border-t-transparent border-b-transparent border-r-transparent",
+    right: "right-full top-1/2 -translate-y-1/2 -mr-1 border-t-transparent border-b-transparent border-l-transparent",
   };
 
   return (
     <div
-      className="relative inline-flex"
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
-      onFocus={() => setIsVisible(true)}
-      onBlur={() => setIsVisible(false)}
+      className={`relative inline-block ${className}`}
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onFocus={show}
+      onBlur={hide}
     >
       {children}
       <AnimatePresence>
         {isVisible && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.15, delay }}
-            className={`absolute ${positions[position]} z-50 pointer-events-none`}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className={`absolute z-50 px-3 py-2 text-sm text-white bg-slate-800 rounded-lg shadow-xl border border-slate-700 whitespace-nowrap ${positionClasses[position]}`}
           >
-            <div className="relative px-2 py-1 text-xs bg-zinc-800 text-white rounded border border-white/10 whitespace-nowrap shadow-lg">
-              {content}
-              <div
-                className={`absolute w-0 h-0 border-4 border-transparent ${arrowPositions[position]}`}
-              />
-            </div>
+            {content}
+            <div
+              className={`absolute w-2 h-2 bg-slate-800 border border-slate-700 rotate-45 ${arrowClasses[position]}`}
+            />
           </motion.div>
         )}
       </AnimatePresence>

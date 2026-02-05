@@ -1,23 +1,20 @@
 "use client";
 
 import { Component, ErrorInfo, ReactNode } from "react";
-import { motion } from "framer-motion";
-import { AlertCircle, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
   hasError: boolean;
-  error: Error | null;
+  error?: Error;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -26,45 +23,29 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
+    // Here you could send to error reporting service like Sentry
   }
-
-  private handleReset = () => {
-    this.setState({ hasError: false, error: null });
-    window.location.reload();
-  };
 
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#0a0a0b] text-white flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-md w-full bg-zinc-900 border border-white/10 rounded-2xl p-6 text-center"
-          >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
-              <AlertCircle className="w-8 h-8 text-red-400" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
-            <p className="text-sm text-zinc-400 mb-6">
-              We encountered an unexpected error. Please try refreshing the page.
+        this.props.fallback || (
+          <div className="min-h-[200px] flex flex-col items-center justify-center p-6 bg-slate-900/50 rounded-xl border border-red-500/30">
+            <div className="text-4xl mb-4">⚠️</div>
+            <h2 className="text-lg font-semibold text-slate-200 mb-2">
+              Something went wrong
+            </h2>
+            <p className="text-sm text-slate-400 text-center mb-4">
+              We apologize for the inconvenience. Please try refreshing the page.
             </p>
-            {this.state.error && (
-              <div className="mb-6 p-3 bg-black/30 rounded-lg text-left">
-                <p className="text-xs text-zinc-500 font-mono break-all">
-                  {this.state.error.message}
-                </p>
-              </div>
-            )}
-            <Button
-              onClick={this.handleReset}
-              className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white"
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg text-sm transition-colors"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
               Refresh Page
-            </Button>
-          </motion.div>
-        </div>
+            </button>
+          </div>
+        )
       );
     }
 

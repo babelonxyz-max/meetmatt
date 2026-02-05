@@ -19,18 +19,18 @@ export function CopyButton({
   toastMessage = "Copied to clipboard!",
 }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
-  const { toast } = useToast();
+  const { addToast } = useToast();
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       if (showToast) {
-        toast(toastMessage, "success");
+        addToast(toastMessage, "success");
       }
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      toast("Failed to copy", "error");
+      addToast("Failed to copy", "error");
     }
   };
 

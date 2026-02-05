@@ -6,75 +6,84 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ConfettiPiece {
   id: number;
   x: number;
-  y: number;
-  rotation: number;
   color: string;
+  rotation: number;
   delay: number;
-  duration: number;
 }
 
 interface ConfettiProps {
-  isActive: boolean;
+  active: boolean;
+  count?: number;
+  duration?: number;
   onComplete?: () => void;
 }
 
-const colors = ["#0ea5e9", "#6366f1", "#8b5cf6", "#ec4899", "#10b981", "#f59e0b"];
+const colors = [
+  "#06b6d4", // cyan-500
+  "#3b82f6", // blue-500
+  "#8b5cf6", // violet-500
+  "#f59e0b", // amber-500
+  "#10b981", // emerald-500
+  "#f43f5e", // rose-500
+];
 
-export function Confetti({ isActive, onComplete }: ConfettiProps) {
+export function Confetti({
+  active,
+  count = 50,
+  duration = 3000,
+  onComplete,
+}: ConfettiProps) {
   const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
 
   useEffect(() => {
-    if (isActive) {
-      const newPieces: ConfettiPiece[] = Array.from({ length: 50 }, (_, i) => ({
+    if (active) {
+      const newPieces: ConfettiPiece[] = Array.from({ length: count }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
-        y: -20 - Math.random() * 20,
-        rotation: Math.random() * 360,
         color: colors[Math.floor(Math.random() * colors.length)],
-        delay: Math.random() * 0.5,
-        duration: 2 + Math.random() * 2,
+        rotation: Math.random() * 360,
+        delay: Math.random() * 0.3,
       }));
       setPieces(newPieces);
 
       const timer = setTimeout(() => {
         setPieces([]);
         onComplete?.();
-      }, 4000);
+      }, duration);
 
       return () => clearTimeout(timer);
     }
-  }, [isActive, onComplete]);
+  }, [active, count, duration, onComplete]);
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[300] overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
       <AnimatePresence>
         {pieces.map((piece) => (
           <motion.div
             key={piece.id}
             initial={{
               x: `${piece.x}vw`,
-              y: `${piece.y}vh`,
+              y: -10,
               rotate: 0,
               opacity: 1,
             }}
             animate={{
-              x: `${piece.x + (Math.random() - 0.5) * 30}vw`,
               y: "110vh",
-              rotate: piece.rotation + 720,
-              opacity: 0,
+              rotate: piece.rotation,
+              opacity: [1, 1, 0],
             }}
             exit={{ opacity: 0 }}
             transition={{
-              duration: piece.duration,
+              duration: 2 + Math.random() * 1,
               delay: piece.delay,
-              ease: [0.25, 0.46, 0.45, 0.94],
+              ease: [0.25, 0.1, 0.25, 1],
             }}
             style={{
               position: "absolute",
-              width: "8px",
-              height: "8px",
+              width: 8 + Math.random() * 6,
+              height: 8 + Math.random() * 6,
               backgroundColor: piece.color,
-              borderRadius: Math.random() > 0.5 ? "50%" : "0%",
+              borderRadius: Math.random() > 0.5 ? "50%" : "2px",
             }}
           />
         ))}

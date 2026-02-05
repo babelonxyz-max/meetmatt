@@ -1,31 +1,59 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Sun, Moon } from "lucide-react";
-import { useTheme } from "./ThemeProvider";
+import { IconButton } from "./IconButton";
 
-export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+export function ThemeToggle({ className = "" }: { className?: string }) {
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const saved = localStorage.getItem("theme") as "light" | "dark" | null;
+    if (saved) {
+      setTheme(saved);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(newTheme);
+  };
+
+  if (!mounted) {
+    return (
+      <div className={`w-10 h-10 rounded-lg bg-slate-800 ${className}`} />
+    );
+  }
 
   return (
-    <motion.button
-      onClick={toggleTheme}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      className="relative p-2 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors"
-      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-    >
-      <motion.div
-        initial={false}
-        animate={{ rotate: theme === "dark" ? 0 : 180 }}
-        transition={{ duration: 0.3 }}
-      >
-        {theme === "dark" ? (
-          <Moon className="w-4 h-4" />
+    <IconButton
+      icon={
+        theme === "light" ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+          </svg>
         ) : (
-          <Sun className="w-4 h-4 text-amber-500" />
-        )}
-      </motion.div>
-    </motion.button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        )
+      }
+      label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+      onClick={toggleTheme}
+      className={className}
+    />
   );
 }
