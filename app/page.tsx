@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { PaymentModal } from "./components/PaymentModal";
 import { AIOrb } from "./components/AIOrb";
 import { DeploymentProgress } from "./components/DeploymentProgress";
+import { SimpleThemeToggle } from "./components/ThemeToggle";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig } from "@/lib/session";
 import { initAudio, playMessageSent, playMessageReceived, playOptionSelected, playSuccess, playHover } from "@/lib/audio";
 import Link from "next/link";
@@ -336,6 +337,7 @@ export default function Home() {
             <span className="font-semibold">Meet Matt</span>
           </Link>
           <div className="flex items-center gap-4">
+            <SimpleThemeToggle />
             <div className="flex items-center gap-2 text-xs text-zinc-500">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <span className="hidden sm:inline">Online</span>

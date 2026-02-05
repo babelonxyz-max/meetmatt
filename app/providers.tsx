@@ -2,14 +2,14 @@
 
 import { ReactNode } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-
-// No authentication providers needed
-// We use localStorage for session management
+import { ThemeProvider } from "./components/ThemeProvider";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
-      {children}
+      <ThemeProvider>
+        {children}
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
