@@ -50,27 +50,36 @@ export function ThemeToggle() {
 
 // Simple toggle for just dark/light (no system)
 export function SimpleThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
+  try {
+    const { resolvedTheme, setTheme } = useTheme();
 
-  return (
-    <motion.button
-      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      className="p-2 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors"
-      aria-label="Toggle theme"
-    >
-      <motion.div
-        initial={false}
-        animate={{ rotate: resolvedTheme === "dark" ? 0 : 180 }}
-        transition={{ duration: 0.3 }}
+    return (
+      <motion.button
+        onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className="p-2 rounded-lg bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors"
+        aria-label="Toggle theme"
       >
-        {resolvedTheme === "dark" ? (
-          <Moon className="w-4 h-4" />
-        ) : (
-          <Sun className="w-4 h-4" />
-        )}
-      </motion.div>
-    </motion.button>
-  );
+        <motion.div
+          initial={false}
+          animate={{ rotate: resolvedTheme === "dark" ? 0 : 180 }}
+          transition={{ duration: 0.3 }}
+        >
+          {resolvedTheme === "dark" ? (
+            <Moon className="w-4 h-4" />
+          ) : (
+            <Sun className="w-4 h-4" />
+          )}
+        </motion.div>
+      </motion.button>
+    );
+  } catch {
+    // Fallback if not in ThemeProvider (during SSR)
+    return (
+      <div className="p-2 rounded-lg bg-white/5 border border-white/10 text-zinc-400">
+        <Moon className="w-4 h-4" />
+      </div>
+    );
+  }
 }
