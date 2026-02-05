@@ -8,22 +8,36 @@ datasource db {
 
 model Agent {
   id        String   @id @default(cuid())
-  sessionId String   @map("session_id")
   name      String
+  slug      String   @unique
+  description String?
   purpose   String
-  features  String   // JSON array of features
-  tier      String   // starter, pro, enterprise
+  features  String[] // Array of feature strings
+  tier      String   // scout, ranger, commander, overlord
+  
+  // Customer info
+  customerName  String? @map("customer_name")
+  customerEmail String? @map("customer_email")
   
   // Devin integration fields
-  devinSessionId String? @map("devin_session_id")
-  devinUrl       String? @map("devin_url")
-  status         String  @default("pending") // pending, deploying, active, error
+  devinSessionId   String? @map("devin_session_id")
+  devinUrl         String? @map("devin_url")
+  status           String  @default("pending") // pending, deploying, live, error, stopped
+  deployedAt       DateTime? @map("deployed_at")
+  
+  // Payment reference
+  paymentSessionId String? @map("payment_session_id")
+  
+  // Legacy field (kept for compatibility)
+  sessionId String? @map("session_id")
   
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   
-  @@index([sessionId])
   @@index([status])
+  @@index([devinSessionId])
+  @@index([paymentSessionId])
+  @@index([slug])
   @@map("agents")
 }
 

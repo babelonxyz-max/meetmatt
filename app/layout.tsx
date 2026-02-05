@@ -24,9 +24,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Meet Matt | Deploy AI Assistants in Minutes",
-  description: "Matt helps you deploy AI assistants in minutes. No signup, no KYC. Just describe what you need and get your own AI agent.",
-  keywords: ["AI assistant", "AI agent", "deploy AI", "no-code AI", "chatbot", "automation"],
+  title: "Meet Matt | Deploy Your AI Agent in 15 Minutes",
+  description: "Deploy your personal AI agent for $5/day. No signup required. Watch it being built live by AI. Custom AI assistants for automation, scheduling, emails, and more.",
+  keywords: ["AI agent", "AI assistant", "deploy AI", "custom AI", "automation", "AI employee", "digital twin", "$5 per day"],
   authors: [{ name: "Meet Matt" }],
   creator: "Meet Matt",
   metadataBase: new URL("https://meetmatt.xyz"),
@@ -93,7 +93,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

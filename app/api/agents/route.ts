@@ -1,134 +1,108 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createDevinSession, pollForCompletion } from "@/lib/devin";
+import { createDevinSession, pollDevinSession, type DevinConfig } from "@/lib/devin";
 
-// GET /api/agents?sessionId=xxx
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const sessionId = searchParams.get("sessionId");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID required" },
-      { status: 400 }
-    );
-  }
-
-  try {
-    const agents = await prisma.agent.findMany({
-      where: { sessionId },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return NextResponse.json({ agents });
-  } catch (error: any) {
-    console.error("Fetch agents error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch agents" },
-      { status: 500 }
-    );
-  }
-}
-
-// POST /api/agents
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sessionId, agentName, purpose, features, tier } = body;
+    const { name, purpose, features, tier, customerName, customerEmail, sessionId } = body;
 
-    if (!sessionId || !agentName || !purpose || !tier) {
+    // Validate required fields
+    if (!name || !purpose) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Create agent record with pending status
+    // Use default tier if not provided
+    const agentTier = tier || "standard";
+
+    // Create Devin session with the configuration
+    const devinConfig: DevinConfig = {
+      name,
+      purpose,
+      features: features || ["Chat", "AI Processing"],
+      tier: agentTier,
+    };
+
+    // Create Devin session
+    console.log("Creating Devin session with config:", devinConfig);
+    const devinSession = await createDevinSession(devinConfig);
+    
+    console.log("Devin session created:", devinSession.sessionId);
+
+    // Create agent record in database
     const agent = await prisma.agent.create({
       data: {
-        sessionId,
-        name: agentName,
+        name,
+        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+        description: purpose,
         purpose,
-        features: JSON.stringify(features || []),
-        tier,
-        status: "pending",
+        features: features || ["Chat", "AI Processing"],
+        tier: agentTier,
+        customerName: customerName || "Anonymous",
+        customerEmail: customerEmail || null,
+        status: "deploying",
+        devinSessionId: devinSession.sessionId,
+        devinUrl: devinSession.url,
+        paymentSessionId: sessionId,
       },
     });
 
-    // Start deployment in background (don't await)
-    deployAgent(agent.id, {
-      name: agentName,
-      purpose,
-      features: features || [],
-      tier,
-    });
+    // Start polling in the background (won't block response)
+    pollDevinSessionInBackground(devinSession.sessionId, agent.id);
 
-    return NextResponse.json({ agent });
-  } catch (error: any) {
-    console.error("Create agent error:", error);
+    return NextResponse.json({ 
+      success: true, 
+      agent,
+      devinSession: {
+        sessionId: devinSession.sessionId,
+        url: devinSession.url,
+      }
+    });
+  } catch (error) {
+    console.error("Error creating agent:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create agent" },
+      { error: "Failed to create agent", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }
 }
 
-/**
- * Deploy agent using Devin
- */
-async function deployAgent(agentId: string, config: {
-  name: string;
-  purpose: string;
-  features: string[];
-  tier: string;
-}) {
+// Background polling function
+async function pollDevinSessionInBackground(sessionId: string, agentId: string) {
   try {
-    // Update status to deploying
-    await prisma.agent.update({
-      where: { id: agentId },
-      data: { status: "deploying" },
-    });
-
-    // Create Devin session
-    const devinSession = await createDevinSession(config);
-
-    // Update agent with Devin session info
-    await prisma.agent.update({
-      where: { id: agentId },
-      data: {
-        devinSessionId: devinSession.sessionId,
-        devinUrl: devinSession.url,
-        status: "deploying",
-      },
-    });
-
-    // Poll for completion
-    await pollForCompletion(
-      devinSession.sessionId,
-      async (status) => {
-        console.log(`Agent ${agentId} deployment status: ${status}`);
+    await pollDevinSession(
+      sessionId,
+      async (status, messages) => {
+        console.log(`Agent ${agentId} status: ${status}`);
         
-        // Update status in database
+        // Update agent status in database
+        const finalStatus = status === "completed" ? "live" : 
+                           status === "error" ? "error" : "deploying";
+        
         await prisma.agent.update({
           where: { id: agentId },
           data: { 
-            status: status === "completed" ? "active" : status,
+            status: finalStatus,
+            deployedAt: status === "completed" ? new Date() : undefined,
           },
         });
-      }
+
+        // Store latest messages for context if available
+        if (messages && messages.length > 0) {
+          // Could store messages in a separate table for history
+          console.log(`Agent ${agentId} has ${messages.length} messages`);
+        }
+      },
+      240, // Max 240 attempts (20 minutes at 5 second intervals)
+      5000 // 5 second polling interval
     );
-
-    // Final update
-    await prisma.agent.update({
-      where: { id: agentId },
-      data: { status: "active" },
-    });
-
-    console.log(`Agent ${agentId} deployed successfully`);
   } catch (error) {
-    console.error(`Failed to deploy agent ${agentId}:`, error);
+    console.error(`Background polling failed for agent ${agentId}:`, error);
     
-    // Update status to error
+    // Mark agent as error
     await prisma.agent.update({
       where: { id: agentId },
       data: { status: "error" },
@@ -136,35 +110,62 @@ async function deployAgent(agentId: string, config: {
   }
 }
 
-// PATCH /api/agents/:id - Update agent status (for webhooks)
-export async function PATCH(req: NextRequest) {
+// GET endpoint to list agents
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const agentId = searchParams.get("id");
+    const sessionId = searchParams.get("sessionId");
+    const devinSessionId = searchParams.get("devinSessionId");
+
+    let where: any = {};
     
-    if (!agentId) {
+    if (sessionId) {
+      where.paymentSessionId = sessionId;
+    }
+    
+    if (devinSessionId) {
+      where.devinSessionId = devinSessionId;
+    }
+
+    const agents = await prisma.agent.findMany({
+      where: Object.keys(where).length > 0 ? where : undefined,
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+
+    return NextResponse.json({ agents });
+  } catch (error) {
+    console.error("Error fetching agents:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch agents" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH endpoint to update agent status
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, status } = body;
+
+    if (!id || !status) {
       return NextResponse.json(
-        { error: "Agent ID required" },
+        { error: "Missing id or status" },
         { status: 400 }
       );
     }
 
-    const body = await req.json();
-    const { status, devinUrl } = body;
-
     const agent = await prisma.agent.update({
-      where: { id: agentId },
-      data: { 
-        status,
-        ...(devinUrl && { devinUrl }),
-      },
+      where: { id },
+      data: { status },
     });
 
     return NextResponse.json({ agent });
-  } catch (error: any) {
-    console.error("Update agent error:", error);
+  } catch (error) {
+    console.error("Error updating agent:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to update agent" },
+      { error: "Failed to update agent" },
       { status: 500 }
     );
   }
