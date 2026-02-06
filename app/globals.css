@@ -11,33 +11,39 @@
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.75rem;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
 }
 
 /* Dark theme (default) */
 .dark {
-  --background: #0a0a0b;
-  --foreground: #fafafa;
-  --card: rgba(255, 255, 255, 0.03);
-  --card-hover: rgba(255, 255, 255, 0.07);
-  --border: rgba(255, 255, 255, 0.1);
-  --muted: #a1a1aa;
-  --accent: #0ea5e9;
-  --accent-dim: #0284c7;
-  --glow: rgba(14, 165, 233, 0.3);
+  --background: #0a0a0f;
+  --foreground: #f8fafc;
+  --card: rgba(255, 255, 255, 0.04);
+  --card-hover: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.08);
+  --muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-dim: #3b82f6;
+  --glow: rgba(59, 130, 246, 0.4);
+  --gradient-from: #3b82f6;
+  --gradient-to: #8b5cf6;
 }
 
-/* Light theme */
+/* Light theme - refined */
 .light {
-  --background: #fafafa;
-  --foreground: #18181b;
-  --card: rgba(0, 0, 0, 0.03);
-  --card-hover: rgba(0, 0, 0, 0.07);
-  --border: rgba(0, 0, 0, 0.1);
-  --muted: #71717a;
-  --accent: #0284c7;
-  --accent-dim: #0369a1;
-  --glow: rgba(2, 132, 199, 0.2);
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: rgba(15, 23, 42, 0.03);
+  --card-hover: rgba(15, 23, 42, 0.06);
+  --border: rgba(15, 23, 42, 0.08);
+  --muted: #64748b;
+  --accent: #2563eb;
+  --accent-dim: #1d4ed8;
+  --glow: rgba(37, 99, 235, 0.25);
+  --gradient-from: #2563eb;
+  --gradient-to: #7c3aed;
 }
 
 @layer base {

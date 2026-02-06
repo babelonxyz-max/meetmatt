@@ -5,6 +5,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Sparkles } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import LoginButton from "./LoginButton";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -44,6 +45,9 @@ export function Navbar() {
               </Link>
             ))}
             <ThemeToggle />
+            <div className="hidden md:block">
+              <LoginButton />
+            </div>
           </div>
 
           {/* Mobile Menu Button */}
@@ -79,6 +83,9 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <div className="pt-2">
+                <LoginButton />
+              </div>
             </div>
           </motion.div>
         )}

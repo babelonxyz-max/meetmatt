@@ -4,7 +4,8 @@
 import { ethers } from "ethers";
 import { 
   assignWalletFromPool, 
-  getWalletPrivateKey, 
+  executePMTransfer,
+  executeDirectTransfer,
   markWalletAsUsed,
   getWalletPoolStats 
 } from "./walletPool";
@@ -51,7 +52,10 @@ interface PaymentSession {
  * Initialize new USDH payment session
  * Assigns wallet from secure pool
  */
-export async function initUSDHPayment(sessionId: string): Promise<PaymentSession | null> {
+export async function initUSDHPayment(
+  sessionId: string, 
+  userId?: string
+): Promise<PaymentSession | null> {
   const DISCOUNTED_AMOUNT = 135; // 10% discount
   
   // Check pool stats first
@@ -77,8 +81,23 @@ export async function initUSDHPayment(sessionId: string): Promise<PaymentSession
     walletAddress: wallet.address,
     amount: DISCOUNTED_AMOUNT.toString(),
   });
+
+  // Store payment in database with user link
+  const { prisma } = await import("@/lib/prisma");
+  await prisma.payment.create({
+    data: {
+      sessionId,
+      userId: userId || null,
+      tier: "pro", // USDH payments are Pro tier with discount
+      currency: "USDH",
+      amount: DISCOUNTED_AMOUNT,
+      address: wallet.address,
+      status: "pending",
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+    },
+  });
   
-  console.log(`[HyperEVM] Payment initialized for ${sessionId} using wallet ${wallet.address}`);
+  console.log(`[HyperEVM] Payment initialized for ${sessionId}${userId ? ` (user: ${userId})` : ''} using wallet ${wallet.address}`);
   
   return {
     sessionId,
@@ -92,12 +111,15 @@ export async function initUSDHPayment(sessionId: string): Promise<PaymentSession
 /**
  * Get provider for HyperEVM
  */
-function getProvider(): ethers.JsonRpcProvider {
+export function getHyperEVMProvider(): ethers.JsonRpcProvider {
   return new ethers.JsonRpcProvider(HYPEREVM_CONFIG.rpcUrl, {
     chainId: HYPEREVM_CONFIG.chainId,
     name: HYPEREVM_CONFIG.name,
   });
 }
+
+// Alias for backward compatibility
+const getProvider = getHyperEVMProvider;
 
 /**
  * Check USDH balance of an address
@@ -149,6 +171,7 @@ export async function checkPaymentReceived(sessionId: string): Promise<boolean> 
 
 /**
  * Transfer funds from assigned wallet to master wallet
+ * Uses PM wallet relayer pattern (PM pays gas, executes transferFrom)
  */
 export async function transferToMasterWallet(sessionId: string): Promise<string | null> {
   const payment = paymentStatuses.get(sessionId);
@@ -164,16 +187,8 @@ export async function transferToMasterWallet(sessionId: string): Promise<string 
   }
   
   try {
-    // Get private key from secure pool
-    const privateKey = await getWalletPrivateKey(payment.walletId);
-    if (!privateKey) {
-      console.error("[HyperEVM] Failed to get private key from pool");
-      return null;
-    }
-    
     const provider = getProvider();
-    const signer = new ethers.Wallet(privateKey, provider);
-    const contract = new ethers.Contract(USDH_CONTRACT, ERC20_ABI, signer);
+    const contract = new ethers.Contract(USDH_CONTRACT, ERC20_ABI, provider);
     
     // Check balance
     const balance = await contract.balanceOf(payment.walletAddress);
@@ -183,24 +198,39 @@ export async function transferToMasterWallet(sessionId: string): Promise<string 
       return null;
     }
     
-    // Transfer all USDH to master wallet
-    console.log(`[HyperEVM] Transferring ${ethers.formatUnits(balance, 6)} USDH to master wallet...`);
-    const tx = await contract.transfer(MASTER_WALLET, balance);
-    console.log(`[HyperEVM] Transfer tx sent: ${tx.hash}`);
+    console.log(`[HyperEVM] Transferring ${ethers.formatUnits(balance, 6)} USDH from ${payment.walletAddress}...`);
     
-    // Wait for confirmation
-    const receipt = await tx.wait();
-    console.log(`[HyperEVM] Transfer confirmed: ${receipt?.hash}`);
+    // Try PM wallet transfer first (relayer pattern - PM pays gas)
+    let result = await executePMTransfer(payment.walletId, balance);
+    
+    // Fallback to direct transfer if PM fails (burner pays gas)
+    if (!result.success) {
+      console.log(`[HyperEVM] PM transfer failed (${result.error}), trying direct transfer...`);
+      result = await executeDirectTransfer(payment.walletId, balance);
+    }
+    
+    if (!result.success) {
+      throw new Error(result.error || "Transfer failed");
+    }
     
     // Update status
     payment.status = "transferred";
-    payment.txHash = receipt?.hash;
+    payment.txHash = result.txHash;
     paymentStatuses.set(sessionId, payment);
     
-    // Mark wallet as used in pool
-    await markWalletAsUsed(payment.walletId);
+    // Update payment in database
+    const { prisma } = await import("@/lib/prisma");
+    await prisma.payment.updateMany({
+      where: { sessionId },
+      data: {
+        status: "confirmed",
+        txHash: result.txHash,
+        confirmedAt: new Date(),
+      },
+    });
     
-    return receipt?.hash || null;
+    console.log(`[HyperEVM] Transfer confirmed: ${result.txHash}`);
+    return result.txHash || null;
   } catch (error) {
     console.error("[HyperEVM] Transfer failed:", error);
     

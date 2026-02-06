@@ -27,52 +27,6 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Meet Matt | Deploy AI Assistants in Minutes",
   description: "Matt helps you deploy AI assistants in minutes. No signup, no KYC. Just describe what you need and get your own AI agent.",
-  keywords: ["AI assistant", "AI agent", "deploy AI", "no-code AI", "chatbot", "automation"],
-  authors: [{ name: "Meet Matt" }],
-  creator: "Meet Matt",
-  metadataBase: new URL("https://meetmatt.xyz"),
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://meetmatt.xyz",
-    siteName: "Meet Matt",
-    title: "Meet Matt | Deploy AI Assistants in Minutes",
-    description: "Matt helps you deploy AI assistants in minutes. No signup, no KYC. Just describe what you need and get your own AI agent.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Meet Matt - Deploy AI Assistants",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Meet Matt | Deploy AI Assistants in Minutes",
-    description: "Matt helps you deploy AI assistants in minutes. No signup, no KYC.",
-    images: ["/og-image.png"],
-    creator: "@meetmatt",
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
 };
 
 export default function RootLayout({
@@ -80,19 +34,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                const theme = localStorage.getItem('theme') || 'dark';
-                document.documentElement.classList.add(theme);
-              })();
-            `,
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: 'window.__PRIVY_APP_ID__=' + JSON.stringify(privyAppId) + ';' }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>

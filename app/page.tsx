@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Check, MessageCircle } from "lucide-react";
+import { ArrowRight, Check, MessageCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaymentModal } from "./components/PaymentModal";
@@ -80,6 +80,7 @@ export default function Home() {
   const [showPayment, setShowPayment] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const getWizardState = (): AIOrbProps["wizardState"] => {
@@ -140,7 +141,6 @@ export default function Home() {
     if (currentIndex > 0) {
       const prevStep = stepOrder[currentIndex - 1];
       setStep(prevStep);
-      // Remove last user and assistant messages
       setMessages((prev) => {
         const newMessages = [...prev];
         while (newMessages.length > 0 && (newMessages[newMessages.length - 1].role === "user" || newMessages[newMessages.length - 1].options)) {
@@ -189,8 +189,6 @@ export default function Home() {
     );
   };
 
-  const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
-
   const handleScopeToggle = async (option: string) => {
     await enableAudio();
     const scopeLabel = option.replace(/^\S+\s/, "");
@@ -199,15 +197,12 @@ export default function Home() {
       : [...selectedScopes, scopeLabel];
     setSelectedScopes(newScopes);
     
-    // Update or add user message showing current selections
     setMessages((prev) => {
       const newMessages = [...prev];
-      // Remove previous selection message if exists
       const lastIdx = newMessages.length - 1;
       if (newMessages[lastIdx]?.role === "user" && newMessages[lastIdx]?.id.startsWith("selection-")) {
         newMessages.pop();
       }
-      // Add new selection message
       if (newScopes.length > 0) {
         newMessages.push({
           id: `selection-${Date.now()}`,
@@ -225,10 +220,8 @@ export default function Home() {
     playOptionSelected();
     const scopeString = selectedScopes.join(", ");
     setConfig((prev) => ({ ...prev, scope: scopeString }));
-    // Replace the temporary selection message with final confirm
     setMessages((prev) => {
       const newMessages = [...prev];
-      // Remove the last selection message if it exists
       const lastIdx = newMessages.length - 1;
       if (newMessages[lastIdx]?.role === "user" && newMessages[lastIdx]?.id.startsWith("selection-")) {
         newMessages[lastIdx] = {
@@ -381,102 +374,165 @@ export default function Home() {
           <AnimatePresence mode="wait">
             {/* NAME INPUT */}
             {step === "name" && (
-              <motion.div key="name-step" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="p-4 border-t border-[var(--border)]">
-                <div className="max-w-md mx-auto">
-                  <Input
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onFocus={() => enableAudio()}
-                    placeholder="e.g., Jarvis, Maya, Helper..."
-                    className="flex-1 bg-[var(--card)] border-[var(--border)] h-12 text-base mb-3"
-                  />
-                  <Button onClick={handleNameSubmit} disabled={!input.trim()} className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-11 disabled:opacity-50">
-                    Continue <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+              <motion.div 
+                key="name-step" 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -20 }} 
+                className="p-4 lg:p-6 border-t border-[var(--border)] bg-[var(--card)]/10"
+              >
+                <div className="max-w-lg mx-auto">
+                  <label className="block text-xs font-medium text-[var(--muted)] mb-2 uppercase tracking-wider">
+                    Agent Name
+                  </label>
+                  <div className="flex gap-3">
+                    <Input
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onFocus={() => enableAudio()}
+                      placeholder="e.g., Jarvis, Maya, Helper..."
+                      className="flex-1 bg-[var(--card)] border-[var(--border)] h-12 text-base"
+                    />
+                    <Button 
+                      onClick={handleNameSubmit} 
+                      disabled={!input.trim()} 
+                      className="bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white h-12 px-6 disabled:opacity-50"
+                    >
+                      <ArrowRight className="w-5 h-5" />
+                    </Button>
+                  </div>
                 </div>
               </motion.div>
             )}
 
             {/* USE CASE SELECTION */}
             {step === "usecase" && (
-              <motion.div key="usecase-step" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="p-4 border-t border-[var(--border)]">
-                <div className="grid grid-cols-1 gap-2 max-w-md mx-auto">
-                  {USE_CASE_OPTIONS.map((option) => (
-                    <motion.button
-                      key={option.id}
-                      onClick={() => handleUseCaseSelect(`${option.icon} ${option.label}`)}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[#0ea5e9]/50 text-left transition-all"
-                    >
-                      <span className="text-2xl">{option.icon}</span>
-                      <div>
-                        <p className="font-medium">{option.label}</p>
-                        <p className="text-xs text-[var(--muted)]">{option.desc}</p>
-                      </div>
-                    </motion.button>
-                  ))}
+              <motion.div 
+                key="usecase-step" 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -20 }} 
+                className="p-4 lg:p-6 border-t border-[var(--border)] bg-[var(--card)]/10"
+              >
+                <div className="max-w-lg mx-auto">
+                  <label className="block text-xs font-medium text-[var(--muted)] mb-3 uppercase tracking-wider">
+                    Select Use Case
+                  </label>
+                  <div className="grid gap-2">
+                    {USE_CASE_OPTIONS.map((option) => (
+                      <motion.button
+                        key={option.id}
+                        onClick={() => handleUseCaseSelect(`${option.icon} ${option.label}`)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex items-center gap-4 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--accent)]/50 text-left transition-all group"
+                      >
+                        <span className="text-3xl">{option.icon}</span>
+                        <div className="flex-1">
+                          <p className="font-medium group-hover:text-[var(--accent)] transition-colors">{option.label}</p>
+                          <p className="text-xs text-[var(--muted)]">{option.desc}</p>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--accent)] transition-colors" />
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}
 
             {/* SCOPE MULTI-SELECT */}
             {step === "scope" && (
-              <motion.div key="scope-step" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="p-4 border-t border-[var(--border)]">
-                <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto mb-3">
-                  {(SCOPE_OPTIONS[config.useCase] || []).map((option) => {
-                    const isSelected = selectedScopes.includes(option.label);
-                    return (
-                      <motion.button
-                        key={option.id}
-                        onClick={() => handleScopeToggle(`${option.icon} ${option.label}`)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`px-4 py-2 rounded-full border text-sm transition-all flex items-center gap-2 ${
-                          isSelected ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-[#0ea5e9]" : "bg-[var(--card)] border-[var(--border)] hover:border-[#0ea5e9]/50"
-                        }`}
+              <motion.div 
+                key="scope-step" 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -20 }} 
+                className="p-4 lg:p-6 border-t border-[var(--border)] bg-[var(--card)]/10"
+              >
+                <div className="max-w-lg mx-auto">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                      Select Capabilities
+                    </label>
+                    {selectedScopes.length > 0 && (
+                      <span className="text-xs text-[var(--accent)]">{selectedScopes.length} selected</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {(SCOPE_OPTIONS[config.useCase] || []).map((option) => {
+                      const isSelected = selectedScopes.includes(option.label);
+                      return (
+                        <motion.button
+                          key={option.id}
+                          onClick={() => handleScopeToggle(`${option.icon} ${option.label}`)}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className={`px-4 py-2.5 rounded-full border text-sm transition-all flex items-center gap-2 ${
+                            isSelected 
+                              ? "bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]" 
+                              : "bg-[var(--card)] border-[var(--border)] hover:border-[var(--accent)]/50"
+                          }`}
+                        >
+                          <span>{option.icon}</span>
+                          <span>{option.label}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5" />}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                  {selectedScopes.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }} 
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex justify-end"
+                    >
+                      <Button 
+                        onClick={handleScopeConfirm} 
+                        className="bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white px-6"
                       >
-                        <span>{option.icon}</span>
-                        <span>{option.label}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5" />}
-                      </motion.button>
-                    );
-                  })}
+                        Continue <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </motion.div>
+                  )}
                 </div>
-                {selectedScopes.length > 0 && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
-                    <Button onClick={handleScopeConfirm} className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-6">
-                      Continue ({selectedScopes.length}) <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </motion.div>
-                )}
               </motion.div>
             )}
 
             {/* CONTACT METHOD */}
             {step === "contact" && (
-              <motion.div key="contact-step" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="p-4 border-t border-[var(--border)]">
-                <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
-                  {CONTACT_OPTIONS.map((option) => (
-                    <motion.button
-                      key={option.id}
-                      onClick={() => handleContactSelect(`${option.icon} ${option.label}`)}
-                      whileHover={{ scale: option.available ? 1.05 : 1 }}
-                      whileTap={{ scale: option.available ? 0.95 : 1 }}
-                      disabled={!option.available}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                        option.available
-                          ? "bg-[var(--card)] border-[var(--border)] hover:border-[#0ea5e9]/50 cursor-pointer"
-                          : "bg-[var(--card)]/50 border-[var(--border)]/50 opacity-50 cursor-not-allowed"
-                      }`}
-                    >
-                      <span className="text-2xl">{option.icon}</span>
-                      <span className="text-sm font-medium">{option.label}</span>
-                      {!option.available && <span className="text-[10px] text-[var(--muted)]">Soon</span>}
-                    </motion.button>
-                  ))}
+              <motion.div 
+                key="contact-step" 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -20 }} 
+                className="p-4 lg:p-6 border-t border-[var(--border)] bg-[var(--card)]/10"
+              >
+                <div className="max-w-lg mx-auto">
+                  <label className="block text-xs font-medium text-[var(--muted)] mb-3 uppercase tracking-wider">
+                    Choose Contact Method
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {CONTACT_OPTIONS.map((option) => (
+                      <motion.button
+                        key={option.id}
+                        onClick={() => handleContactSelect(`${option.icon} ${option.label}`)}
+                        whileHover={{ scale: option.available ? 1.05 : 1 }}
+                        whileTap={{ scale: option.available ? 0.95 : 1 }}
+                        disabled={!option.available}
+                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
+                          option.available
+                            ? "bg-[var(--card)] border-[var(--border)] hover:border-[var(--accent)]/50 cursor-pointer"
+                            : "bg-[var(--card)]/50 border-[var(--border)]/50 opacity-50 cursor-not-allowed"
+                        }`}
+                      >
+                        <span className="text-2xl">{option.icon}</span>
+                        <span className="text-sm font-medium">{option.label}</span>
+                        {!option.available && <span className="text-[10px] text-[var(--muted)]">Soon</span>}
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}

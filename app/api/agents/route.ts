@@ -34,13 +34,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // Generate unique slug from agent name
+    const baseSlug = agentName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
+
     // Create agent record with pending status
     const agent = await prisma.agent.create({
       data: {
         sessionId,
+        slug: uniqueSlug,
         name: agentName,
         purpose: scope || useCase,
-        features: JSON.stringify({ useCase, scope, contactMethod }),
+        features: [JSON.stringify({ useCase, scope, contactMethod })],
         tier: "matt",
         status: "pending",
       },

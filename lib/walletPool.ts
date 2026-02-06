@@ -1,25 +1,31 @@
-// Secure Wallet Pool Management
-// Pre-generated wallets stored encrypted in database
+// Secure Wallet Pool Management with Relayer Pattern
+// PM Wallet handles transfers, burner wallets only hold approvals
 
 import { ethers } from "ethers";
 import { prisma } from "./prisma";
+import { getHyperEVMProvider } from "./hyperevm";
 
-// Encryption key from environment
 const ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY || "";
+const MASTER_WALLET = process.env.HYPEREVM_MASTER_WALLET || "";
+const PM_WALLET_KEY = process.env.PM_WALLET_KEY || process.env.HYPEREVM_MASTER_KEY || "";
+
+// Minimal gas for approval: 0.001 HYPER (~$0.02, covers 1 approval + some buffer)
+const APPROVAL_GAS_FUND = ethers.parseEther("0.001");
 
 interface WalletPoolEntry {
   id: string;
   address: string;
   encryptedPrivateKey: string;
   status: "available" | "assigned" | "used";
+  pmApproved: boolean; // Whether PM wallet is approved to spend
   assignedToSession?: string;
   assignedAt?: Date;
   createdAt: Date;
 }
 
 /**
- * Generate a batch of wallets and store them encrypted in database
- * Call this once to pre-populate the wallet pool
+ * Generate wallets - NO pre-funding needed in relayer pattern
+ * Approval happens at assignment time with minimal gas
  */
 export async function generateWalletPool(count: number = 100): Promise<string[]> {
   const wallets: string[] = [];
@@ -33,20 +39,24 @@ export async function generateWalletPool(count: number = 100): Promise<string[]>
         address: wallet.address,
         encryptedPrivateKey: encryptedKey,
         status: "available",
+        pmApproved: false,
       },
     });
     
     wallets.push(wallet.address);
   }
   
-  console.log(`[WalletPool] Generated ${count} wallets`);
+  console.log(`[WalletPool] Generated ${count} wallets (no pre-funding needed)`);
   return wallets;
 }
 
 /**
- * Get next available wallet from pool
+ * Assign wallet and set up approval for PM wallet
+ * This is where minimal gas is spent (0.001 HYPER)
  */
-export async function assignWalletFromPool(sessionId: string): Promise<{ address: string; id: string } | null> {
+export async function assignWalletFromPool(
+  sessionId: string
+): Promise<{ address: string; id: string; ready: boolean } | null> {
   // Find available wallet
   const wallet = await prisma.walletPool.findFirst({
     where: { status: "available" },
@@ -54,9 +64,12 @@ export async function assignWalletFromPool(sessionId: string): Promise<{ address
   });
   
   if (!wallet) {
-    console.error("[WalletPool] No available wallets in pool!");
+    console.error("[WalletPool] No available wallets!");
     return null;
   }
+  
+  // Set up approval for PM wallet (one-time gas cost)
+  const approvalSuccess = await setupPMApproval(wallet.id, wallet.address);
   
   // Mark as assigned
   await prisma.walletPool.update({
@@ -65,154 +78,282 @@ export async function assignWalletFromPool(sessionId: string): Promise<{ address
       status: "assigned",
       assignedToSession: sessionId,
       assignedAt: new Date(),
+      pmApproved: approvalSuccess,
     },
   });
   
-  console.log(`[WalletPool] Assigned wallet ${wallet.address} to session ${sessionId}`);
+  console.log(`[WalletPool] Assigned ${wallet.address} to ${sessionId} (approval: ${approvalSuccess})`);
   
   return {
     address: wallet.address,
     id: wallet.id,
+    ready: approvalSuccess,
   };
 }
 
 /**
- * Get private key for a wallet (decrypt from database)
+ * Set up approval: PM wallet sends gas, burner approves PM to spend USDH
+ * This is the ONLY time burner needs gas (0.001 HYPER)
  */
+async function setupPMApproval(walletId: string, walletAddress: string): Promise<boolean> {
+  try {
+    if (!PM_WALLET_KEY) {
+      console.warn("[WalletPool] No PM wallet key, skipping approval setup");
+      return false;
+    }
+
+    const provider = getHyperEVMProvider();
+    const pmWallet = new ethers.Wallet(PM_WALLET_KEY, provider);
+    
+    // Step 1: PM sends minimal gas to burner
+    const fundTx = await pmWallet.sendTransaction({
+      to: walletAddress,
+      value: APPROVAL_GAS_FUND,
+    });
+    await fundTx.wait();
+    console.log(`[WalletPool] Funded ${walletAddress} with ${ethers.formatEther(APPROVAL_GAS_FUND)} HYPER`);
+    
+    // Step 2: Burner wallet approves PM to spend USDH (infinite approval)
+    const privateKey = await getWalletPrivateKey(walletId);
+    if (!privateKey) return false;
+    
+    const burnerWallet = new ethers.Wallet(privateKey, provider);
+    const USDH_CONTRACT = process.env.USDH_CONTRACT_ADDRESS!;
+    
+    const erc20Abi = [
+      "function approve(address spender, uint256 amount) returns (bool)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+    ];
+    
+    const contract = new ethers.Contract(USDH_CONTRACT, erc20Abi, burnerWallet);
+    const approveTx = await contract.approve(pmWallet.address, ethers.MaxUint256);
+    await approveTx.wait();
+    
+    console.log(`[WalletPool] PM wallet approved for ${walletAddress}`);
+    return true;
+  } catch (err) {
+    console.error(`[WalletPool] Approval setup failed for ${walletAddress}:`, err);
+    return false;
+  }
+}
+
+/**
+ * PM Wallet executes transferFrom (uses PM's gas, not burner's)
+ * This is the key relayer pattern - PM pays gas, transfers from burner to master
+ */
+export async function executePMTransfer(
+  walletId: string,
+  amount: bigint
+): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  try {
+    if (!PM_WALLET_KEY) {
+      return { success: false, error: "PM wallet not configured" };
+    }
+
+    const wallet = await prisma.walletPool.findUnique({
+      where: { id: walletId },
+    });
+    
+    if (!wallet) {
+      return { success: false, error: "Wallet not found" };
+    }
+
+    const provider = getHyperEVMProvider();
+    const pmWallet = new ethers.Wallet(PM_WALLET_KEY, provider);
+    const USDH_CONTRACT = process.env.USDH_CONTRACT_ADDRESS!;
+    
+    const erc20Abi = [
+      "function transferFrom(address from, address to, uint256 amount) returns (bool)",
+      "function balanceOf(address account) view returns (uint256)",
+    ];
+    
+    // Check if PM is approved
+    const allowanceAbi = ["function allowance(address owner, address spender) view returns (uint256)"];
+    const allowanceContract = new ethers.Contract(USDH_CONTRACT, allowanceAbi, provider);
+    const allowance = await allowanceContract.allowance(wallet.address, pmWallet.address);
+    
+    if (allowance < amount) {
+      return { success: false, error: "PM not approved or insufficient allowance" };
+    }
+    
+    // PM executes transferFrom (burner → master)
+    const contract = new ethers.Contract(USDH_CONTRACT, erc20Abi, pmWallet);
+    const tx = await contract.transferFrom(wallet.address, MASTER_WALLET, amount);
+    const receipt = await tx.wait();
+    
+    // Mark as used
+    await markWalletAsUsed(walletId);
+    
+    console.log(`[PM Wallet] Transferred ${amount} USDH from ${wallet.address} to master`);
+    return { success: true, txHash: receipt.hash };
+  } catch (err: any) {
+    console.error("[PM Wallet] Transfer failed:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Alternative: Direct transfer using burner's own gas (fallback)
+ * Used when PM approval failed or for recovery
+ */
+export async function executeDirectTransfer(
+  walletId: string,
+  amount: bigint
+): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  try {
+    const privateKey = await getWalletPrivateKey(walletId);
+    if (!privateKey) {
+      return { success: false, error: "Wallet not found" };
+    }
+
+    const provider = getHyperEVMProvider();
+    const wallet = new ethers.Wallet(privateKey, provider);
+    const USDH_CONTRACT = process.env.USDH_CONTRACT_ADDRESS!;
+    
+    // Check burner has gas
+    const gasBalance = await provider.getBalance(wallet.address);
+    if (gasBalance < ethers.parseEther("0.0001")) {
+      return { success: false, error: "Burner has no gas, use PM transfer or fund gas" };
+    }
+    
+    const erc20Abi = [
+      "function transfer(address to, uint256 amount) returns (bool)",
+    ];
+    
+    const contract = new ethers.Contract(USDH_CONTRACT, erc20Abi, wallet);
+    const tx = await contract.transfer(MASTER_WALLET, amount);
+    const receipt = await tx.wait();
+    
+    await markWalletAsUsed(walletId);
+    
+    return { success: true, txHash: receipt.hash };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+// ... rest of helper functions (getWalletPrivateKey, markWalletAsUsed, etc.) ...
+
 export async function getWalletPrivateKey(walletId: string): Promise<string | null> {
   const wallet = await prisma.walletPool.findUnique({
     where: { id: walletId },
   });
   
-  if (!wallet) {
-    console.error(`[WalletPool] Wallet ${walletId} not found`);
-    return null;
-  }
-  
+  if (!wallet) return null;
   return decryptPrivateKey(wallet.encryptedPrivateKey);
 }
 
-/**
- * Mark wallet as used (after successful transfer)
- */
 export async function markWalletAsUsed(walletId: string): Promise<void> {
   await prisma.walletPool.update({
     where: { id: walletId },
     data: { status: "used" },
   });
-  
-  console.log(`[WalletPool] Wallet ${walletId} marked as used`);
 }
 
-/**
- * Get pool statistics
- */
 export async function getWalletPoolStats(): Promise<{
   total: number;
   available: number;
   assigned: number;
   used: number;
+  pmApproved: number;
 }> {
-  const [total, available, assigned, used] = await Promise.all([
+  const [total, available, assigned, used, pmApproved] = await Promise.all([
     prisma.walletPool.count(),
     prisma.walletPool.count({ where: { status: "available" } }),
     prisma.walletPool.count({ where: { status: "assigned" } }),
     prisma.walletPool.count({ where: { status: "used" } }),
+    prisma.walletPool.count({ where: { pmApproved: true } }),
   ]);
   
-  return { total, available, assigned, used };
+  return { total, available, assigned, used, pmApproved };
 }
 
-/**
- * Encrypt private key using AES-256-GCM
- */
+// Encryption functions (same as before)
 function encryptPrivateKey(privateKey: string): string {
   if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) {
-    throw new Error("WALLET_ENCRYPTION_KEY not configured properly");
+    throw new Error("WALLET_ENCRYPTION_KEY not configured");
   }
   
-  // Use ethers built-in encryption
+  const crypto = require("crypto");
   const key = ENCRYPTION_KEY.slice(0, 32);
-  const iv = ethers.randomBytes(16);
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv("aes-256-gcm", Buffer.from(key), iv);
   
-  // Simple XOR encryption for demo (use proper AES in production)
-  const encoder = new TextEncoder();
-  const data = encoder.encode(privateKey);
-  const keyBytes = encoder.encode(key);
+  let encrypted = cipher.update(privateKey, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  const authTag = cipher.getAuthTag();
   
-  const encrypted = new Uint8Array(data.length);
-  for (let i = 0; i < data.length; i++) {
-    encrypted[i] = data[i] ^ keyBytes[i % keyBytes.length];
-  }
-  
-  // Store as: iv:encrypted
-  const combined = new Uint8Array(iv.length + encrypted.length);
-  combined.set(iv);
-  combined.set(encrypted, iv.length);
-  
-  return Buffer.from(combined).toString("base64");
+  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
 }
 
-/**
- * Decrypt private key
- */
 function decryptPrivateKey(encryptedData: string): string {
   if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) {
-    throw new Error("WALLET_ENCRYPTION_KEY not configured properly");
+    throw new Error("WALLET_ENCRYPTION_KEY not configured");
   }
   
+  const crypto = require("crypto");
   const key = ENCRYPTION_KEY.slice(0, 32);
-  const combined = Buffer.from(encryptedData, "base64");
+  const [ivHex, authTagHex, encrypted] = encryptedData.split(":");
   
-  const iv = combined.slice(0, 16);
-  const encrypted = combined.slice(16);
+  const decipher = crypto.createDecipheriv(
+    "aes-256-gcm",
+    Buffer.from(key),
+    Buffer.from(ivHex, "hex")
+  );
+  decipher.setAuthTag(Buffer.from(authTagHex, "hex"));
   
-  // XOR decryption
-  const decoder = new TextDecoder();
-  const keyBytes = new TextEncoder().encode(key);
+  let decrypted = decipher.update(encrypted, "hex", "utf8");
+  decrypted += decipher.final("utf8");
   
-  const decrypted = new Uint8Array(encrypted.length);
-  for (let i = 0; i < encrypted.length; i++) {
-    decrypted[i] = encrypted[i] ^ keyBytes[i % keyBytes.length];
-  }
-  
-  return decoder.decode(decrypted);
+  return decrypted;
 }
 
 /**
- * Export private keys (for backup/recovery)
- * Only accessible with proper authorization
- */
-export async function exportWalletPrivateKey(
-  walletId: string,
-  authToken: string
-): Promise<string | null> {
-  // Verify auth token (implement proper auth)
-  if (authToken !== process.env.ADMIN_AUTH_TOKEN) {
-    throw new Error("Unauthorized");
-  }
-  
-  return getWalletPrivateKey(walletId);
-}
-
-/**
- * Recovery: Get stuck funds from a wallet
- * If auto-transfer failed, manually recover
+ * Recovery: Fund gas and transfer directly
  */
 export async function recoverStuckFunds(
   walletId: string,
-  masterWallet: string
-): Promise<string | null> {
-  const privateKey = await getWalletPrivateKey(walletId);
-  if (!privateKey) return null;
+  toAddress?: string
+): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  const target = toAddress || MASTER_WALLET;
   
-  const wallet = new ethers.Wallet(privateKey);
-  
-  // Check balance and transfer
-  // Implementation similar to hyperevm.ts transfer function
-  console.log(`[WalletPool] Recovering funds from ${wallet.address} to ${masterWallet}`);
-  
-  // TODO: Implement actual transfer logic
-  
-  return wallet.address;
+  try {
+    const wallet = await prisma.walletPool.findUnique({
+      where: { id: walletId },
+    });
+    
+    if (!wallet) return { success: false, error: "Wallet not found" };
+
+    const provider = getHyperEVMProvider();
+    const USDH_CONTRACT = process.env.USDH_CONTRACT_ADDRESS!;
+    
+    // Check USDH balance
+    const erc20Abi = ["function balanceOf(address) view returns (uint256)"];
+    const contract = new ethers.Contract(USDH_CONTRACT, erc20Abi, provider);
+    const balance = await contract.balanceOf(wallet.address);
+    
+    if (balance === BigInt(0)) {
+      return { success: false, error: "No USDH balance" };
+    }
+
+    // Try PM transfer first
+    const pmResult = await executePMTransfer(walletId, balance);
+    if (pmResult.success) return pmResult;
+    
+    // Fallback: Fund gas and do direct transfer
+    if (!PM_WALLET_KEY) {
+      return { success: false, error: "No PM wallet for recovery" };
+    }
+    
+    const pmWallet = new ethers.Wallet(PM_WALLET_KEY, provider);
+    const fundTx = await pmWallet.sendTransaction({
+      to: wallet.address,
+      value: ethers.parseEther("0.01"),
+    });
+    await fundTx.wait();
+    
+    return executeDirectTransfer(walletId, balance);
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 }

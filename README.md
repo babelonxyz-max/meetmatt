@@ -1,36 +1,138 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meet Matt
 
-## Getting Started
+AI agent deployment platform with crypto payments on HyperEVM.
 
-First, run the development server:
+## Features
+
+- 🤖 Deploy AI assistants via Devin
+- 💳 Pay with USDH (10% discount) or stablecoins
+- 🔐 Secure wallet pool with PM relayer architecture
+- 👤 User authentication via Privy (email, social, wallet)
+- ⚡ 98% capital efficient gas management
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Setup Environment Variables
+
+```bash
+# Copy template
+cp .env.local.example .env.local
+
+# Or run setup script (generates PM wallet + burner pool)
+npx tsx scripts/setup-wallets.ts
+```
+
+### 3. Add Required Credentials
+
+Get from [Privy Dashboard](https://dashboard.privy.io):
+
+```bash
+# Add to .env.local:
+NEXT_PUBLIC_PRIVY_APP_ID=cm-xxx
+PRIVY_APP_SECRET=xxx
+```
+
+Get `DATABASE_URL` from [Vercel Dashboard](https://vercel.com).
+
+### 4. Fund PM Wallet
+
+Send HYPER to the address shown by setup script:
+
+```bash
+# Check PM wallet
+npx tsx scripts/setup-wallets.ts --pm-only
+
+# Recommended: 5 HYPER for 100 wallets
+```
+
+### 5. Generate Burner Wallets
+
+```bash
+npx tsx scripts/setup-wallets.ts 100
+```
+
+### 6. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### PM Wallet Relayer Pattern
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Instead of funding each burner wallet with 0.05 HYPER (~$1), we use a PM (Payment Manager) wallet:
 
-## Learn More
+```
+User pays USDH → Burner Wallet
+                        ↓
+              PM executes transferFrom (pays gas)
+                        ↓
+                 Master Wallet (receives USDH)
+```
 
-To learn more about Next.js, take a look at the following resources:
+**Benefits:**
+- 98% cheaper: 0.001 HYPER per wallet vs 0.05 HYPER
+- 100 wallets = $2 instead of $100
+- PM wallet handles all gas costs
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Wallet Pool Flow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Generate**: Create encrypted burner wallets (no gas needed)
+2. **Assign**: PM funds 0.001 HYPER + approves itself to spend
+3. **Payment**: User sends USDH to burner address
+4. **Transfer**: PM executes `transferFrom` to master wallet
+5. **Cleanup**: Wallet marked as "used"
 
-## Deploy on Vercel
+## API Endpoints
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Payment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# Create USDH payment
+POST /api/payment/hyperevm
+{ "sessionId": "xxx", "userId": "optional" }
+
+# Check payment status
+GET /api/payment/hyperevm/status?sessionId=xxx
+```
+
+### Admin
+
+```bash
+# Get wallet pool stats
+GET /api/admin/wallet-pool
+Authorization: Bearer <ADMIN_AUTH_TOKEN>
+
+# Generate more wallets
+POST /api/admin/wallet-pool
+{ "count": 100 }
+
+# Recover stuck funds
+PATCH /api/admin/wallet-pool
+{ "walletId": "xxx" }
+```
+
+## Documentation
+
+- [Environment Variables](docs/ENVIRONMENT_VARIABLES.md) - Complete setup guide
+- [PM Wallet Architecture](docs/PM_WALLET_ARCHITECTURE.md) - How relayer works
+- [Privy Setup](docs/PRIVY_SETUP.md) - Authentication configuration
+
+## Tech Stack
+
+- **Framework**: Next.js 15 + React 19
+- **Auth**: Privy (email, social, embedded wallets)
+- **Database**: PostgreSQL + Prisma
+- **Blockchain**: HyperEVM (USDH payments)
+- **Deployment**: Vercel
+
+## License
+
+MIT

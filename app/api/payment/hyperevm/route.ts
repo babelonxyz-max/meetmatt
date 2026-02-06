@@ -5,14 +5,22 @@ import { initUSDHPayment, pollForPayment, getPaymentStatus } from "@/lib/hyperev
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sessionId } = body;
+    const { sessionId, userId } = body;
 
     if (!sessionId) {
       return NextResponse.json({ error: "Session ID required" }, { status: 400 });
     }
 
+    // Link to user if provided
+    let linkedUserId = userId;
+    if (!linkedUserId) {
+      // Try to get from localStorage via cookie/session
+      const cookieUserId = req.cookies.get("userId")?.value;
+      linkedUserId = cookieUserId;
+    }
+
     // Initialize payment with wallet from secure pool
-    const payment = await initUSDHPayment(sessionId);
+    const payment = await initUSDHPayment(sessionId, linkedUserId);
     
     if (!payment) {
       return NextResponse.json({ 

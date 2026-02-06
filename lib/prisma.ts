@@ -7,8 +7,16 @@ const globalForPrisma = globalThis as unknown as {
 // Check if we're in build phase
 const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
 
-// Mock implementation for build phase to avoid DB connection errors
+// Mock implementation for build phase
 const mockDb = {
+  user: {
+    findMany: () => Promise.resolve([]),
+    findUnique: () => Promise.resolve(null),
+    create: (args: any) => Promise.resolve({ id: "mock-" + Date.now(), ...args.data }),
+    update: () => Promise.resolve({}),
+    delete: () => Promise.resolve({}),
+    count: () => Promise.resolve(0),
+  },
   agent: {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
@@ -27,9 +35,22 @@ const mockDb = {
     update: () => Promise.resolve({}),
     delete: () => Promise.resolve({}),
   },
+  walletPool: {
+    findMany: () => Promise.resolve([]),
+    findUnique: () => Promise.resolve(null),
+    findFirst: () => Promise.resolve(null),
+    create: (args: any) => Promise.resolve({ 
+      id: "wallet-" + Date.now(), 
+      address: "0x" + "1".repeat(40),
+      ...args.data 
+    }),
+    update: () => Promise.resolve({}),
+    count: () => Promise.resolve(0),
+  },
   $connect: () => Promise.resolve(),
   $disconnect: () => Promise.resolve(),
   $transaction: (fn: any) => Promise.resolve(fn(mockDb)),
+  $queryRaw: () => Promise.resolve([1]),
 };
 
 // Initialize Prisma Client
@@ -39,11 +60,26 @@ function getPrismaClient(): PrismaClient | typeof mockDb {
   }
 
   if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = new PrismaClient({
-      log: process.env.NODE_ENV === "development" 
-        ? ["query", "error", "warn"] 
-        : ["error"],
-    });
+    const connectionString = process.env.DATABASE_URL;
+    
+    if (!connectionString) {
+      console.warn("[Prisma] DATABASE_URL not set, using mock database");
+      return mockDb as any;
+    }
+
+    try {
+      // Use standard Prisma client without adapter for serverless compatibility
+      globalForPrisma.prisma = new PrismaClient({
+        log: process.env.NODE_ENV === "development" 
+          ? ["query", "error", "warn"] 
+          : ["error"],
+      });
+      
+      console.log("[Prisma] Client initialized successfully");
+    } catch (error) {
+      console.error("[Prisma] Failed to initialize:", error);
+      return mockDb as any;
+    }
   }
   
   return globalForPrisma.prisma;
@@ -60,7 +96,7 @@ export async function checkDatabaseConnection(): Promise<boolean> {
     await prisma.$queryRaw`SELECT 1`;
     return true;
   } catch (error) {
-    console.error("Database connection failed:", error);
+    console.error("[Prisma] Database connection failed:", error);
     return false;
   }
 }

@@ -7,23 +7,36 @@ datasource db {
 }
 
 model Agent {
-  id        String   @id @default(cuid())
-  sessionId String   @map("session_id")
-  name      String
-  purpose   String
-  features  String   // JSON array of features
-  tier      String   // starter, pro, enterprise
-  
-  // Devin integration fields
-  devinSessionId String? @map("devin_session_id")
-  devinUrl       String? @map("devin_url")
-  status         String  @default("pending") // pending, deploying, active, error
-  
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  
-  @@index([sessionId])
+  id                 String    @id @default(cuid())
+  sessionId          String?   @map("session_id")
+  name               String
+  purpose            String
+  tier               String
+  devinSessionId     String?   @map("devin_session_id")
+  devinUrl           String?   @map("devin_url")
+  status             String    @default("pending")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  customer_email     String?
+  customer_name      String?
+  deployed_at        DateTime?
+  description        String?
+  payment_session_id String?
+  slug               String    @unique
+  features           String[]
+  userId             String?   @map("user_id")
+  subscriptionStatus String    @default("trial") @map("subscription_status")
+  subscriptionType   String    @default("monthly") @map("subscription_type")
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+  lastPaymentId      String?   @map("last_payment_id")
+
   @@index([status])
+  @@index([devinSessionId])
+  @@index([payment_session_id])
+  @@index([slug])
+  @@index([userId])
   @@map("agents")
 }
 
@@ -34,29 +47,48 @@ model Payment {
   currency    String
   amount      Float
   address     String
-  status      String    @default("pending") // pending, confirming, confirmed, expired
+  status      String    @default("pending")
   txHash      String?   @map("tx_hash")
   confirmedAt DateTime? @map("confirmed_at")
   expiresAt   DateTime  @map("expires_at")
   createdAt   DateTime  @default(now()) @map("created_at")
-  
+  userId      String?   @map("user_id")
+
   @@index([sessionId])
   @@index([address])
   @@index([status])
+  @@index([userId])
   @@map("payments")
 }
 
-// Pre-generated encrypted wallet pool for USDH payments
 model WalletPool {
   id                  String    @id @default(cuid())
   address             String    @unique
   encryptedPrivateKey String    @map("encrypted_private_key")
-  status              String    @default("available") // available, assigned, used
+  status              String    @default("available")
   assignedToSession   String?   @map("assigned_to_session")
   assignedAt          DateTime? @map("assigned_at")
   createdAt           DateTime  @default(now()) @map("created_at")
-  
+  hyperBalance        String    @default("0") @map("hyper_balance")
+  pmApproved          Boolean   @default(false) @map("pm_approved")
+
   @@index([status])
   @@index([assignedToSession])
   @@map("wallet_pool")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  privyId       String    @unique @map("privy_id")
+  email         String?
+  walletAddress String?   @map("wallet_address")
+  name          String?
+  avatar        String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+
+  @@index([email])
+  @@index([walletAddress])
+  @@map("users")
 }
