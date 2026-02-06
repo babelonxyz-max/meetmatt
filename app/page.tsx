@@ -6,7 +6,7 @@ import { ArrowRight, Sparkles, User } from "lucide-react";
 import { PaymentModal } from "./components/PaymentModal";
 import { AIOrb, type AIOrbProps } from "./components/AIOrb";
 import { ThemeToggle } from "./components/ThemeToggle";
-import { getOrCreateSessionId, savePendingConfig, clearPendingConfig } from "@/lib/session";
+import { getOrCreateSessionId, savePendingConfig, clearPendingConfig, getPendingConfig } from "@/lib/session";
 import { initAudio, playMessageSent, playMessageReceived, playOptionSelected, playSuccess } from "@/lib/audio";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
@@ -72,7 +72,7 @@ const CONTACT_OPTIONS = [
 ];
 
 export default function Home() {
-  const { authenticated, login, user } = usePrivy();
+  const { authenticated, login, user, ready } = usePrivy();
   const [sessionId] = useState<string>(() => getOrCreateSessionId());
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -91,6 +91,7 @@ export default function Home() {
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
   const [currentAgent, setCurrentAgent] = useState<AgentData | null>(null);
   const [awaitingAuthCode, setAwaitingAuthCode] = useState(false);
+  const [showContinue, setShowContinue] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activationPollRef = useRef<NodeJS.Timeout | null>(null);
@@ -119,6 +120,33 @@ export default function Home() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  // Check for pending config after login
+  useEffect(() => {
+    if (ready && authenticated && step === "intro") {
+      const pending = getPendingConfig();
+      if (pending && pending.agentName) {
+        // Restore and continue
+        setConfig({
+          agentName: pending.agentName,
+          useCase: pending.useCase || "",
+          scope: pending.scope || "",
+          contactMethod: "",
+        });
+        setStep("usecase");
+        setMessages([
+          { id: "restored", role: "user", content: pending.agentName },
+          { id: "continue", role: "assistant", content: `Welcome back! Let's continue with **${pending.agentName}**.`, options: [] },
+        ]);
+        setTimeout(() => {
+          simulateTyping(
+            `What's the use case for ${pending.agentName}?`,
+            USE_CASE_OPTIONS.map((o) => `${o.icon} ${o.label}`)
+          );
+        }, 500);
+      }
+    }
+  }, [ready, authenticated, step]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -203,14 +231,16 @@ export default function Home() {
     addMessage("user", name);
     setInput("");
     
-    // Check if user is logged in RIGHT AFTER they typed the name
+    // ALWAYS ask for login after name, regardless of auth state (for testing)
+    console.log("Auth state:", { authenticated, ready, user });
+    
     if (!authenticated) {
+      console.log("Showing login prompt");
       setStep("login");
       await simulateTyping(
-        `Nice to meet **${name}**! To proceed with creating your agent, please log in. This helps us save your configuration and deploy your AI assistant.`,
+        `Nice to meet **${name}**! To proceed with creating your agent, please log in.`,
         ["Log in"]
       );
-      // Save config for after login
       savePendingConfig({ agentName: name, useCase: "", scope: "", contactMethod: "", createdAt: Date.now() });
       return;
     }
@@ -229,25 +259,20 @@ export default function Home() {
     setConfig((prev) => ({ ...prev, useCase: useCaseId }));
     addMessage("user", option.replace(/^\S+\s/, ""));
     setStep("scope");
+    setSelectedScopes([]);
+    setShowContinue(false);
     const scopeOptions = SCOPE_OPTIONS[useCaseId] || [];
     await simulateTyping(
-      "What should your agent help with? Select all that apply, then click Continue:",
-      [...scopeOptions.map((o) => `${o.icon} ${o.label}`), "✓ Continue"]
+      "What should your agent help with? Select all that apply:",
+      scopeOptions.map((o) => `${o.icon} ${o.label}`)
     );
+    // Show continue button after a delay
+    setTimeout(() => setShowContinue(true), 500);
   };
 
   const handleScopeToggle = async (option: string) => {
     await enableAudio();
     const scopeLabel = option.replace(/^\S+\s/, "");
-    
-    // Handle continue button
-    if (option.includes("Continue")) {
-      if (selectedScopes.length === 0) {
-        return;
-      }
-      await handleScopeConfirm();
-      return;
-    }
     
     const newScopes = selectedScopes.includes(scopeLabel) 
       ? selectedScopes.filter((s) => s !== scopeLabel) 
@@ -271,28 +296,20 @@ export default function Home() {
     });
   };
 
-  const handleScopeConfirm = async () => {
+  const handleContinue = async () => {
     if (selectedScopes.length === 0) return;
     await enableAudio();
     playOptionSelected();
     const scopeString = selectedScopes.join(", ");
     setConfig((prev) => ({ ...prev, scope: scopeString }));
+    setShowContinue(false);
     setMessages((prev) => {
       const newMessages = [...prev];
-      const lastIdx = newMessages.length - 1;
-      if (newMessages[lastIdx]?.role === "user" && newMessages[lastIdx]?.id.startsWith("selection-")) {
-        newMessages[lastIdx] = {
-          id: `confirm-${Date.now()}`,
-          role: "user",
-          content: scopeString,
-        };
-      } else {
-        newMessages.push({
-          id: `confirm-${Date.now()}`,
-          role: "user",
-          content: scopeString,
-        });
-      }
+      newMessages.push({
+        id: `confirm-${Date.now()}`,
+        role: "user",
+        content: scopeString,
+      });
       return newMessages;
     });
     setSelectedScopes([]);
@@ -473,7 +490,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content - Fixed layout with proper zoning */}
+      {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-0 relative">
         {/* Back Button */}
         {canGoBack && (
@@ -490,11 +507,27 @@ export default function Home() {
           </button>
         )}
 
-        {/* Top Section: Messages - with fade gradient at bottom */}
-        <div className="flex-1 relative overflow-hidden">
+        {/* Chat Section - Fades at top, positioned above orb */}
+        <div className="flex-none h-[45vh] relative">
+          {/* Fade gradient at TOP of chat (so messages blend as they go up toward orb) */}
+          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-[var(--background)] to-transparent z-10 pointer-events-none" />
+          
           {/* Messages scroll area */}
-          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-4 pt-4 pb-20">
-            <div className="w-full max-w-md mx-auto space-y-3">
+          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-4 pt-6 pb-4">
+            <div className="w-full max-w-xl mx-auto space-y-4">
+              {/* Greeting above messages when intro */}
+              {step === "intro" && messages.length === 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center mb-4"
+                >
+                  <span className="inline-block px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm text-[var(--muted)]">
+                    👋 Hi! I&apos;m MATT
+                  </span>
+                </motion.div>
+              )}
+              
               <AnimatePresence mode="popLayout">
                 {messages.map((msg, i) => (
                   <motion.div
@@ -512,27 +545,21 @@ export default function Home() {
                           ? "bg-[var(--accent)] text-white rounded-2xl rounded-br-md" 
                           : "bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] rounded-2xl rounded-bl-md"
                         } 
-                        px-4 py-3 shadow-sm
+                        px-5 py-4 shadow-sm
                       `}
                     >
                       <p 
-                        className="text-sm leading-relaxed whitespace-pre-wrap" 
+                        className="text-base leading-relaxed whitespace-pre-wrap" 
                         dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} 
                       />
                       
                       {msg.options && msg.options.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
+                        <div className="flex flex-wrap gap-2 mt-4">
                           {msg.options.map((opt) => (
                             <button
                               key={opt}
                               onClick={() => handleOptionClick(opt)}
-                              className={`
-                                px-3 py-1.5 text-xs font-medium rounded-full transition-colors
-                                ${opt.includes("Continue") 
-                                  ? "bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30" 
-                                  : "bg-white/10 hover:bg-white/20 border border-white/20"
-                                }
-                              `}
+                              className="px-4 py-2 text-sm font-medium rounded-full transition-colors bg-white/10 hover:bg-white/20 border border-white/20"
                             >
                               {opt}
                             </button>
@@ -546,11 +573,11 @@ export default function Home() {
               
               {isTyping && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl rounded-bl-md px-4 py-3">
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl rounded-bl-md px-5 py-4">
                     <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-[var(--muted)] rounded-full animate-bounce" />
-                      <span className="w-2 h-2 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
-                      <span className="w-2 h-2 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                      <span className="w-2.5 h-2.5 bg-[var(--muted)] rounded-full animate-bounce" />
+                      <span className="w-2.5 h-2.5 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                      <span className="w-2.5 h-2.5 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
                     </div>
                   </div>
                 </motion.div>
@@ -558,60 +585,57 @@ export default function Home() {
               <div ref={messagesEndRef} />
             </div>
           </div>
-
-          {/* Fade gradient overlay at bottom of messages */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[var(--background)] to-transparent pointer-events-none" />
         </div>
 
-        {/* Middle Section: Orb - positioned higher with padding */}
-        <div className="flex-none flex items-center justify-center py-6">
-          <div className="w-44 h-44 sm:w-52 sm:h-52">
-            <AIOrb wizardState={getWizardState()} showGreeting={step === "intro" && messages.length === 0} />
+        {/* Orb Section - 50px safe area above */}
+        <div className="flex-none flex items-center justify-center py-8">
+          <div className="w-56 h-56 sm:w-64 sm:h-64">
+            <AIOrb wizardState={getWizardState()} />
           </div>
         </div>
 
-        {/* Bottom Section: Welcome Card or Input */}
-        <div className="flex-none px-4 pb-6 pt-2">
+        {/* Bottom Controls Section */}
+        <div className="flex-none px-4 pb-8 pt-4 min-h-[180px]">
           {step === "intro" && messages.length === 0 ? (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-md mx-auto"
+              className="max-w-lg mx-auto"
             >
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-lg">
-                <h1 className="text-xl font-bold mb-3 text-center">
+                <h1 className="text-2xl font-bold mb-3 text-center">
                   Meet Your AI Agent
                 </h1>
-                <p className="text-[var(--muted)] text-sm text-center mb-4 leading-relaxed">
-                  I&apos;m <strong>MATT</strong> — your AI deployment assistant. I&apos;ll help you create a custom Telegram bot in just a few minutes.
+                <p className="text-[var(--muted)] text-base text-center mb-5 leading-relaxed">
+                  I&apos;m <strong>MATT</strong> — your AI deployment assistant. I&apos;ll help you create a custom Telegram bot powered by Kimi K2.5.
                 </p>
-                <div className="flex flex-col gap-2 text-xs text-[var(--muted)] mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">1</span>
+                <div className="flex flex-col gap-3 text-sm text-[var(--muted)] mb-5">
+                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
+                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-semibold text-xs">1</span>
                     <span>Name your agent & choose its role</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">2</span>
+                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
+                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-semibold text-xs">2</span>
                     <span>Select capabilities & contact method</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">3</span>
+                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
+                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-semibold text-xs">3</span>
                     <span>Pay with crypto & deploy instantly</span>
                   </div>
                 </div>
                 <button
                   onClick={() => handleOptionClick("Start creating")}
-                  className="w-full py-3 bg-[var(--accent)] text-white rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-semibold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-lg"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-5 h-5" />
                   Start Creating
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
             </motion.div>
-          ) : (step === "name" || step === "awaiting_verification") ? (
-            <div className="max-w-md mx-auto">
-              <div className="flex gap-2">
+          ) : step === "name" || step === "awaiting_verification" ? (
+            <div className="max-w-lg mx-auto">
+              <div className="flex gap-3">
                 <input
                   ref={inputRef}
                   type="text"
@@ -619,16 +643,30 @@ export default function Home() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={step === "awaiting_verification" ? "Enter auth code from bot..." : "Type your agent's name..."}
-                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--accent)]"
+                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-5 py-4 text-base focus:outline-none focus:border-[var(--accent)]"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim()}
-                  className="w-11 h-11 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                  className="w-14 h-14 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all hover:scale-105 active:scale-95"
                 >
-                  <ArrowRight className="w-5 h-5" />
+                  <ArrowRight className="w-6 h-6" />
                 </button>
               </div>
+            </div>
+          ) : step === "scope" && showContinue ? (
+            <div className="max-w-lg mx-auto">
+              <button
+                onClick={handleContinue}
+                disabled={selectedScopes.length === 0}
+                className="w-full py-4 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+              >
+                <span>Continue</span>
+                <ArrowRight className="w-5 h-5" />
+              </button>
+              {selectedScopes.length === 0 && (
+                <p className="text-center text-sm text-[var(--muted)] mt-2">Select at least one capability to continue</p>
+              )}
             </div>
           ) : null}
         </div>
