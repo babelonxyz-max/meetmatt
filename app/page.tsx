@@ -123,10 +123,10 @@ export default function Home() {
 
   // Check for pending config after login
   useEffect(() => {
-    if (ready && authenticated && step === "intro") {
+    if (ready && authenticated && step === "login") {
       const pending = getPendingConfig();
       if (pending && pending.agentName) {
-        // Restore and continue
+        // Restore and continue to usecase
         setConfig({
           agentName: pending.agentName,
           useCase: pending.useCase || "",
@@ -134,16 +134,17 @@ export default function Home() {
           contactMethod: "",
         });
         setStep("usecase");
-        setMessages([
-          { id: "restored", role: "user", content: pending.agentName },
-          { id: "continue", role: "assistant", content: `Welcome back! Let's continue with **${pending.agentName}**.`, options: [] },
+        // Add welcome back message and continue flow
+        setMessages((prev) => [
+          ...prev,
+          { id: "logged-in", role: "assistant", content: `✅ Logged in! Welcome back.`, options: [] }
         ]);
         setTimeout(() => {
           simulateTyping(
             `What's the use case for ${pending.agentName}?`,
             USE_CASE_OPTIONS.map((o) => `${o.icon} ${o.label}`)
           );
-        }, 500);
+        }, 800);
       }
     }
   }, [ready, authenticated, step]);
@@ -551,17 +552,27 @@ export default function Home() {
                       />
                       
                       {msg.options && msg.options.length > 0 && (
-                        <div className="flex flex-wrap gap-3 mt-4">
-                          {msg.options.map((opt) => (
-                            <button
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ staggerChildren: 0.05, delayChildren: 0.1 }}
+                          className="flex flex-wrap gap-3 mt-4"
+                        >
+                          {msg.options.map((opt, idx) => (
+                            <motion.button
                               key={opt}
+                              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              transition={{ delay: idx * 0.05, duration: 0.3, ease: "easeOut" }}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => handleOptionClick(opt)}
                               className="px-5 py-2.5 text-base font-medium rounded-full transition-colors bg-white/10 hover:bg-white/20 border border-white/20"
                             >
                               {opt}
-                            </button>
+                            </motion.button>
                           ))}
-                        </div>
+                        </motion.div>
                       )}
                     </div>
                   </motion.div>
@@ -583,6 +594,9 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Fade gradient at bottom of chat */}
+        <div className="flex-none h-20 bg-gradient-to-t from-[var(--background)] to-transparent pointer-events-none" />
 
         {/* Orb Section - Higher up with safe area below */}
         <div className="flex-none flex items-center justify-center pb-4">
