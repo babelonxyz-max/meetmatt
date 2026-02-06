@@ -97,7 +97,7 @@ export default function Home() {
 
   const getWizardState = (): AIOrbProps["wizardState"] => {
     if (step === "intro") return "idle";
-    if (step === "name") return "initializing";
+    if (step === "name" || step === "login") return "initializing";
     if (step === "usecase" || step === "scope" || step === "contact") return "processing";
     if (step === "deploying" || step === "activating") return "deploying";
     if (step === "success") return "success";
@@ -243,7 +243,6 @@ export default function Home() {
     // Handle continue button
     if (option.includes("Continue")) {
       if (selectedScopes.length === 0) {
-        // Show error or just ignore
         return;
       }
       await handleScopeConfirm();
@@ -430,8 +429,8 @@ export default function Home() {
     }
   };
 
-  // Only show back button when NOT on intro or name step
-  const canGoBack = step !== "intro" && step !== "name" && step !== "confirm" && !isDeploying && step !== "success" && step !== "activating" && step !== "awaiting_verification";
+  // Only show back button when NOT on intro, name, or login step
+  const canGoBack = step !== "intro" && step !== "name" && step !== "login" && step !== "confirm" && !isDeploying && step !== "success" && step !== "activating" && step !== "awaiting_verification";
 
   if (isLoading) {
     return (
@@ -445,7 +444,7 @@ export default function Home() {
 
   return (
     <div className="h-screen w-screen bg-[var(--background)] overflow-hidden flex flex-col">
-      {/* Header - Always visible with login/pricing buttons */}
+      {/* Header */}
       <header className="flex-none h-14 sm:h-16 flex items-center justify-between px-4 sm:px-6 z-50 bg-[var(--background)] border-b border-[var(--border)]">
         <div className="flex items-center gap-2">
           <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
@@ -474,9 +473,9 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content - Fixed layout with proper zoning */}
       <main className="flex-1 flex flex-col min-h-0 relative">
-        {/* Back Button - Only shown when canGoBack is true */}
+        {/* Back Button */}
         {canGoBack && (
           <button
             onClick={() => {
@@ -491,149 +490,148 @@ export default function Home() {
           </button>
         )}
 
-        {/* Orb Section */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 py-2 min-h-0">
-          <div className="w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52">
+        {/* Top Section: Messages - with fade gradient at bottom */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Messages scroll area */}
+          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-4 pt-4 pb-20">
+            <div className="w-full max-w-md mx-auto space-y-3">
+              <AnimatePresence mode="popLayout">
+                {messages.map((msg, i) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: i * 0.03, duration: 0.2 }}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div 
+                      className={`
+                        max-w-[85%]
+                        ${msg.role === "user" 
+                          ? "bg-[var(--accent)] text-white rounded-2xl rounded-br-md" 
+                          : "bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] rounded-2xl rounded-bl-md"
+                        } 
+                        px-4 py-3 shadow-sm
+                      `}
+                    >
+                      <p 
+                        className="text-sm leading-relaxed whitespace-pre-wrap" 
+                        dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} 
+                      />
+                      
+                      {msg.options && msg.options.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {msg.options.map((opt) => (
+                            <button
+                              key={opt}
+                              onClick={() => handleOptionClick(opt)}
+                              className={`
+                                px-3 py-1.5 text-xs font-medium rounded-full transition-colors
+                                ${opt.includes("Continue") 
+                                  ? "bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30" 
+                                  : "bg-white/10 hover:bg-white/20 border border-white/20"
+                                }
+                              `}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              
+              {isTyping && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl rounded-bl-md px-4 py-3">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-[var(--muted)] rounded-full animate-bounce" />
+                      <span className="w-2 h-2 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                      <span className="w-2 h-2 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+
+          {/* Fade gradient overlay at bottom of messages */}
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[var(--background)] to-transparent pointer-events-none" />
+        </div>
+
+        {/* Middle Section: Orb - positioned higher with padding */}
+        <div className="flex-none flex items-center justify-center py-6">
+          <div className="w-44 h-44 sm:w-52 sm:h-52">
             <AIOrb wizardState={getWizardState()} showGreeting={step === "intro" && messages.length === 0} />
           </div>
         </div>
 
-        {/* Messages Section - More flexible, blended borders */}
-        <div className="flex-1 min-h-0 px-4 pb-4 overflow-y-auto scrollbar-hide">
-          <div className="w-full max-w-lg mx-auto space-y-4">
-            <AnimatePresence mode="popLayout">
-              {messages.map((msg, i) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: i * 0.03, duration: 0.2 }}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+        {/* Bottom Section: Welcome Card or Input */}
+        <div className="flex-none px-4 pb-6 pt-2">
+          {step === "intro" && messages.length === 0 ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-md mx-auto"
+            >
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-lg">
+                <h1 className="text-xl font-bold mb-3 text-center">
+                  Meet Your AI Agent
+                </h1>
+                <p className="text-[var(--muted)] text-sm text-center mb-4 leading-relaxed">
+                  I&apos;m <strong>MATT</strong> — your AI deployment assistant. I&apos;ll help you create a custom Telegram bot in just a few minutes.
+                </p>
+                <div className="flex flex-col gap-2 text-xs text-[var(--muted)] mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">1</span>
+                    <span>Name your agent & choose its role</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">2</span>
+                    <span>Select capabilities & contact method</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">3</span>
+                    <span>Pay with crypto & deploy instantly</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleOptionClick("Start creating")}
+                  className="w-full py-3 bg-[var(--accent)] text-white rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                 >
-                  <div 
-                    className={`
-                      max-w-[90%] sm:max-w-[85%] 
-                      ${msg.role === "user" 
-                        ? "bg-[var(--accent)] text-white rounded-2xl rounded-br-md" 
-                        : "bg-[var(--card)]/80 backdrop-blur-sm text-[var(--foreground)] rounded-2xl rounded-bl-md shadow-sm border border-[var(--border)]/50"
-                      } 
-                      px-4 py-3 
-                      transition-all duration-200
-                      hover:shadow-md
-                    `}
-                  >
-                    <p 
-                      className="text-sm leading-relaxed whitespace-pre-wrap" 
-                      dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.+?)\*\*/g, "<strong class='font-semibold'>$1</strong>") }} 
-                    />
-                    
-                    {/* Options with better styling */}
-                    {msg.options && msg.options.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t border-white/10">
-                        {msg.options.map((opt) => (
-                          <button
-                            key={opt}
-                            onClick={() => handleOptionClick(opt)}
-                            className={`
-                              px-3 py-1.5 
-                              ${opt.includes("Continue") 
-                                ? "bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30" 
-                                : "bg-white/10 hover:bg-white/20 border border-white/20"
-                              }
-                              rounded-full text-xs font-medium 
-                              transition-all duration-200
-                              hover:scale-105 active:scale-95
-                            `}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            
-            {isTyping && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                <div className="bg-[var(--card)]/80 backdrop-blur-sm border border-[var(--border)]/50 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-[var(--accent)] rounded-full animate-bounce" />
-                    <span className="w-2 h-2 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
-                    <span className="w-2 h-2 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
-                  </div>
-                </div>
-              </motion.div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Big Welcome Message - Only on intro */}
-        {step === "intro" && messages.length === 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex-none px-4 pb-6 pt-2"
-          >
-            <div className="max-w-md mx-auto bg-gradient-to-br from-[var(--card)] to-[var(--card)]/80 border border-[var(--border)]/50 rounded-3xl p-6 shadow-xl backdrop-blur-sm">
-              <h1 className="text-2xl font-bold mb-3 text-center bg-gradient-to-r from-[var(--accent)] to-purple-400 bg-clip-text text-transparent">
-                Meet Your AI Agent
-              </h1>
-              <p className="text-[var(--muted)] text-sm text-center mb-5 leading-relaxed">
-                I&apos;m <strong className="text-[var(--foreground)]">MATT</strong> — your AI deployment assistant. I&apos;ll help you create a custom Telegram bot powered by Kimi K2.5 in just a few minutes.
-              </p>
-              <div className="flex flex-col gap-3 text-sm text-[var(--muted)] mb-5">
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                  <span className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-semibold text-xs">1</span>
-                  <span>Name your agent & choose its role</span>
-                </div>
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                  <span className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-semibold text-xs">2</span>
-                  <span>Select capabilities & contact method</span>
-                </div>
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                  <span className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-semibold text-xs">3</span>
-                  <span>Pay with crypto & deploy instantly</span>
-                </div>
+                  <Sparkles className="w-4 h-4" />
+                  Start Creating
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={() => handleOptionClick("Start creating")}
-                className="w-full py-3.5 bg-gradient-to-r from-[var(--accent)] to-purple-500 text-white rounded-xl font-semibold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-[var(--accent)]/20"
-              >
-                <Sparkles className="w-5 h-5" />
-                Start Creating
-                <ArrowRight className="w-5 h-5" />
-              </button>
+            </motion.div>
+          ) : (step === "name" || step === "awaiting_verification") ? (
+            <div className="max-w-md mx-auto">
+              <div className="flex gap-2">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={step === "awaiting_verification" ? "Enter auth code from bot..." : "Type your agent's name..."}
+                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--accent)]"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  className="w-11 h-11 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-          </motion.div>
-        )}
-
-        {/* Input Area - Fixed at bottom when needed */}
-        {(step === "name" || step === "awaiting_verification") && (
-          <div className="flex-none border-t border-[var(--border)]/50 bg-[var(--background)]/80 backdrop-blur-sm px-4 py-4 pb-safe">
-            <div className="max-w-lg mx-auto flex gap-2">
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={step === "awaiting_verification" ? "Enter auth code from bot..." : "Type your agent's name..."}
-                className="flex-1 bg-[var(--card)] border border-[var(--border)]/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 transition-all"
-              />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                className="w-12 h-12 bg-gradient-to-r from-[var(--accent)] to-purple-500 text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-[var(--accent)]/20"
-              >
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
+          ) : null}
+        </div>
       </main>
 
       {/* Payment Modal */}
