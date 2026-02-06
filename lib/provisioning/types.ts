@@ -42,8 +42,11 @@ export type InstanceStatus =
   | "configuring"    // Bot being configured
   | "awaiting_verification"  // Waiting for user to verify
   | "active"         // Bot is live
+  | "running"        // Server is running (BitLaunch)
+  | "stopped"        // Server is stopped (BitLaunch)
   | "suspended"      // Temporarily disabled
-  | "terminated";    // Shut down
+  | "terminated"     // Shut down
+  | "error";         // Error state
 
 // Default limits for all users (no tiers)
 export interface ServiceLimits {

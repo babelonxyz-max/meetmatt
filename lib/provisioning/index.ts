@@ -8,4 +8,5 @@ export * from "./verification";
 export * from "./rate-limiter";
 export * from "./account-manager";
 export * from "./skills-config";
+export * from "./bitlaunch-provider";
 export * from "./provisioner";
