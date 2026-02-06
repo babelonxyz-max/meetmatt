@@ -2,16 +2,15 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Check, MessageCircle, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, User, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { PaymentModal } from "./components/PaymentModal";
 import { AIOrb, type AIOrbProps } from "./components/AIOrb";
-import { JarvisInterface } from "./components/JarvisInterface";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig } from "@/lib/session";
 import { initAudio, playMessageSent, playMessageReceived, playOptionSelected, playSuccess } from "@/lib/audio";
 import { usePrivy } from "@privy-io/react-auth";
+import Link from "next/link";
 
 interface Message {
   id: string;
@@ -74,7 +73,7 @@ const CONTACT_OPTIONS = [
 ];
 
 export default function Home() {
-  const { authenticated, login, user } = usePrivy();
+  const { authenticated, login, user, logout } = usePrivy();
   const [sessionId] = useState<string>(() => getOrCreateSessionId());
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -147,12 +146,8 @@ export default function Home() {
         ]);
         setStep("contact");
       } else {
-        setMessages([{
-          id: "welcome",
-          role: "assistant",
-          content: "Hello! I'm MATT. I'll help you create your AI agent in minutes. Ready to get started?",
-          options: ["Start creating"],
-        }]);
+        // Initial welcome with big greeting bubble
+        setStep("intro");
       }
     }, 600);
     return () => clearTimeout(timer);
@@ -334,6 +329,11 @@ export default function Home() {
       return;
     }
     
+    setStep("contact");
+    await simulateTyping(
+      "How would you like to contact your agent?",
+      CONTACT_OPTIONS.map((o) => `${o.icon} ${o.label}${o.available ? "" : " (soon)"}`)
+    );
   };
 
   const handleContactSelect = async (option: string) => {
@@ -455,18 +455,14 @@ export default function Home() {
         setSelectedScopes([]);
         setCurrentAgent(null);
         setAwaitingAuthCode(false);
-        setMessages([{
-          id: "restart",
-          role: "assistant",
-          content: "Hello! I'm MATT. I'll help you create your AI agent in minutes. Ready to get started?",
-          options: ["Start creating"],
-        }]);
+        setMessages([]);
       } else {
         handleConfirm(option);
       }
     }
   };
 
+  // Only show back button when NOT on intro step
   const canGoBack = step !== "intro" && step !== "confirm" && !isDeploying && step !== "success" && step !== "activating" && step !== "awaiting_verification";
 
   if (isLoading) {
@@ -479,11 +475,10 @@ export default function Home() {
     );
   }
 
-  // ... rest of the component remains the same
   return (
-    <div className="h-screen w-screen bg-[var(--background)] overflow-hidden safe-area-padding">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 sm:h-16 flex items-center justify-between px-4 sm:px-6 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
+    <div className="h-screen w-screen bg-[var(--background)] overflow-hidden flex flex-col">
+      {/* Header - Always visible with login/pricing buttons */}
+      <header className="flex-none h-14 sm:h-16 flex items-center justify-between px-4 sm:px-6 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
         <div className="flex items-center gap-2">
           <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
             <Sparkles className="w-5 h-5 text-[var(--accent)]" />
@@ -491,23 +486,48 @@ export default function Home() {
           <span className="font-semibold text-lg tracking-tight">Matt</span>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/pricing">
+            <Button variant="ghost" size="sm" className="gap-1">
+              <CreditCard className="w-4 h-4" />
+              <span className="hidden sm:inline">Pricing</span>
+            </Button>
+          </Link>
           <ThemeToggle />
-          {authenticated && (
+          {authenticated ? (
             <Button variant="ghost" size="sm" onClick={() => window.location.href = "/dashboard"}>
               Dashboard
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={login} className="gap-1">
+              <User className="w-4 h-4" />
+              <span className="hidden sm:inline">Log in</span>
             </Button>
           )}
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="h-full pt-14 sm:pt-16 flex flex-col">
-        {/* Orb */}
-        <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 py-4">
-          <AIOrb wizardState={getWizardState()} />
-          
-          {/* Messages */}
-          <div className="w-full max-w-md mt-6 space-y-3 overflow-y-auto max-h-[40vh] scrollbar-hide">
+      {/* Main Content - Flex column with proper height distribution */}
+      <main className="flex-1 flex flex-col min-h-0 relative">
+        {/* Back Button - Only shown when canGoBack is true */}
+        {canGoBack && (
+          <button
+            onClick={handleBack}
+            className="absolute top-4 left-4 z-40 p-2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors bg-[var(--background)]/50 rounded-lg backdrop-blur-sm"
+          >
+            ← Back
+          </button>
+        )}
+
+        {/* Orb Section - Takes available space */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-2 min-h-0">
+          <div className="w-44 h-44 sm:w-52 sm:h-52 lg:w-60 lg:h-60">
+            <AIOrb wizardState={getWizardState()} showGreeting={step === "intro"} />
+          </div>
+        </div>
+
+        {/* Messages Section - Fixed max height, scrollable */}
+        <div className="flex-none px-4 pb-4 max-h-[35vh] overflow-y-auto scrollbar-hide">
+          <div className="w-full max-w-md mx-auto space-y-3">
             <AnimatePresence mode="popLayout">
               {messages.map((msg, i) => (
                 <motion.div
@@ -554,9 +574,49 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Input Area */}
+        {/* Big Welcome Message Bubble - Only on intro */}
+        {step === "intro" && messages.length === 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex-none px-4 pb-6"
+          >
+            <div className="max-w-md mx-auto bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-lg">
+              <h1 className="text-xl font-bold mb-3 text-center">
+                Meet Your AI Agent
+              </h1>
+              <p className="text-[var(--muted)] text-sm text-center mb-4 leading-relaxed">
+                I&apos;m <strong>MATT</strong> — your AI deployment assistant. I&apos;ll help you create a custom Telegram bot powered by Kimi K2.5 in just a few minutes.
+              </p>
+              <div className="flex flex-col gap-2 text-xs text-[var(--muted)] mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">1</span>
+                  <span>Name your agent & choose its role</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">2</span>
+                  <span>Select capabilities & contact method</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">3</span>
+                  <span>Pay with crypto & deploy instantly</span>
+                </div>
+              </div>
+              <button
+                onClick={() => handleOptionClick("Start creating")}
+                className="w-full py-3 bg-[var(--accent)] text-white rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                Start Creating
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Input Area - Fixed at bottom when needed */}
         {(step === "name" || step === "awaiting_verification") && (
-          <div className="border-t border-[var(--border)] bg-[var(--background)] px-4 py-4 pb-safe">
+          <div className="flex-none border-t border-[var(--border)] bg-[var(--background)] px-4 py-4 pb-safe">
             <div className="max-w-md mx-auto flex gap-2">
               <input
                 ref={inputRef}
@@ -564,7 +624,7 @@ export default function Home() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={step === "awaiting_verification" ? "Enter auth code..." : "Type a name..."}
+                placeholder={step === "awaiting_verification" ? "Enter auth code from bot..." : "Type your agent's name..."}
                 className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--accent)]"
               />
               <button
@@ -576,16 +636,6 @@ export default function Home() {
               </button>
             </div>
           </div>
-        )}
-
-        {/* Back Button */}
-        {canGoBack && (
-          <button
-            onClick={handleBack}
-            className="fixed top-20 left-4 p-2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
-          >
-            ← Back
-          </button>
         )}
       </main>
 

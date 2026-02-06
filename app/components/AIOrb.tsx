@@ -9,6 +9,7 @@ export interface AIOrbProps {
   isThinking?: boolean;
   intensity?: "low" | "medium" | "high";
   wizardState?: "idle" | "initializing" | "processing" | "deploying" | "success";
+  showGreeting?: boolean;
 }
 
 type ReactionType = "giggle" | "spin" | "bounce" | "wink" | "pulse" | "backflip" | null;
@@ -18,7 +19,8 @@ export const AIOrb = memo(function AIOrb({
   isListening = false, 
   isThinking = false,
   intensity = "medium",
-  wizardState = "idle"
+  wizardState = "idle",
+  showGreeting = false,
 }: AIOrbProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [reaction, setReaction] = useState<ReactionType>(null);
@@ -29,16 +31,18 @@ export const AIOrb = memo(function AIOrb({
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [colorPhase, setColorPhase] = useState(0);
   const [isBlinking, setIsBlinking] = useState(false);
+  const [greetingShown, setGreetingShown] = useState(false);
 
-  // Eye tracking - pure 2D
+  // Enhanced Eye tracking - more responsive and wider range
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        const offsetX = Math.max(-3, Math.min(3, (e.clientX - centerX) / 30));
-        const offsetY = Math.max(-2, Math.min(2, (e.clientY - centerY) / 30));
+        // Increased range from /30 to /15 for more movement
+        const offsetX = Math.max(-6, Math.min(6, (e.clientX - centerX) / 15));
+        const offsetY = Math.max(-5, Math.min(5, (e.clientY - centerY) / 15));
         setEyeOffset({ x: offsetX, y: offsetY });
       }
     };
@@ -51,6 +55,15 @@ export const AIOrb = memo(function AIOrb({
     const timer = setTimeout(() => playOrbActivate(), 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Show greeting on first load
+  useEffect(() => {
+    if (showGreeting && !greetingShown) {
+      setGreetingShown(true);
+      setBubbleText("Hi! I'm MATT 👋");
+      setShowBubble(true);
+    }
+  }, [showGreeting, greetingShown]);
 
   useEffect(() => {
     if (isThinking || isListening || wizardState === "deploying") {
@@ -68,7 +81,7 @@ export const AIOrb = memo(function AIOrb({
 
   useEffect(() => {
     if (showBubble) {
-      const timer = setTimeout(() => setShowBubble(false), 3000);
+      const timer = setTimeout(() => setShowBubble(false), 4000);
       return () => clearTimeout(timer);
     }
   }, [showBubble]);
@@ -145,19 +158,19 @@ export const AIOrb = memo(function AIOrb({
             initial={{ opacity: 0, scale: 0.5, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.5, y: -10 }}
-            className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap"
+            className="absolute -top-20 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap"
           >
-            <div className="bg-[var(--card)]/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-xl border border-[var(--border)]">
-              <p className="text-sm font-medium text-[var(--foreground)]">{bubbleText}</p>
+            <div className="bg-[var(--card)]/95 backdrop-blur-sm px-5 py-3 rounded-2xl shadow-xl border border-[var(--border)]">
+              <p className="text-base font-semibold text-[var(--foreground)]">{bubbleText}</p>
             </div>
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-[var(--card)]/90" />
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-[var(--card)]/95" />
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Main Orb Container - Pure 2D, NO 3D transforms */}
       <motion.div
-        className="relative w-44 h-44 sm:w-52 sm:h-52 lg:w-60 lg:h-60 cursor-pointer"
+        className="relative w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 cursor-pointer"
         animate={reaction ? {
           x: reaction === "giggle" ? [0, -8, 8, -8, 8, 0] : 0,
           y: reaction === "bounce" ? [0, -40, 0, -20, 0] : reaction === "backflip" ? [0, -30, 0] : 0,
@@ -200,7 +213,7 @@ export const AIOrb = memo(function AIOrb({
 
         {/* Main orb body - Liquid morphing with border-radius */}
         <motion.div
-          className="absolute inset-5 rounded-full overflow-hidden"
+          className="absolute inset-4 rounded-full overflow-hidden"
           animate={{
             borderRadius: ["50%", "45% 55% 50% 50% / 50% 45% 55% 50%", "50% 50% 45% 55% / 55% 50% 50% 45%", "55% 45% 50% 50% / 50% 55% 45% 50%", "50%"],
             scale: state === "thinking" ? [1, 1.08, 1] : state === "listening" ? [1, 1.04, 1] : isHovered ? [1, 1.03, 1] : [1, 1.01, 1],
@@ -228,18 +241,18 @@ export const AIOrb = memo(function AIOrb({
             transition={{ duration: state === "thinking" ? 3 : 8, repeat: Infinity, ease: "easeInOut" }}
           />
 
-          {/* Eyes */}
+          {/* Enhanced Eyes - more responsive */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="relative w-14 h-8">
+            <div className="relative w-12 h-6">
               <motion.div 
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/90 shadow-lg"
-                animate={{ x: isBlinking ? 0 : eyeOffset.x, y: isBlinking ? 0 : eyeOffset.y, scaleY: isBlinking ? 0.1 : 1 }}
-                transition={{ x: { type: "spring", stiffness: 300, damping: 20 }, y: { type: "spring", stiffness: 300, damping: 20 }, scaleY: { duration: 0.1 } }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white/95 shadow-lg"
+                animate={{ x: isBlinking ? 0 : eyeOffset.x * 1.5, y: isBlinking ? 0 : eyeOffset.y * 1.5, scaleY: isBlinking ? 0.1 : 1 }}
+                transition={{ x: { type: "spring", stiffness: 400, damping: 15 }, y: { type: "spring", stiffness: 400, damping: 15 }, scaleY: { duration: 0.1 } }}
               />
               <motion.div 
-                className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/90 shadow-lg"
-                animate={{ x: isBlinking ? 0 : eyeOffset.x, y: isBlinking ? 0 : eyeOffset.y, scaleY: isBlinking ? 0.1 : 1 }}
-                transition={{ x: { type: "spring", stiffness: 300, damping: 20 }, y: { type: "spring", stiffness: 300, damping: 20 }, scaleY: { duration: 0.1 } }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white/95 shadow-lg"
+                animate={{ x: isBlinking ? 0 : eyeOffset.x * 1.5, y: isBlinking ? 0 : eyeOffset.y * 1.5, scaleY: isBlinking ? 0.1 : 1 }}
+                transition={{ x: { type: "spring", stiffness: 400, damping: 15 }, y: { type: "spring", stiffness: 400, damping: 15 }, scaleY: { duration: 0.1 } }}
               />
             </div>
           </div>
@@ -249,7 +262,7 @@ export const AIOrb = memo(function AIOrb({
         </motion.div>
 
         {/* Inner ring */}
-        <div className="absolute inset-5 rounded-full border-2 pointer-events-none" style={{ borderColor: `rgba(${colors.primary},0.4)`, boxShadow: `inset 0 0 25px rgba(${colors.primary},0.3), 0 0 35px rgba(${colors.primary},0.3)` }} />
+        <div className="absolute inset-4 rounded-full border-2 pointer-events-none" style={{ borderColor: `rgba(${colors.primary},0.4)`, boxShadow: `inset 0 0 25px rgba(${colors.primary},0.3), 0 0 35px rgba(${colors.primary},0.3)` }} />
 
         {/* Status glow */}
         <motion.div
