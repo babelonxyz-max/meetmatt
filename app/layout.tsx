@@ -60,9 +60,9 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)] overflow-x-hidden`}>
         <Providers>
           <Navbar />
-          <div className="pt-16 sm:pt-20">
+          <main className="min-h-screen">
             {children}
-          </div>
+          </main>
           <Footer />
         </Providers>
       </body>

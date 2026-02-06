@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, Bot, Rocket } from "lucide-react";
 import { PaymentModal } from "./components/PaymentModal";
 import { AIOrb, type AIOrbProps } from "./components/AIOrb";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig, getPendingConfig } from "@/lib/session";
@@ -107,11 +107,6 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activationPollRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Scroll to top on mount
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
   const getWizardState = (): AIOrbProps["wizardState"] => {
     if (step === "intro") return "idle";
     if (step === "name" || step === "login") return "initializing";
@@ -207,7 +202,6 @@ export default function Home() {
     };
   }, [step, currentAgent?.id]);
 
-  // Clear orb message after 3 seconds
   useEffect(() => {
     if (orbMessage) {
       const timer = setTimeout(() => setOrbMessage(null), 3000);
@@ -446,7 +440,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] flex items-center justify-center overflow-hidden">
+      <div className="fixed inset-0 top-16 sm:top-20 flex items-center justify-center">
         <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-[var(--muted)] font-mono text-lg">
           Initializing...
         </motion.div>
@@ -455,7 +449,7 @@ export default function Home() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 top-16 sm:top-20 overflow-hidden flex flex-col">
       {/* Main Content - No scroll */}
       <main className="flex-1 flex flex-col min-h-0 relative">
         {/* Back Button */}
@@ -475,7 +469,7 @@ export default function Home() {
 
         {/* Messages Section */}
         <div className="flex-1 relative overflow-hidden">
-          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-6 pt-4 pb-32">
+          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-6 pt-4 pb-24">
             <div className="w-full max-w-2xl mx-auto space-y-4">
               <AnimatePresence mode="popLayout">
                 {messages.map((msg, i) => (
@@ -551,7 +545,7 @@ export default function Home() {
         </div>
 
         {/* Orb Section with Click Message */}
-        <div className="flex-none flex flex-col items-center justify-center py-2 relative">
+        <div className="flex-none flex flex-col items-center justify-center relative">
           {/* Orb Click Message */}
           <AnimatePresence>
             {orbMessage && (
@@ -559,7 +553,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 10, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                className="absolute -top-12 z-10"
+                className="absolute -top-10 z-10"
               >
                 <div className="px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm text-[var(--foreground)] shadow-lg whitespace-nowrap">
                   {orbMessage}
@@ -575,43 +569,63 @@ export default function Home() {
           </AnimatePresence>
 
           {/* The Orb */}
-          <div className="w-48 h-48 sm:w-56 sm:h-56" onClick={handleOrbClick}>
+          <div className="w-44 h-44 sm:w-52 sm:h-52" onClick={handleOrbClick}>
             <AIOrb wizardState={getWizardState()} />
           </div>
         </div>
 
-        {/* Bottom Controls */}
-        <div className="flex-none px-6 pb-6 pt-2">
+        {/* Bottom Controls - Compact */}
+        <div className="flex-none px-6 pb-4 pt-2">
           {step === "intro" && messages.length === 0 ? (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-xl mx-auto"
+              className="max-w-md mx-auto"
             >
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-lg">
-                <h1 className="text-3xl sm:text-4xl font-bold mb-3 text-center">
-                  Deploy Your AI Agent in Minutes
-                </h1>
-                <p className="text-[var(--muted)] text-base text-center mb-4 leading-relaxed">
-                  I&apos;m <strong>MATT</strong> — your AI deployment assistant. I&apos;ll help you create a custom Telegram bot powered by Kimi K2.5.
-                </p>
-                <div className="flex flex-col gap-2 text-base text-[var(--muted)] mb-4">
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-sm">1</span>
-                    <span>Name your agent & choose its role</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-sm">2</span>
-                    <span>Select capabilities & contact method</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-sm">3</span>
-                    <span>Pay with crypto & deploy instantly</span>
-                  </div>
+              {/* Redesigned Welcome Card - More playful */}
+              <div className="text-center">
+                {/* Fun headline */}
+                <div className="mb-3">
+                  <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center justify-center gap-2">
+                    <Rocket className="w-7 h-7 text-[var(--accent)]" />
+                    Meet Matt
+                  </h1>
+                  <p className="text-[var(--muted)] text-base">
+                    Your AI agent builder. Deploy in 15 min.
+                  </p>
                 </div>
+
+                {/* Playful feature tags */}
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                  <span className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm flex items-center gap-1.5">
+                    <Bot className="w-4 h-4 text-[var(--accent)]" />
+                    Telegram bots
+                  </span>
+                  <span className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    Devin AI powered
+                  </span>
+                  <span className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    Kimi K2.5
+                  </span>
+                </div>
+
+                {/* Simple steps */}
+                <div className="flex items-center justify-center gap-2 text-sm text-[var(--muted)] mb-4">
+                  <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">1</span>
+                  <span>Name</span>
+                  <span className="text-[var(--border)]">→</span>
+                  <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">2</span>
+                  <span>Configure</span>
+                  <span className="text-[var(--border)]">→</span>
+                  <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">3</span>
+                  <span>Deploy</span>
+                </div>
+
                 <button
                   onClick={() => handleOptionClick("Start creating")}
-                  className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-bold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-lg"
+                  className="w-full py-3.5 bg-[var(--accent)] text-white rounded-xl font-bold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-base"
                 >
                   <Sparkles className="w-5 h-5" />
                   Start Creating
@@ -620,7 +634,7 @@ export default function Home() {
               </div>
             </motion.div>
           ) : step === "name" || step === "awaiting_verification" ? (
-            <div className="max-w-xl mx-auto">
+            <div className="max-w-lg mx-auto">
               <div className="flex gap-2">
                 <input
                   ref={inputRef}
@@ -629,36 +643,36 @@ export default function Home() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={step === "awaiting_verification" ? "Enter auth code from bot..." : "Type your agent's name..."}
-                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[var(--accent)]"
+                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--accent)]"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim()}
-                  className="w-14 h-14 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all hover:scale-105 active:scale-95"
+                  className="w-12 h-12 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all hover:scale-105 active:scale-95"
                 >
-                  <ArrowRight className="w-6 h-6" />
+                  <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
             </div>
           ) : step === "scope" && showContinue ? (
-            <div className="max-w-xl mx-auto">
+            <div className="max-w-lg mx-auto">
               <button
                 onClick={handleContinue}
                 disabled={selectedScopes.length === 0}
-                className="w-full py-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+                className="w-full py-3.5 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
               >
                 <span>Continue</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               {selectedScopes.length === 0 && (
-                <p className="text-center text-sm text-[var(--muted)] mt-2">Select at least one capability to continue</p>
+                <p className="text-center text-sm text-[var(--muted)] mt-2">Select at least one capability</p>
               )}
             </div>
           ) : null}
         </div>
       </main>
 
-      {/* Payment Modal - with z-index below header */}
+      {/* Payment Modal */}
       <PaymentModal
         isOpen={showPayment}
         onClose={() => setShowPayment(false)}

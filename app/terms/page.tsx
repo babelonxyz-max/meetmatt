@@ -84,7 +84,7 @@ Violation may result in immediate termination of your account without refund.`
 
 export default function TermsPage() {
   return (
-    <div className="pt-14 pb-12 overflow-x-hidden">
+    <div className="pt-20 sm:pt-24 pb-12 overflow-x-hidden min-h-screen">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <motion.div 
