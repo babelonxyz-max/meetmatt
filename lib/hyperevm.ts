@@ -1,78 +1,92 @@
-// HyperEVM / USDH Payment Integration
-// Hyperliquid's EVM chain with USDH stablecoin
+// HyperEVM / USDH Payment Integration with Secure Wallet Pool
+// Uses pre-generated encrypted wallets from database
 
 import { ethers } from "ethers";
+import { 
+  assignWalletFromPool, 
+  getWalletPrivateKey, 
+  markWalletAsUsed,
+  getWalletPoolStats 
+} from "./walletPool";
 
 // HyperEVM Network Configuration
 const HYPEREVM_CONFIG = {
   chainId: 998, // HyperEVM mainnet
   rpcUrl: process.env.HYPEREVM_RPC_URL || "https://rpc.hyperliquid.xyz/evm",
   name: "HyperEVM",
-  nativeCurrency: {
-    name: "HYPE",
-    symbol: "HYPE",
-    decimals: 18,
-  },
 };
 
-// USDH Token Contract (Hypers native stablecoin on HyperEVM)
+// USDH Token Contract
 const USDH_CONTRACT = process.env.USDH_CONTRACT_ADDRESS || "0x54e00a5988577cb0b0c9ab0cb6ef7f4b";
 
-// ERC20 ABI (minimal for transfer and balance)
+// Master wallet (receives all payments)
+const MASTER_WALLET = process.env.HYPEREVM_MASTER_WALLET || "";
+
+// ERC20 ABI
 const ERC20_ABI = [
   "function balanceOf(address owner) view returns (uint256)",
   "function transfer(address to, uint256 amount) returns (bool)",
   "function decimals() view returns (uint8)",
-  "function symbol() view returns (string)",
   "event Transfer(address indexed from, address indexed to, uint256 amount)",
 ];
 
-// Payment amount (10% discount: $150 → $135)
-const PAYMENT_AMOUNT_USD = 135;
-
-interface BurnerWallet {
-  address: string;
-  privateKey: string;
-  createdAt: Date;
-  sessionId: string;
-}
-
-interface PaymentStatus {
+// Payment tracking
+const paymentStatuses = new Map<string, {
   status: "pending" | "received" | "confirmed" | "transferred" | "failed";
-  burnerAddress: string;
+  walletId: string;
+  walletAddress: string;
   amount: string;
   txHash?: string;
-  blockNumber?: number;
+}>();
+
+interface PaymentSession {
+  sessionId: string;
+  walletId: string;
+  walletAddress: string;
+  amount: number;
+  status: string;
 }
 
-// Store burner wallets (in production, use database with encryption)
-const burnerWallets = new Map<string, BurnerWallet>();
-const paymentStatuses = new Map<string, PaymentStatus>();
-
 /**
- * Generate new burner wallet for payment
+ * Initialize new USDH payment session
+ * Assigns wallet from secure pool
  */
-export function generateBurnerWallet(sessionId: string): BurnerWallet {
-  const wallet = ethers.Wallet.createRandom();
+export async function initUSDHPayment(sessionId: string): Promise<PaymentSession | null> {
+  const DISCOUNTED_AMOUNT = 135; // 10% discount
   
-  const burnerWallet: BurnerWallet = {
-    address: wallet.address,
-    privateKey: wallet.privateKey,
-    createdAt: new Date(),
-    sessionId,
-  };
+  // Check pool stats first
+  const stats = await getWalletPoolStats();
+  console.log(`[HyperEVM] Wallet pool: ${stats.available} available, ${stats.assigned} assigned, ${stats.used} used`);
   
-  // Store with session ID
-  burnerWallets.set(sessionId, burnerWallet);
+  if (stats.available === 0) {
+    console.error("[HyperEVM] No wallets available in pool!");
+    return null;
+  }
+  
+  // Assign wallet from pool
+  const wallet = await assignWalletFromPool(sessionId);
+  if (!wallet) {
+    console.error("[HyperEVM] Failed to assign wallet from pool");
+    return null;
+  }
+  
+  // Track payment status
   paymentStatuses.set(sessionId, {
     status: "pending",
-    burnerAddress: wallet.address,
-    amount: PAYMENT_AMOUNT_USD.toString(),
+    walletId: wallet.id,
+    walletAddress: wallet.address,
+    amount: DISCOUNTED_AMOUNT.toString(),
   });
   
-  console.log(`[HyperEVM] Generated burner wallet: ${wallet.address} for session: ${sessionId}`);
+  console.log(`[HyperEVM] Payment initialized for ${sessionId} using wallet ${wallet.address}`);
   
-  return burnerWallet;
+  return {
+    sessionId,
+    walletId: wallet.id,
+    walletAddress: wallet.address,
+    amount: DISCOUNTED_AMOUNT,
+    status: "pending",
+  };
 }
 
 /**
@@ -88,7 +102,7 @@ function getProvider(): ethers.JsonRpcProvider {
 /**
  * Check USDH balance of an address
  */
-export async function checkUSDHBalance(address: string): Promise<ethers.BigNumberish> {
+export async function checkUSDHBalance(address: string): Promise<bigint> {
   try {
     const provider = getProvider();
     const contract = new ethers.Contract(USDH_CONTRACT, ERC20_ABI, provider);
@@ -98,10 +112,10 @@ export async function checkUSDHBalance(address: string): Promise<ethers.BigNumbe
     
     console.log(`[HyperEVM] Balance of ${address}: ${ethers.formatUnits(balance, decimals)} USDH`);
     
-    return balance;
+    return BigInt(balance.toString());
   } catch (error) {
     console.error("[HyperEVM] Error checking balance:", error);
-    return 0;
+    return BigInt(0);
   }
 }
 
@@ -109,24 +123,20 @@ export async function checkUSDHBalance(address: string): Promise<ethers.BigNumbe
  * Check if payment is received
  */
 export async function checkPaymentReceived(sessionId: string): Promise<boolean> {
-  const wallet = burnerWallets.get(sessionId);
-  if (!wallet) {
-    console.error(`[HyperEVM] No wallet found for session: ${sessionId}`);
+  const payment = paymentStatuses.get(sessionId);
+  if (!payment) {
+    console.error(`[HyperEVM] No payment found for session: ${sessionId}`);
     return false;
   }
   
   try {
-    const balance = await checkUSDHBalance(wallet.address);
-    const requiredAmount = ethers.parseUnits(PAYMENT_AMOUNT_USD.toString(), 6);
+    const balance = await checkUSDHBalance(payment.walletAddress);
+    const requiredAmount = ethers.parseUnits(payment.amount, 6); // USDH has 6 decimals
     
-    const status = paymentStatuses.get(sessionId);
-    
-    if (ethers.getBigInt(balance) >= requiredAmount) {
+    if (balance >= requiredAmount) {
       console.log(`[HyperEVM] Payment received for session: ${sessionId}`);
-      if (status) {
-        status.status = "received";
-        paymentStatuses.set(sessionId, status);
-      }
+      payment.status = "received";
+      paymentStatuses.set(sessionId, payment);
       return true;
     }
     
@@ -138,29 +148,35 @@ export async function checkPaymentReceived(sessionId: string): Promise<boolean> 
 }
 
 /**
- * Transfer funds from burner to master wallet
+ * Transfer funds from assigned wallet to master wallet
  */
 export async function transferToMasterWallet(sessionId: string): Promise<string | null> {
-  const wallet = burnerWallets.get(sessionId);
-  const masterWallet = process.env.HYPEREVM_MASTER_WALLET;
+  const payment = paymentStatuses.get(sessionId);
   
-  if (!wallet) {
-    console.error(`[HyperEVM] No burner wallet for session: ${sessionId}`);
+  if (!payment) {
+    console.error(`[HyperEVM] No payment found for session: ${sessionId}`);
     return null;
   }
   
-  if (!masterWallet) {
+  if (!MASTER_WALLET) {
     console.error("[HyperEVM] Master wallet not configured");
     return null;
   }
   
   try {
+    // Get private key from secure pool
+    const privateKey = await getWalletPrivateKey(payment.walletId);
+    if (!privateKey) {
+      console.error("[HyperEVM] Failed to get private key from pool");
+      return null;
+    }
+    
     const provider = getProvider();
-    const signer = new ethers.Wallet(wallet.privateKey, provider);
+    const signer = new ethers.Wallet(privateKey, provider);
     const contract = new ethers.Contract(USDH_CONTRACT, ERC20_ABI, signer);
     
     // Check balance
-    const balance = await contract.balanceOf(wallet.address);
+    const balance = await contract.balanceOf(payment.walletAddress);
     
     if (balance === BigInt(0)) {
       console.error("[HyperEVM] No funds to transfer");
@@ -168,7 +184,8 @@ export async function transferToMasterWallet(sessionId: string): Promise<string 
     }
     
     // Transfer all USDH to master wallet
-    const tx = await contract.transfer(masterWallet, balance);
+    console.log(`[HyperEVM] Transferring ${ethers.formatUnits(balance, 6)} USDH to master wallet...`);
+    const tx = await contract.transfer(MASTER_WALLET, balance);
     console.log(`[HyperEVM] Transfer tx sent: ${tx.hash}`);
     
     // Wait for confirmation
@@ -176,26 +193,19 @@ export async function transferToMasterWallet(sessionId: string): Promise<string 
     console.log(`[HyperEVM] Transfer confirmed: ${receipt?.hash}`);
     
     // Update status
-    const status = paymentStatuses.get(sessionId);
-    if (status && receipt) {
-      status.status = "transferred";
-      status.txHash = receipt.hash;
-      status.blockNumber = receipt.blockNumber;
-      paymentStatuses.set(sessionId, status);
-    }
+    payment.status = "transferred";
+    payment.txHash = receipt?.hash;
+    paymentStatuses.set(sessionId, payment);
     
-    // Clean up - remove private key from memory
-    burnerWallets.delete(sessionId);
+    // Mark wallet as used in pool
+    await markWalletAsUsed(payment.walletId);
     
     return receipt?.hash || null;
   } catch (error) {
     console.error("[HyperEVM] Transfer failed:", error);
     
-    const status = paymentStatuses.get(sessionId);
-    if (status) {
-      status.status = "failed";
-      paymentStatuses.set(sessionId, status);
-    }
+    payment.status = "failed";
+    paymentStatuses.set(sessionId, payment);
     
     return null;
   }
@@ -206,8 +216,8 @@ export async function transferToMasterWallet(sessionId: string): Promise<string 
  */
 export async function pollForPayment(
   sessionId: string,
-  onStatusUpdate?: (status: PaymentStatus) => void,
-  maxAttempts: number = 360, // 30 minutes (5s intervals)
+  onStatusUpdate?: (status: string) => void,
+  maxAttempts: number = 360,
   intervalMs: number = 5000
 ): Promise<boolean> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -221,17 +231,14 @@ export async function pollForPayment(
       const txHash = await transferToMasterWallet(sessionId);
       
       if (txHash) {
-        const status = paymentStatuses.get(sessionId);
-        if (status) {
-          onStatusUpdate?.(status);
-        }
+        onStatusUpdate?.("transferred");
         return true;
       }
     }
     
-    const status = paymentStatuses.get(sessionId);
-    if (status) {
-      onStatusUpdate?.(status);
+    const payment = paymentStatuses.get(sessionId);
+    if (payment) {
+      onStatusUpdate?.(payment.status);
     }
     
     await new Promise(resolve => setTimeout(resolve, intervalMs));
@@ -243,16 +250,13 @@ export async function pollForPayment(
 /**
  * Get payment status
  */
-export function getPaymentStatus(sessionId: string): PaymentStatus | null {
+export function getPaymentStatus(sessionId: string) {
   return paymentStatuses.get(sessionId) || null;
 }
 
 /**
- * Get burner address for session
+ * Get wallet address for session
  */
-export function getBurnerAddress(sessionId: string): string | null {
-  return burnerWallets.get(sessionId)?.address || null;
+export function getWalletAddress(sessionId: string): string | null {
+  return paymentStatuses.get(sessionId)?.walletAddress || null;
 }
-
-// Export types
-export type { BurnerWallet, PaymentStatus };

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateBurnerWallet, pollForPayment, getPaymentStatus, getBurnerAddress } from "@/lib/hyperevm";
+import { initUSDHPayment, pollForPayment, getPaymentStatus } from "@/lib/hyperevm";
 
 // POST /api/payment/hyperevm/create
 export async function POST(req: NextRequest) {
@@ -11,12 +11,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Session ID required" }, { status: 400 });
     }
 
-    // Generate burner wallet
-    const wallet = generateBurnerWallet(sessionId);
+    // Initialize payment with wallet from secure pool
+    const payment = await initUSDHPayment(sessionId);
+    
+    if (!payment) {
+      return NextResponse.json({ 
+        error: "No wallets available in pool. Contact admin." 
+      }, { status: 503 });
+    }
 
     // Start polling in background (don't await)
     pollForPayment(sessionId, (status) => {
-      console.log(`[HyperEVM Payment] Status update for ${sessionId}:`, status.status);
+      console.log(`[HyperEVM Payment] Status update for ${sessionId}: ${status}`);
     }).then((success) => {
       if (success) {
         console.log(`[HyperEVM Payment] Completed for ${sessionId}`);
@@ -26,8 +32,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      address: wallet.address,
-      amount: "135", // 10% discount: $150 → $135
+      address: payment.walletAddress,
+      amount: payment.amount.toString(),
       token: "USDH",
       network: "HyperEVM",
       discount: "10%",
@@ -49,7 +55,6 @@ export async function GET(req: NextRequest) {
     }
 
     const status = getPaymentStatus(sessionId);
-    const address = getBurnerAddress(sessionId);
 
     if (!status) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
@@ -57,10 +62,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       status: status.status,
-      address,
+      address: status.walletAddress,
       amount: status.amount,
       txHash: status.txHash,
-      blockNumber: status.blockNumber,
     });
   } catch (error: any) {
     console.error("[HyperEVM] Status check error:", error);

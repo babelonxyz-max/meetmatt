@@ -45,3 +45,18 @@ model Payment {
   @@index([status])
   @@map("payments")
 }
+
+// Pre-generated encrypted wallet pool for USDH payments
+model WalletPool {
+  id                  String    @id @default(cuid())
+  address             String    @unique
+  encryptedPrivateKey String    @map("encrypted_private_key")
+  status              String    @default("available") // available, assigned, used
+  assignedToSession   String?   @map("assigned_to_session")
+  assignedAt          DateTime? @map("assigned_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  
+  @@index([status])
+  @@index([assignedToSession])
+  @@map("wallet_pool")
+}
