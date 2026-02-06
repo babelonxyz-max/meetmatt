@@ -475,7 +475,7 @@ export default function Home() {
       <main className="h-full pt-14 sm:pt-16 flex flex-col">
         {/* Orb */}
         <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 py-4">
-          <AIOrb state={getWizardState()} />
+          <AIOrb wizardState={getWizardState()} />
           
           {/* Messages */}
           <div className="w-full max-w-md mt-6 space-y-3 overflow-y-auto max-h-[40vh] scrollbar-hide">
