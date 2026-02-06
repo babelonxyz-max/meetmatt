@@ -39,7 +39,7 @@ export default function PrivyProvider({
     <BasePrivyProvider
       appId={appId}
       config={{
-        loginMethods: ["email", "wallet", "google", "twitter", "discord"],
+        loginMethods: ["email", "wallet"],
         appearance: {
           theme: "dark",
           accentColor: "#3B82F6",
