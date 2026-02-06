@@ -452,7 +452,7 @@ export default function Home() {
   if (isLoading) {
     return (
       <div className="h-screen w-screen bg-[var(--background)] flex items-center justify-center safe-area-padding">
-        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-[var(--muted)] font-mono text-sm">
+        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-[var(--muted)] font-mono text-lg">
           Initializing...
         </motion.div>
       </div>
@@ -460,30 +460,30 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen w-screen bg-[var(--background)] overflow-hidden flex flex-col">
-      {/* Header */}
-      <header className="flex-none h-14 sm:h-16 flex items-center justify-between px-4 sm:px-6 z-50 bg-[var(--background)] border-b border-[var(--border)]">
-        <div className="flex items-center gap-2">
+    <div className="h-screen w-screen bg-[var(--background)] overflow-hidden flex flex-col text-lg">
+      {/* Header - Bigger */}
+      <header className="flex-none h-20 sm:h-24 flex items-center justify-between px-6 sm:px-8 z-50 bg-[var(--background)] border-b border-[var(--border)]">
+        <div className="flex items-center gap-3">
           <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
-            <Sparkles className="w-5 h-5 text-[var(--accent)]" />
+            <Sparkles className="w-7 h-7 text-[var(--accent)]" />
           </motion.div>
-          <span className="font-semibold text-lg tracking-tight">Matt</span>
+          <span className="font-bold text-2xl tracking-tight">Matt</span>
         </div>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Link href="/pricing" className="px-3 py-2 text-sm text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Link href="/pricing" className="px-4 py-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
             Pricing
           </Link>
           <ThemeToggle />
           {authenticated ? (
-            <Link href="/dashboard" className="px-3 py-2 text-sm text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
+            <Link href="/dashboard" className="px-4 py-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
               Dashboard
             </Link>
           ) : (
             <button 
               onClick={login} 
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
             >
-              <User className="w-4 h-4" />
+              <User className="w-5 h-5" />
               <span>Log in</span>
             </button>
           )}
@@ -501,28 +501,25 @@ export default function Home() {
               else if (step === "contact") setStep("scope");
               else setStep("intro");
             }}
-            className="absolute top-4 left-4 z-40 p-2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors bg-[var(--card)]/80 rounded-lg backdrop-blur-sm border border-[var(--border)] shadow-sm"
+            className="absolute top-4 left-4 z-40 p-3 text-lg text-[var(--muted)] hover:text-[var(--foreground)] transition-colors bg-[var(--card)]/80 rounded-lg backdrop-blur-sm border border-[var(--border)] shadow-sm"
           >
             ← Back
           </button>
         )}
 
-        {/* Chat Section - Fades at top, positioned above orb */}
-        <div className="flex-none h-[45vh] relative">
-          {/* Fade gradient at TOP of chat (so messages blend as they go up toward orb) */}
-          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-[var(--background)] to-transparent z-10 pointer-events-none" />
-          
-          {/* Messages scroll area */}
-          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-4 pt-6 pb-4">
-            <div className="w-full max-w-xl mx-auto space-y-4">
-              {/* Greeting above messages when intro */}
+        {/* Messages Section - Positioned just above orb */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Messages scroll area with padding for orb space */}
+          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-6 pt-6 pb-48">
+            <div className="w-full max-w-2xl mx-auto space-y-5">
+              {/* Greeting bubble when intro */}
               {step === "intro" && messages.length === 0 && (
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-center mb-4"
+                  className="text-center mb-6"
                 >
-                  <span className="inline-block px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm text-[var(--muted)]">
+                  <span className="inline-block px-6 py-3 bg-[var(--card)] border border-[var(--border)] rounded-full text-lg text-[var(--muted)]">
                     👋 Hi! I&apos;m MATT
                   </span>
                 </motion.div>
@@ -545,21 +542,21 @@ export default function Home() {
                           ? "bg-[var(--accent)] text-white rounded-2xl rounded-br-md" 
                           : "bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] rounded-2xl rounded-bl-md"
                         } 
-                        px-5 py-4 shadow-sm
+                        px-6 py-5 shadow-sm
                       `}
                     >
                       <p 
-                        className="text-base leading-relaxed whitespace-pre-wrap" 
+                        className="text-lg leading-relaxed whitespace-pre-wrap" 
                         dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} 
                       />
                       
                       {msg.options && msg.options.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4">
+                        <div className="flex flex-wrap gap-3 mt-4">
                           {msg.options.map((opt) => (
                             <button
                               key={opt}
                               onClick={() => handleOptionClick(opt)}
-                              className="px-4 py-2 text-sm font-medium rounded-full transition-colors bg-white/10 hover:bg-white/20 border border-white/20"
+                              className="px-5 py-2.5 text-base font-medium rounded-full transition-colors bg-white/10 hover:bg-white/20 border border-white/20"
                             >
                               {opt}
                             </button>
@@ -573,11 +570,11 @@ export default function Home() {
               
               {isTyping && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl rounded-bl-md px-5 py-4">
-                    <div className="flex gap-1">
-                      <span className="w-2.5 h-2.5 bg-[var(--muted)] rounded-full animate-bounce" />
-                      <span className="w-2.5 h-2.5 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
-                      <span className="w-2.5 h-2.5 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl rounded-bl-md px-6 py-5">
+                    <div className="flex gap-1.5">
+                      <span className="w-3 h-3 bg-[var(--muted)] rounded-full animate-bounce" />
+                      <span className="w-3 h-3 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                      <span className="w-3 h-3 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
                     </div>
                   </div>
                 </motion.div>
@@ -587,54 +584,54 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Orb Section - 50px safe area above */}
-        <div className="flex-none flex items-center justify-center py-8">
-          <div className="w-56 h-56 sm:w-64 sm:h-64">
+        {/* Orb Section - Higher up with safe area below */}
+        <div className="flex-none flex items-center justify-center pb-4">
+          <div className="w-48 h-48 sm:w-56 sm:h-56">
             <AIOrb wizardState={getWizardState()} />
           </div>
         </div>
 
-        {/* Bottom Controls Section */}
-        <div className="flex-none px-4 pb-8 pt-4 min-h-[180px]">
+        {/* Bottom Controls Section - Safe area */}
+        <div className="flex-none px-6 pb-10 pt-4 min-h-[220px]">
           {step === "intro" && messages.length === 0 ? (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-lg mx-auto"
+              className="max-w-xl mx-auto"
             >
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-lg">
-                <h1 className="text-2xl font-bold mb-3 text-center">
+              <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8 shadow-lg">
+                <h1 className="text-3xl font-bold mb-4 text-center">
                   Meet Your AI Agent
                 </h1>
-                <p className="text-[var(--muted)] text-base text-center mb-5 leading-relaxed">
+                <p className="text-[var(--muted)] text-lg text-center mb-6 leading-relaxed">
                   I&apos;m <strong>MATT</strong> — your AI deployment assistant. I&apos;ll help you create a custom Telegram bot powered by Kimi K2.5.
                 </p>
-                <div className="flex flex-col gap-3 text-sm text-[var(--muted)] mb-5">
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-semibold text-xs">1</span>
+                <div className="flex flex-col gap-4 text-base text-[var(--muted)] mb-6">
+                  <div className="flex items-center gap-4 p-3 rounded-lg bg-[var(--background)]/50">
+                    <span className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-sm">1</span>
                     <span>Name your agent & choose its role</span>
                   </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-semibold text-xs">2</span>
+                  <div className="flex items-center gap-4 p-3 rounded-lg bg-[var(--background)]/50">
+                    <span className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-sm">2</span>
                     <span>Select capabilities & contact method</span>
                   </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-semibold text-xs">3</span>
+                  <div className="flex items-center gap-4 p-3 rounded-lg bg-[var(--background)]/50">
+                    <span className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-sm">3</span>
                     <span>Pay with crypto & deploy instantly</span>
                   </div>
                 </div>
                 <button
                   onClick={() => handleOptionClick("Start creating")}
-                  className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-semibold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-lg"
+                  className="w-full py-5 bg-[var(--accent)] text-white rounded-xl font-bold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 text-xl"
                 >
-                  <Sparkles className="w-5 h-5" />
+                  <Sparkles className="w-6 h-6" />
                   Start Creating
-                  <ArrowRight className="w-5 h-5" />
+                  <ArrowRight className="w-6 h-6" />
                 </button>
               </div>
             </motion.div>
           ) : step === "name" || step === "awaiting_verification" ? (
-            <div className="max-w-lg mx-auto">
+            <div className="max-w-xl mx-auto">
               <div className="flex gap-3">
                 <input
                   ref={inputRef}
@@ -643,29 +640,29 @@ export default function Home() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={step === "awaiting_verification" ? "Enter auth code from bot..." : "Type your agent's name..."}
-                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-5 py-4 text-base focus:outline-none focus:border-[var(--accent)]"
+                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-6 py-5 text-lg focus:outline-none focus:border-[var(--accent)]"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim()}
-                  className="w-14 h-14 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all hover:scale-105 active:scale-95"
+                  className="w-16 h-16 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all hover:scale-105 active:scale-95"
                 >
-                  <ArrowRight className="w-6 h-6" />
+                  <ArrowRight className="w-7 h-7" />
                 </button>
               </div>
             </div>
           ) : step === "scope" && showContinue ? (
-            <div className="max-w-lg mx-auto">
+            <div className="max-w-xl mx-auto">
               <button
                 onClick={handleContinue}
                 disabled={selectedScopes.length === 0}
-                className="w-full py-4 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+                className="w-full py-5 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-xl"
               >
                 <span>Continue</span>
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-6 h-6" />
               </button>
               {selectedScopes.length === 0 && (
-                <p className="text-center text-sm text-[var(--muted)] mt-2">Select at least one capability to continue</p>
+                <p className="text-center text-base text-[var(--muted)] mt-3">Select at least one capability to continue</p>
               )}
             </div>
           ) : null}
