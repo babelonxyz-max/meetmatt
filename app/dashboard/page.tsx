@@ -16,12 +16,9 @@ import {
   MessageCircle,
   Copy,
   ExternalLink,
-  Settings,
-  Sparkles,
-  User
+  Settings
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { ThemeToggle } from "../components/ThemeToggle";
 
 interface DashboardData {
   user: {
@@ -194,34 +191,8 @@ export default function DashboardPage() {
   const { agents, payments, stats } = data;
 
   return (
-    <>
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-[var(--background)] z-50 border-b border-[var(--border)]">
-        <Link href="/" className="flex items-center gap-3">
-          <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
-            <Sparkles className="w-7 h-7 text-[var(--accent)]" />
-          </motion.div>
-          <span className="font-bold text-2xl tracking-tight">Matt</span>
-        </Link>
-        <div className="flex items-center gap-6">
-          <Link href="/pricing" className="text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
-            Pricing
-          </Link>
-          <ThemeToggle />
-          {authenticated && (
-            <button 
-              onClick={() => logout()} 
-              className="flex items-center gap-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
-            >
-              <User className="w-5 h-5" />
-              <span>Log out</span>
-            </button>
-          )}
-        </div>
-      </header>
-
-      <div className="pt-20 pb-12">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8">
+    <div className="py-8">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8">
         {/* Welcome - BIGGER */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -534,7 +505,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

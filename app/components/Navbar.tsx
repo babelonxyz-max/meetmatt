@@ -1,95 +1,51 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
+import { Sparkles, User } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
-import LoginButton from "./LoginButton";
-
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/dashboard", label: "Dashboard" },
-];
+import { usePrivy } from "@privy-io/react-auth";
 
 export function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { authenticated, login, logout } = usePrivy();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]/50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0ea5e9] to-[#6366f1] flex items-center justify-center"
+    <header className="fixed top-0 left-0 right-0 h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-[var(--background)] z-[100] border-b border-[var(--border)]">
+      <Link href="/" className="flex items-center gap-3">
+        <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
+          <Sparkles className="w-7 h-7 text-[var(--accent)]" />
+        </motion.div>
+        <span className="font-bold text-2xl tracking-tight">Matt</span>
+      </Link>
+      
+      <nav className="flex items-center gap-6">
+        <Link href="/pricing" className="text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
+          Pricing
+        </Link>
+        <ThemeToggle />
+        {authenticated ? (
+          <>
+            <Link href="/dashboard" className="text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
+              Dashboard
+            </Link>
+            <button 
+              onClick={() => logout()} 
+              className="flex items-center gap-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
             >
-              <Sparkles className="w-4 h-4 text-white" />
-            </motion.div>
-            <span className="font-semibold text-[var(--foreground)] group-hover:text-[#0ea5e9] transition-colors">
-              Meet Matt
-            </span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
-            <ThemeToggle />
-            <div className="hidden md:block">
-              <LoginButton />
-            </div>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="flex items-center gap-2 md:hidden">
-            <ThemeToggle />
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-2 text-[var(--foreground)] hover:text-[#0ea5e9] transition-colors"
-            >
-              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              <User className="w-5 h-5" />
+              <span className="hidden sm:inline">Log out</span>
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-[var(--border)]/50 bg-[var(--background)]/95 backdrop-blur-md"
+          </>
+        ) : (
+          <button 
+            onClick={login} 
+            className="flex items-center gap-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
           >
-            <div className="px-4 py-3 space-y-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className="block py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="pt-2">
-                <LoginButton />
-              </div>
-            </div>
-          </motion.div>
+            <User className="w-5 h-5" />
+            <span className="hidden sm:inline">Log in</span>
+          </button>
         )}
-      </AnimatePresence>
-    </nav>
+      </nav>
+    </header>
   );
 }

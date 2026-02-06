@@ -2,14 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles, User } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { PaymentModal } from "./components/PaymentModal";
 import { AIOrb, type AIOrbProps } from "./components/AIOrb";
-import { ThemeToggle } from "./components/ThemeToggle";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig, getPendingConfig } from "@/lib/session";
 import { initAudio, playMessageSent, playMessageReceived, playOptionSelected, playSuccess } from "@/lib/audio";
 import { usePrivy } from "@privy-io/react-auth";
-import Link from "next/link";
 
 interface Message {
   id: string;
@@ -309,7 +307,6 @@ export default function Home() {
     const scopeString = selectedScopes.join(", ");
     setConfig((prev) => ({ ...prev, scope: scopeString }));
     setShowContinue(false);
-    // Only add ONE message with the final selection
     addMessage("user", scopeString);
     setSelectedScopes([]);
     
@@ -449,7 +446,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center">
+      <div className="h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] flex items-center justify-center overflow-hidden">
         <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-[var(--muted)] font-mono text-lg">
           Initializing...
         </motion.div>
@@ -458,36 +455,7 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col">
-      {/* Single Header - Always visible with highest z-index */}
-      <header className="flex-none h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-[var(--background)] z-[100]">
-        <div className="flex items-center gap-3">
-          <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
-            <Sparkles className="w-7 h-7 text-[var(--accent)]" />
-          </motion.div>
-          <span className="font-bold text-2xl tracking-tight">Matt</span>
-        </div>
-        <div className="flex items-center gap-6">
-          <Link href="/pricing" className="text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
-            Pricing
-          </Link>
-          <ThemeToggle />
-          {authenticated ? (
-            <Link href="/dashboard" className="text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
-              Dashboard
-            </Link>
-          ) : (
-            <button 
-              onClick={login} 
-              className="flex items-center gap-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
-            >
-              <User className="w-5 h-5" />
-              <span>Log in</span>
-            </button>
-          )}
-        </div>
-      </header>
-
+    <div className="h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] overflow-hidden flex flex-col">
       {/* Main Content - No scroll */}
       <main className="flex-1 flex flex-col min-h-0 relative">
         {/* Back Button */}

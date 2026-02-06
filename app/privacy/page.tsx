@@ -69,7 +69,7 @@ Each provider is vetted for security and privacy compliance. They only receive d
 
 export default function PrivacyPage() {
   return (
-    <div className="pt-14 pb-12">
+    <div className="pt-14 pb-12 overflow-x-hidden">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <motion.div 

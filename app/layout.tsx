@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 
 const geistSans = Geist({
@@ -52,18 +53,17 @@ export default function RootLayout({
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
   
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="overflow-x-hidden">
       <head>
         <script dangerouslySetInnerHTML={{ __html: 'window.__PRIVY_APP_ID__=' + JSON.stringify(privyAppId) + ';' }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)]`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)] overflow-x-hidden`}>
         <Providers>
-          <div className="flex flex-col min-h-screen">
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
+          <Navbar />
+          <div className="pt-16 sm:pt-20">
+            {children}
           </div>
+          <Footer />
         </Providers>
       </body>
     </html>
