@@ -31,12 +31,21 @@ model Agent {
   currentPeriodEnd   DateTime? @map("current_period_end")
   cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
   lastPaymentId      String?   @map("last_payment_id")
+  
+  // Bot activation fields
+  activationStatus   String    @default("pending") @map("activation_status") // pending, activating, awaiting_verification, active, failed
+  botUsername        String?   @map("bot_username")
+  telegramLink       String?   @map("telegram_link")
+  authCode           String?   @map("auth_code")
+  verifiedAt         DateTime? @map("verified_at")
+  telegramUserId     String?   @map("telegram_user_id")
 
   @@index([status])
   @@index([devinSessionId])
   @@index([payment_session_id])
   @@index([slug])
   @@index([userId])
+  @@index([activationStatus])
   @@map("agents")
 }
 

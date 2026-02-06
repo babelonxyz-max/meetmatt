@@ -2,22 +2,37 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createDevinSession, pollForCompletion } from "@/lib/devin";
 
-// GET /api/agents?sessionId=xxx
+// GET /api/agents?sessionId=xxx or /api/agents?id=xxx
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId");
-
-  if (!sessionId) {
-    return NextResponse.json({ error: "Session ID required" }, { status: 400 });
-  }
+  const agentId = searchParams.get("id");
 
   try {
-    const agents = await prisma.agent.findMany({
-      where: { sessionId },
-      orderBy: { createdAt: "desc" },
-    });
+    // Get single agent by ID
+    if (agentId) {
+      const agent = await prisma.agent.findUnique({
+        where: { id: agentId },
+      });
 
-    return NextResponse.json({ agents });
+      if (!agent) {
+        return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+      }
+
+      return NextResponse.json(agent);
+    }
+
+    // Get agents by session ID
+    if (sessionId) {
+      const agents = await prisma.agent.findMany({
+        where: { sessionId },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return NextResponse.json({ agents });
+    }
+
+    return NextResponse.json({ error: "Session ID or Agent ID required" }, { status: 400 });
   } catch (error: any) {
     console.error("Fetch agents error:", error);
     return NextResponse.json({ error: error.message || "Failed to fetch agents" }, { status: 500 });
@@ -28,7 +43,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sessionId, agentName, useCase, scope, contactMethod } = body;
+    const { sessionId, agentName, useCase, scope, contactMethod, userId } = body;
 
     if (!sessionId || !agentName || !useCase) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -38,7 +53,7 @@ export async function POST(req: NextRequest) {
     const baseSlug = agentName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
 
-    // Create agent record with pending status
+    // Create agent record with activating status
     const agent = await prisma.agent.create({
       data: {
         sessionId,
@@ -48,6 +63,8 @@ export async function POST(req: NextRequest) {
         features: [JSON.stringify({ useCase, scope, contactMethod })],
         tier: "matt",
         status: "pending",
+        userId: userId || null,
+        activationStatus: "activating",
       },
     });
 
@@ -59,7 +76,7 @@ export async function POST(req: NextRequest) {
       contactMethod,
     });
 
-    return NextResponse.json({ agent });
+    return NextResponse.json(agent);
   } catch (error: any) {
     console.error("Create agent error:", error);
     return NextResponse.json({ error: error.message || "Failed to create agent" }, { status: 500 });
@@ -79,12 +96,6 @@ async function deployAgent(
   }
 ) {
   try {
-    // Update status to deploying
-    await prisma.agent.update({
-      where: { id: agentId },
-      data: { status: "deploying" },
-    });
-
     // Create Devin session
     const devinSession = await createDevinSession({
       name: config.name,
@@ -107,19 +118,25 @@ async function deployAgent(
     await pollForCompletion(devinSession.sessionId, async (status) => {
       console.log(`Agent ${agentId} deployment status: ${status}`);
 
-      // Update status in database
-      await prisma.agent.update({
-        where: { id: agentId },
-        data: {
-          status: status === "completed" ? "active" : status,
-        },
-      });
-    });
-
-    // Final update
-    await prisma.agent.update({
-      where: { id: agentId },
-      data: { status: "active" },
+      if (status === "completed") {
+        // When Devin completes, set to awaiting_verification
+        // Devin should provide bot username and auth code via webhook or API
+        await prisma.agent.update({
+          where: { id: agentId },
+          data: {
+            status: "active",
+            activationStatus: "awaiting_verification",
+          },
+        });
+      } else if (status === "error") {
+        await prisma.agent.update({
+          where: { id: agentId },
+          data: {
+            status: "error",
+            activationStatus: "failed",
+          },
+        });
+      }
     });
 
     console.log(`Agent ${agentId} deployed successfully`);
@@ -129,12 +146,15 @@ async function deployAgent(
     // Update status to error
     await prisma.agent.update({
       where: { id: agentId },
-      data: { status: "error" },
+      data: { 
+        status: "error",
+        activationStatus: "failed",
+      },
     });
   }
 }
 
-// PATCH /api/agents/:id - Update agent status (for webhooks)
+// PATCH /api/agents/:id - Update agent (for activation webhooks)
 export async function PATCH(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -145,13 +165,28 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { status, devinUrl } = body;
+    const { 
+      status, 
+      devinUrl, 
+      activationStatus, 
+      botUsername, 
+      telegramLink, 
+      authCode,
+      verifiedAt,
+      telegramUserId,
+    } = body;
 
     const agent = await prisma.agent.update({
       where: { id: agentId },
       data: {
-        status,
+        ...(status && { status }),
         ...(devinUrl && { devinUrl }),
+        ...(activationStatus && { activationStatus }),
+        ...(botUsername && { botUsername }),
+        ...(telegramLink && { telegramLink }),
+        ...(authCode && { authCode }),
+        ...(verifiedAt && { verifiedAt: new Date(verifiedAt) }),
+        ...(telegramUserId && { telegramUserId }),
       },
     });
 

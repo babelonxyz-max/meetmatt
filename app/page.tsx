@@ -11,6 +11,7 @@ import { JarvisInterface } from "./components/JarvisInterface";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig } from "@/lib/session";
 import { initAudio, playMessageSent, playMessageReceived, playOptionSelected, playSuccess } from "@/lib/audio";
+import { usePrivy } from "@privy-io/react-auth";
 
 interface Message {
   id: string;
@@ -19,13 +20,21 @@ interface Message {
   options?: string[];
 }
 
-type Step = "intro" | "name" | "usecase" | "scope" | "contact" | "confirm" | "deploying" | "success";
+type Step = "intro" | "login" | "name" | "usecase" | "scope" | "contact" | "confirm" | "deploying" | "activating" | "awaiting_verification" | "success";
 
 interface SetupConfig {
   agentName: string;
   useCase: string;
   scope: string;
   contactMethod: string;
+}
+
+interface AgentData {
+  id: string;
+  activationStatus: string;
+  botUsername?: string;
+  telegramLink?: string;
+  authCode?: string;
 }
 
 const USE_CASE_OPTIONS = [
@@ -65,6 +74,7 @@ const CONTACT_OPTIONS = [
 ];
 
 export default function Home() {
+  const { authenticated, login, user } = usePrivy();
   const [sessionId] = useState<string>(() => getOrCreateSessionId());
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -81,13 +91,16 @@ export default function Home() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
+  const [currentAgent, setCurrentAgent] = useState<AgentData | null>(null);
+  const [awaitingAuthCode, setAwaitingAuthCode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const activationPollRef = useRef<NodeJS.Timeout | null>(null);
 
   const getWizardState = (): AIOrbProps["wizardState"] => {
     if (step === "intro") return "idle";
-    if (step === "name") return "initializing";
+    if (step === "name" || step === "login") return "initializing";
     if (step === "usecase" || step === "scope" || step === "contact") return "processing";
-    if (step === "deploying") return "deploying";
+    if (step === "deploying" || step === "activating") return "deploying";
     if (step === "success") return "success";
     return "idle";
   };
@@ -117,10 +130,44 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if ((step === "name" || step === "scope") && inputRef.current) {
+    if ((step === "name" || step === "scope" || step === "awaiting_verification") && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [step]);
+
+  // Poll for activation status
+  useEffect(() => {
+    if (step === "activating" && currentAgent?.id) {
+      activationPollRef.current = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/agents?id=${currentAgent.id}`);
+          if (response.ok) {
+            const agent = await response.json();
+            if (agent.activationStatus === "awaiting_verification") {
+              setCurrentAgent(agent);
+              setStep("awaiting_verification");
+              addMessage("assistant", `🎉 Your bot **@${agent.botUsername}** is ready!\n\n👉 [Click here to open Telegram](${agent.telegramLink})\n\n**Please message the bot now.** It will give you an auth code. Paste that code here:`, []);
+              setAwaitingAuthCode(true);
+              if (activationPollRef.current) clearInterval(activationPollRef.current);
+            } else if (agent.activationStatus === "active") {
+              setCurrentAgent(agent);
+              setStep("success");
+              addMessage("assistant", `✅ **${config.agentName}** is now active and ready to help you!\n\nYou can chat with your bot anytime at **@${agent.botUsername}**`, ["Create another"]);
+              if (activationPollRef.current) clearInterval(activationPollRef.current);
+            } else if (agent.activationStatus === "failed") {
+              addMessage("assistant", "❌ Activation failed. Please contact support.", ["Try again"]);
+              if (activationPollRef.current) clearInterval(activationPollRef.current);
+            }
+          }
+        } catch (err) {
+          console.error("Poll error:", err);
+        }
+      }, 5000);
+    }
+    return () => {
+      if (activationPollRef.current) clearInterval(activationPollRef.current);
+    };
+  }, [step, currentAgent?.id]);
 
   const addMessage = (role: "assistant" | "user", content: string, options?: string[]) => {
     setMessages((prev) => [...prev, { id: Date.now().toString(), role, content, options }]);
@@ -136,7 +183,7 @@ export default function Home() {
 
   const handleBack = async () => {
     await enableAudio();
-    const stepOrder: Step[] = ["intro", "name", "usecase", "scope", "contact", "confirm"];
+    const stepOrder: Step[] = ["intro", "login", "name", "usecase", "scope", "contact", "confirm"];
     const currentIndex = stepOrder.indexOf(step);
     if (currentIndex > 0) {
       const prevStep = stepOrder[currentIndex - 1];
@@ -154,10 +201,24 @@ export default function Home() {
   const startCreating = async () => {
     await enableAudio();
     playOptionSelected();
+    
+    // Check if user is logged in
+    if (!authenticated) {
+      setStep("login");
+      addMessage("assistant", "Please log in to create your AI agent. You can use email or wallet.", ["Log in"]);
+      return;
+    }
+    
     setStep("name");
     setTimeout(() => {
       simulateTyping("What should be the name of your agent?");
     }, 400);
+  };
+
+  const handleLogin = async () => {
+    await enableAudio();
+    playOptionSelected();
+    login();
   };
 
   const handleNameSubmit = async () => {
@@ -277,21 +338,23 @@ export default function Home() {
     setShowPayment(false);
     setIsDeploying(true);
     setStep("deploying");
-    addMessage("assistant", "Initializing deployment...", []);
+    addMessage("assistant", "💳 Payment confirmed! Initializing deployment...", []);
 
     try {
       const response = await fetch("/api/agents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...config, sessionId }),
+        body: JSON.stringify({ ...config, sessionId, userId: user?.id }),
       });
 
       if (!response.ok) throw new Error("Deployment failed");
 
+      const agent = await response.json();
+      setCurrentAgent(agent);
       clearPendingConfig();
       setIsDeploying(false);
-      setStep("success");
-      addMessage("assistant", `🎉 ${config.agentName} is now live! Check your Telegram.`, ["Create another"]);
+      setStep("activating");
+      addMessage("assistant", "⏳ Payment received! Your agent is being activated. This may take a few minutes...", []);
     } catch (error: any) {
       setIsDeploying(false);
       setStep("confirm");
@@ -299,9 +362,42 @@ export default function Home() {
     }
   };
 
+  const handleAuthCodeSubmit = async (code: string) => {
+    if (!currentAgent?.id) return;
+    
+    addMessage("user", code);
+    setInput("");
+    
+    try {
+      // Send auth code to verification endpoint
+      const response = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instanceId: currentAgent.id,
+          code: code,
+          telegramUserId: user?.id,
+        }),
+      });
+
+      if (response.ok) {
+        setAwaitingAuthCode(false);
+        setStep("success");
+        addMessage("assistant", `✅ **${config.agentName}** is now active and you're the admin!\n\nYou can chat with your bot anytime at **@${currentAgent.botUsername}**`, ["Create another"]);
+      } else {
+        addMessage("assistant", "❌ Invalid auth code. Please try again:", []);
+      }
+    } catch (err) {
+      addMessage("assistant", "❌ Error verifying code. Please try again:", []);
+    }
+  };
+
   const handleSend = () => {
     if (!input.trim()) return;
     if (step === "name") handleNameSubmit();
+    else if (step === "awaiting_verification" && awaitingAuthCode) {
+      handleAuthCodeSubmit(input.trim());
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -315,6 +411,8 @@ export default function Home() {
     await enableAudio();
     if (option === "Start creating") {
       startCreating();
+    } else if (option === "Log in") {
+      handleLogin();
     } else if (step === "usecase") {
       handleUseCaseSelect(option);
     } else if (step === "scope") {
@@ -326,6 +424,8 @@ export default function Home() {
         setStep("intro");
         setConfig({ agentName: "", useCase: "", scope: "", contactMethod: "" });
         setSelectedScopes([]);
+        setCurrentAgent(null);
+        setAwaitingAuthCode(false);
         setMessages([{
           id: "restart",
           role: "assistant",
@@ -338,7 +438,7 @@ export default function Home() {
     }
   };
 
-  const canGoBack = step !== "intro" && step !== "confirm" && !isDeploying && step !== "success";
+  const canGoBack = step !== "intro" && step !== "confirm" && !isDeploying && step !== "success" && step !== "activating" && step !== "awaiting_verification";
 
   if (isLoading) {
     return (
@@ -350,197 +450,124 @@ export default function Home() {
     );
   }
 
+  // ... rest of the component remains the same
   return (
-    <main className="fixed inset-0 pt-14 pb-safe bg-[var(--background)] text-[var(--foreground)] overflow-hidden flex flex-col lg:flex-row">
-      {/* Left Side - AI Orb */}
-      <div className="lg:w-[42%] h-[35%] lg:h-full flex flex-col items-center justify-center relative">
-        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }} className="relative z-10 w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56">
-          <AIOrb isListening={isTyping} isThinking={isDeploying} intensity={isDeploying ? "high" : "medium"} wizardState={getWizardState()} />
-        </motion.div>
-
-        <motion.div className="mt-4 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-          <h1 className="text-xl lg:text-2xl font-semibold mb-1 tracking-wider">MATT</h1>
-          <p className="text-[10px] lg:text-xs font-mono text-[var(--muted)]">{isTyping ? "PROCESSING..." : isDeploying ? "DEPLOYING..." : "SYSTEM READY"}</p>
-        </motion.div>
-
-        <div className="absolute bottom-4 left-4 z-20">
-          <ThemeToggle />
+    <div className="h-screen w-screen bg-[var(--background)] overflow-hidden safe-area-padding">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 h-14 sm:h-16 flex items-center justify-between px-4 sm:px-6 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
+        <div className="flex items-center gap-2">
+          <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
+            <Sparkles className="w-5 h-5 text-[var(--accent)]" />
+          </motion.div>
+          <span className="font-semibold text-lg tracking-tight">Matt</span>
         </div>
-      </div>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          {authenticated && (
+            <Button variant="ghost" size="sm" onClick={() => window.location.href = "/dashboard"}>
+              Dashboard
+            </Button>
+          )}
+        </div>
+      </header>
 
-      {/* Right Side - Chat Interface */}
-      <div className="lg:w-[58%] h-[65%] lg:h-full flex flex-col bg-gradient-to-l from-[var(--card)]/20 to-transparent">
-        <JarvisInterface messages={messages} isTyping={isTyping} isDeploying={isDeploying} canGoBack={canGoBack} onBack={handleBack} onOptionClick={handleOptionClick}>
-          <AnimatePresence mode="wait">
-            {/* NAME INPUT */}
-            {step === "name" && (
-              <motion.div 
-                key="name-step" 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: -20 }} 
-                className="p-4 lg:p-6 border-t border-[var(--border)] bg-[var(--card)]/10"
-              >
-                <div className="max-w-lg mx-auto">
-                  <label className="block text-xs font-medium text-[var(--muted)] mb-2 uppercase tracking-wider">
-                    Agent Name
-                  </label>
-                  <div className="flex gap-3">
-                    <Input
-                      ref={inputRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      onFocus={() => enableAudio()}
-                      placeholder="e.g., Jarvis, Maya, Helper..."
-                      className="flex-1 bg-[var(--card)] border-[var(--border)] h-12 text-base"
-                    />
-                    <Button 
-                      onClick={handleNameSubmit} 
-                      disabled={!input.trim()} 
-                      className="bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white h-12 px-6 disabled:opacity-50"
-                    >
-                      <ArrowRight className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* USE CASE SELECTION */}
-            {step === "usecase" && (
-              <motion.div 
-                key="usecase-step" 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: -20 }} 
-                className="p-4 lg:p-6 border-t border-[var(--border)] bg-[var(--card)]/10"
-              >
-                <div className="max-w-lg mx-auto">
-                  <label className="block text-xs font-medium text-[var(--muted)] mb-3 uppercase tracking-wider">
-                    Select Use Case
-                  </label>
-                  <div className="grid gap-2">
-                    {USE_CASE_OPTIONS.map((option) => (
-                      <motion.button
-                        key={option.id}
-                        onClick={() => handleUseCaseSelect(`${option.icon} ${option.label}`)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="flex items-center gap-4 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-[var(--accent)]/50 text-left transition-all group"
-                      >
-                        <span className="text-3xl">{option.icon}</span>
-                        <div className="flex-1">
-                          <p className="font-medium group-hover:text-[var(--accent)] transition-colors">{option.label}</p>
-                          <p className="text-xs text-[var(--muted)]">{option.desc}</p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--accent)] transition-colors" />
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* SCOPE MULTI-SELECT */}
-            {step === "scope" && (
-              <motion.div 
-                key="scope-step" 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: -20 }} 
-                className="p-4 lg:p-6 border-t border-[var(--border)] bg-[var(--card)]/10"
-              >
-                <div className="max-w-lg mx-auto">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
-                      Select Capabilities
-                    </label>
-                    {selectedScopes.length > 0 && (
-                      <span className="text-xs text-[var(--accent)]">{selectedScopes.length} selected</span>
+      {/* Main Content */}
+      <main className="h-full pt-14 sm:pt-16 flex flex-col">
+        {/* Orb */}
+        <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-4 py-4">
+          <AIOrb state={getWizardState()} />
+          
+          {/* Messages */}
+          <div className="w-full max-w-md mt-6 space-y-3 overflow-y-auto max-h-[40vh] scrollbar-hide">
+            <AnimatePresence mode="popLayout">
+              {messages.map((msg, i) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: i * 0.05 }}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div className={`max-w-[85%] ${msg.role === "user" ? "bg-[var(--accent)] text-white" : "bg-[var(--card)] border border-[var(--border)]"} rounded-2xl px-4 py-3`}>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
+                    
+                    {/* Options */}
+                    {msg.options && msg.options.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {msg.options.map((opt) => (
+                          <button
+                            key={opt}
+                            onClick={() => handleOptionClick(opt)}
+                            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-medium transition-colors border border-white/20"
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {(SCOPE_OPTIONS[config.useCase] || []).map((option) => {
-                      const isSelected = selectedScopes.includes(option.label);
-                      return (
-                        <motion.button
-                          key={option.id}
-                          onClick={() => handleScopeToggle(`${option.icon} ${option.label}`)}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className={`px-4 py-2.5 rounded-full border text-sm transition-all flex items-center gap-2 ${
-                            isSelected 
-                              ? "bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]" 
-                              : "bg-[var(--card)] border-[var(--border)] hover:border-[var(--accent)]/50"
-                          }`}
-                        >
-                          <span>{option.icon}</span>
-                          <span>{option.label}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5" />}
-                        </motion.button>
-                      );
-                    })}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            
+            {isTyping && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl px-4 py-3">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-[var(--muted)] rounded-full animate-bounce" />
+                    <span className="w-2 h-2 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                    <span className="w-2 h-2 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
                   </div>
-                  {selectedScopes.length > 0 && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }} 
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex justify-end"
-                    >
-                      <Button 
-                        onClick={handleScopeConfirm} 
-                        className="bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white px-6"
-                      >
-                        Continue <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </motion.div>
-                  )}
                 </div>
               </motion.div>
             )}
+          </div>
+        </div>
 
-            {/* CONTACT METHOD */}
-            {step === "contact" && (
-              <motion.div 
-                key="contact-step" 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: -20 }} 
-                className="p-4 lg:p-6 border-t border-[var(--border)] bg-[var(--card)]/10"
+        {/* Input Area */}
+        {(step === "name" || step === "awaiting_verification") && (
+          <div className="border-t border-[var(--border)] bg-[var(--background)] px-4 py-4 pb-safe">
+            <div className="max-w-md mx-auto flex gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={step === "awaiting_verification" ? "Enter auth code..." : "Type a name..."}
+                className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--accent)]"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="w-11 h-11 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
               >
-                <div className="max-w-lg mx-auto">
-                  <label className="block text-xs font-medium text-[var(--muted)] mb-3 uppercase tracking-wider">
-                    Choose Contact Method
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {CONTACT_OPTIONS.map((option) => (
-                      <motion.button
-                        key={option.id}
-                        onClick={() => handleContactSelect(`${option.icon} ${option.label}`)}
-                        whileHover={{ scale: option.available ? 1.05 : 1 }}
-                        whileTap={{ scale: option.available ? 0.95 : 1 }}
-                        disabled={!option.available}
-                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                          option.available
-                            ? "bg-[var(--card)] border-[var(--border)] hover:border-[var(--accent)]/50 cursor-pointer"
-                            : "bg-[var(--card)]/50 border-[var(--border)]/50 opacity-50 cursor-not-allowed"
-                        }`}
-                      >
-                        <span className="text-2xl">{option.icon}</span>
-                        <span className="text-sm font-medium">{option.label}</span>
-                        {!option.available && <span className="text-[10px] text-[var(--muted)]">Soon</span>}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </JarvisInterface>
-      </div>
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
 
-      {showPayment && <PaymentModal isOpen={showPayment} onClose={() => setShowPayment(false)} config={config} sessionId={sessionId} onSuccess={handlePaymentSuccess} />}
-    </main>
+        {/* Back Button */}
+        {canGoBack && (
+          <button
+            onClick={handleBack}
+            className="fixed top-20 left-4 p-2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+          >
+            ← Back
+          </button>
+        )}
+      </main>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
+        config={config}
+        sessionId={sessionId}
+        onSuccess={handlePaymentSuccess}
+      />
+    </div>
   );
 }

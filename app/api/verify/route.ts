@@ -2,8 +2,7 @@
 // POST /api/verify - Verify code and activate instance
 
 import { NextRequest, NextResponse } from "next/server";
-import { verifyCode, clearVerificationRequest } from "@/lib/provisioning/verification";
-import { activateInstance, getInstance } from "@/lib/provisioning/provisioner";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,61 +10,64 @@ export async function POST(request: NextRequest) {
     const { instanceId, code, telegramUserId } = body;
 
     // Validate required fields
-    if (!instanceId || !code || !telegramUserId) {
+    if (!instanceId || !code) {
       return NextResponse.json(
-        { error: "Missing required fields: instanceId, code, telegramUserId" },
+        { error: "Missing required fields: instanceId, code" },
         { status: 400 }
       );
     }
 
-    // Check instance exists
-    const instance = getInstance(instanceId);
-    if (!instance) {
+    // Get agent from database
+    const agent = await prisma.agent.findUnique({
+      where: { id: instanceId },
+    });
+
+    if (!agent) {
       return NextResponse.json(
-        { error: "Instance not found" },
+        { error: "Agent not found" },
         { status: 404 }
       );
     }
 
-    // Check instance is awaiting verification
-    if (instance.status !== "awaiting_verification") {
+    // Check agent is awaiting verification
+    if (agent.activationStatus !== "awaiting_verification") {
       return NextResponse.json(
         { 
-          error: "Instance is not awaiting verification",
-          currentStatus: instance.status 
+          error: "Agent is not awaiting verification",
+          currentStatus: agent.activationStatus 
         },
         { status: 400 }
       );
     }
 
-    // Verify the code
-    const verification = verifyCode(instanceId, code, telegramUserId);
-    
-    if (!verification.valid) {
+    // Verify the code matches
+    if (agent.authCode !== code) {
       return NextResponse.json(
-        { valid: false, error: verification.error },
+        { valid: false, error: "Invalid auth code" },
         { status: 400 }
       );
     }
 
-    // Activate the instance
-    const activated = activateInstance(instanceId, telegramUserId);
-    
-    if (!activated) {
-      return NextResponse.json(
-        { error: "Failed to activate instance" },
-        { status: 500 }
-      );
-    }
+    // Activate the agent
+    const updatedAgent = await prisma.agent.update({
+      where: { id: instanceId },
+      data: {
+        activationStatus: "active",
+        verifiedAt: new Date(),
+        telegramUserId: telegramUserId || null,
+        status: "active",
+      },
+    });
 
-    // Clear the verification request
-    clearVerificationRequest(instanceId);
+    // TODO: Notify Devin to make user admin of the bot
+    // This would be a webhook call to Devin or the provisioning system
+    console.log(`[Verify] Agent ${instanceId} activated for user ${telegramUserId}`);
 
     return NextResponse.json({
       valid: true,
       message: "Verification successful! Your bot is now active.",
       instanceId,
-      botUsername: instance.botUsername,
+      botUsername: updatedAgent.botUsername,
     });
 
   } catch (error) {

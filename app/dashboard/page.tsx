@@ -12,7 +12,11 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Settings
+  Settings,
+  Send,
+  MessageCircle,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -24,7 +28,7 @@ interface DashboardData {
     name: string | null;
     createdAt: string;
   };
-  agents: any[];
+  agents: Agent[];
   payments: any[];
   stats: {
     totalAgents: number;
@@ -34,6 +38,20 @@ interface DashboardData {
   };
 }
 
+interface Agent {
+  id: string;
+  name: string;
+  subscriptionStatus: string;
+  subscriptionType: string;
+  currentPeriodEnd?: string;
+  devinUrl?: string;
+  activationStatus: string;
+  botUsername?: string;
+  telegramLink?: string;
+  authCode?: string;
+  verifiedAt?: string;
+}
+
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   active: { color: "bg-green-500", icon: CheckCircle2, label: "Active" },
   trial: { color: "bg-amber-500", icon: Clock, label: "Trial" },
@@ -41,11 +59,21 @@ const statusConfig: Record<string, { color: string; icon: any; label: string }> 
   pending: { color: "bg-blue-500", icon: Loader2, label: "Pending" },
 };
 
+const activationStatusConfig: Record<string, { color: string; icon: any; label: string; action?: string }> = {
+  pending: { color: "bg-gray-500", icon: Clock, label: "Pending Payment", action: "Pay Now" },
+  activating: { color: "bg-amber-500", icon: Loader2, label: "Activating..." },
+  awaiting_verification: { color: "bg-purple-500", icon: MessageCircle, label: "Awaiting Verification", action: "Verify Now" },
+  active: { color: "bg-green-500", icon: CheckCircle2, label: "Active" },
+  failed: { color: "bg-red-500", icon: AlertCircle, label: "Failed", action: "Retry" },
+};
+
 export default function DashboardPage() {
   const { authenticated, user, logout } = usePrivy();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [verifyingAgent, setVerifyingAgent] = useState<string | null>(null);
+  const [authCode, setAuthCode] = useState("");
 
   useEffect(() => {
     if (!authenticated || !user) {
@@ -83,6 +111,37 @@ export default function DashboardPage() {
 
     fetchDashboard();
   }, [authenticated, user]);
+
+  const handleVerify = async (agentId: string) => {
+    if (!authCode.trim()) return;
+    
+    try {
+      const response = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instanceId: agentId,
+          code: authCode,
+          telegramUserId: user?.id,
+        }),
+      });
+
+      if (response.ok) {
+        setVerifyingAgent(null);
+        setAuthCode("");
+        // Refresh dashboard
+        window.location.reload();
+      } else {
+        alert("Invalid auth code. Please try again.");
+      }
+    } catch (err) {
+      alert("Error verifying code. Please try again.");
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
 
   if (!authenticated) {
     return (
@@ -230,14 +289,17 @@ export default function DashboardPage() {
                 <div className="divide-y divide-[var(--border)]">
                   {agents.map((agent) => {
                     const status = statusConfig[agent.subscriptionStatus] || statusConfig.pending;
+                    const activationStatus = activationStatusConfig[agent.activationStatus] || activationStatusConfig.pending;
                     const StatusIcon = status.icon;
+                    const ActivationIcon = activationStatus.icon;
+                    const needsVerification = agent.activationStatus === "awaiting_verification";
                     
                     return (
                       <div 
                         key={agent.id} 
                         className="p-4 hover:bg-[var(--card)]/50 transition-colors group"
                       >
-                        <div className="flex items-start justify-between">
+                        <div className="flex items-start justify-between mb-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-medium truncate">{agent.name}</h3>
@@ -272,6 +334,90 @@ export default function DashboardPage() {
                             )}
                           </div>
                         </div>
+
+                        {/* Activation Status */}
+                        <div className="mb-3">
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs ${activationStatus.color.replace('bg-', 'bg-').replace('500', '500/10')} ${activationStatus.color.replace('bg-', 'text-')}`}>
+                            <ActivationIcon className="w-3 h-3" />
+                            {activationStatus.label}
+                          </div>
+                        </div>
+
+                        {/* Bot Info (if available) */}
+                        {(agent.botUsername || agent.telegramLink) && (
+                          <div className="bg-[var(--background)] rounded-lg p-3 space-y-2">
+                            {agent.botUsername && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-[var(--muted)]">Bot:</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">@{agent.botUsername}</span>
+                                  <button
+                                    onClick={() => copyToClipboard(`@${agent.botUsername}`)}
+                                    className="p-1 hover:bg-[var(--card)] rounded transition-colors"
+                                    title="Copy username"
+                                  >
+                                    <Copy className="w-3 h-3 text-[var(--muted)]" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                            {agent.telegramLink && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-[var(--muted)]">Link:</span>
+                                <a
+                                  href={agent.telegramLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-sm text-[var(--accent)] hover:underline"
+                                >
+                                  Open in Telegram
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Verification Section */}
+                        {needsVerification && (
+                          <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                            {verifyingAgent === agent.id ? (
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={authCode}
+                                  onChange={(e) => setAuthCode(e.target.value)}
+                                  placeholder="Enter auth code from bot..."
+                                  className="flex-1 px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)]"
+                                />
+                                <button
+                                  onClick={() => handleVerify(agent.id)}
+                                  disabled={!authCode.trim()}
+                                  className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Verify
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setVerifyingAgent(null);
+                                    setAuthCode("");
+                                  }}
+                                  className="px-3 py-2 text-[var(--muted)] hover:text-[var(--foreground)]"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setVerifyingAgent(agent.id)}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500/10 text-purple-500 text-sm font-medium rounded-lg hover:bg-purple-500/20 transition-colors"
+                              >
+                                <Send className="w-4 h-4" />
+                                Enter Auth Code to Activate
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -300,67 +446,42 @@ export default function DashboardPage() {
                   <span className="font-medium">Pro</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)]">Monthly Cost</span>
-                  <span className="font-medium">$150</span>
+                  <span className="text-[var(--muted)]">Next billing</span>
+                  <span className="font-medium">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
                 </div>
               </div>
 
               <Link href="/billing">
-                <button className="w-full mt-4 py-2 px-4 bg-[var(--accent)]/10 text-[var(--accent)] rounded-lg text-sm font-medium hover:bg-[var(--accent)]/20 transition-colors">
+                <button className="w-full mt-4 px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity">
                   Manage Billing
                 </button>
               </Link>
             </motion.div>
 
-            {/* Recent Payments */}
+            {/* Recent Activity */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden"
+              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5"
             >
-              <div className="px-5 py-4 border-b border-[var(--border)]">
-                <h3 className="font-medium text-sm">Recent Payments</h3>
-              </div>
+              <h3 className="font-medium mb-4 text-sm">Recent Activity</h3>
               
               {payments.length === 0 ? (
-                <div className="p-5 text-center">
-                  <p className="text-sm text-[var(--muted)]">No payments yet</p>
-                </div>
+                <p className="text-sm text-[var(--muted)]">No recent payments</p>
               ) : (
-                <div className="divide-y divide-[var(--border)]">
-                  {payments.slice(0, 5).map((payment: any) => (
-                    <div key={payment.id} className="p-4 flex items-center justify-between">
+                <div className="space-y-3">
+                  {payments.slice(0, 5).map((payment) => (
+                    <div key={payment.id} className="flex items-center justify-between text-sm">
                       <div>
-                        <div className="font-medium text-sm">${payment.amount}</div>
-                        <div className="text-xs text-[var(--muted)]">
-                          {new Date(payment.createdAt).toLocaleDateString()}
-                        </div>
+                        <p className="font-medium">{payment.tier} Plan</p>
+                        <p className="text-xs text-[var(--muted)]">{new Date(payment.createdAt).toLocaleDateString()}</p>
                       </div>
-                      <StatusBadge status={payment.status} />
+                      <span className="font-medium">${payment.amount}</span>
                     </div>
                   ))}
                 </div>
               )}
-            </motion.div>
-
-            {/* Settings */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5"
-            >
-              <h3 className="font-medium mb-3 text-sm flex items-center gap-2">
-                <Settings className="w-4 h-4 text-[var(--muted)]" />
-                Account
-              </h3>
-              <button
-                onClick={logout}
-                className="w-full py-2 px-3 text-sm text-red-500 hover:bg-red-500/10 rounded-lg transition-colors text-left"
-              >
-                Sign Out
-              </button>
             </motion.div>
           </div>
         </div>
@@ -370,38 +491,20 @@ export default function DashboardPage() {
 }
 
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: string }) {
-  const colors: Record<string, string> = {
-    blue: "from-blue-500/20 to-blue-600/20 text-blue-500",
-    green: "from-green-500/20 to-green-600/20 text-green-500",
-    amber: "from-amber-500/20 to-amber-600/20 text-amber-500",
-    red: "from-red-500/20 to-red-600/20 text-red-500",
+  const colorClasses: Record<string, string> = {
+    blue: "bg-blue-500/10 text-blue-500",
+    green: "bg-green-500/10 text-green-500",
+    amber: "bg-amber-500/10 text-amber-500",
+    red: "bg-red-500/10 text-red-500",
   };
 
   return (
     <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-      <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${colors[color]} flex items-center justify-center`}>
-          <Icon className="w-5 h-5" />
-        </div>
-        <div>
-          <div className="text-2xl font-bold">{value}</div>
-          <div className="text-xs text-[var(--muted)]">{label}</div>
-        </div>
+      <div className={`w-10 h-10 rounded-lg ${colorClasses[color]} flex items-center justify-center mb-3`}>
+        <Icon className="w-5 h-5" />
       </div>
+      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-sm text-[var(--muted)]">{label}</p>
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    confirmed: "bg-green-500/10 text-green-500",
-    pending: "bg-amber-500/10 text-amber-500",
-    failed: "bg-red-500/10 text-red-500",
-  };
-
-  return (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || "bg-[var(--muted)]/10 text-[var(--muted)]"}`}>
-      {status}
-    </span>
   );
 }
