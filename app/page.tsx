@@ -119,15 +119,44 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-      setMessages([{
-        id: "welcome",
-        role: "assistant",
-        content: "Hello! I'm MATT. I'll help you create your AI agent in minutes. Ready to get started?",
-        options: ["Start creating"],
-      }]);
+      
+      // Check if user just logged in with pending config
+      const { getPendingConfig } = require("@/lib/session");
+      const pending = getPendingConfig();
+      
+      if (authenticated && pending && pending.agentName) {
+        // Restore the config and continue to contact step
+        setConfig({
+          agentName: pending.agentName,
+          useCase: pending.useCase,
+          scope: pending.scope,
+          contactMethod: "",
+        });
+        setMessages([
+          {
+            id: "welcome-back",
+            role: "assistant",
+            content: `Welcome back! Let's continue setting up **${pending.agentName}**.`,
+          },
+          {
+            id: "contact-method",
+            role: "assistant",
+            content: "How would you like to contact your agent?",
+            options: CONTACT_OPTIONS.map((o) => `${o.icon} ${o.label}${o.available ? "" : " (soon)"}`),
+          },
+        ]);
+        setStep("contact");
+      } else {
+        setMessages([{
+          id: "welcome",
+          role: "assistant",
+          content: "Hello! I'm MATT. I'll help you create your AI agent in minutes. Ready to get started?",
+          options: ["Start creating"],
+        }]);
+      }
     }, 600);
     return () => clearTimeout(timer);
-  }, []);
+  }, [authenticated]);
 
   useEffect(() => {
     if ((step === "name" || step === "scope" || step === "awaiting_verification") && inputRef.current) {
@@ -201,14 +230,6 @@ export default function Home() {
   const startCreating = async () => {
     await enableAudio();
     playOptionSelected();
-    
-    // Check if user is logged in
-    if (!authenticated) {
-      setStep("login");
-      addMessage("assistant", "Please log in to create your AI agent. You can use email or wallet.", ["Log in"]);
-      return;
-    }
-    
     setStep("name");
     setTimeout(() => {
       simulateTyping("What should be the name of your agent?");
@@ -218,6 +239,8 @@ export default function Home() {
   const handleLogin = async () => {
     await enableAudio();
     playOptionSelected();
+    // Save current config before login so we can restore after
+    savePendingConfig({ ...config, createdAt: Date.now() });
     login();
   };
 
@@ -300,11 +323,17 @@ export default function Home() {
       return newMessages;
     });
     setSelectedScopes([]);
-    setStep("contact");
-    await simulateTyping(
-      "How would you like to contact your agent?",
-      CONTACT_OPTIONS.map((o) => `${o.icon} ${o.label}${o.available ? "" : " (soon)"}`)
-    );
+    
+    // Check if user is logged in AFTER they've invested effort (name + usecase + scope)
+    if (!authenticated) {
+      setStep("login");
+      await simulateTyping(
+        `Great choices! To proceed with creating **${config.agentName}**, please log in. This helps us save your agent and keep track of your deployment.`,
+        ["Log in"]
+      );
+      return;
+    }
+    
   };
 
   const handleContactSelect = async (option: string) => {
