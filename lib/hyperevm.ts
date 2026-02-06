@@ -15,9 +15,8 @@ const HYPEREVM_CONFIG = {
   },
 };
 
-// USDH Token Contract (Hypers native stablecoin)
-// NOTE: Verify this address - using placeholder
-const USDH_CONTRACT = process.env.USDH_CONTRACT_ADDRESS || "0x...";
+// USDH Token Contract (Hypers native stablecoin on HyperEVM)
+const USDH_CONTRACT = process.env.USDH_CONTRACT_ADDRESS || "0x54e00a5988577cb0b0c9ab0cb6ef7f4b";
 
 // ERC20 ABI (minimal for transfer and balance)
 const ERC20_ABI = [
