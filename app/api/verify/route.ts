@@ -4,20 +4,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCode, clearVerificationRequest } from "@/lib/provisioning/verification";
 import { activateInstance, getInstance } from "@/lib/provisioning/provisioner";
-import { checkIPRateLimit } from "@/lib/provisioning/rate-limiter";
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit by IP
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
-    const rateCheck = checkIPRateLimit(ip);
-    if (!rateCheck.allowed) {
-      return NextResponse.json(
-        { error: "Too many requests", retryAfter: rateCheck.retryAfter },
-        { status: 429 }
-      );
-    }
-
     const body = await request.json();
     const { instanceId, code, telegramUserId } = body;
 

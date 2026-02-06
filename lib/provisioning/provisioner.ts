@@ -5,10 +5,11 @@ import {
   ProvisioningConfig, 
   ProvisionedInstance, 
   InstanceStatus,
-  TIER_LIMITS 
+  DEFAULT_LIMITS 
 } from "./types";
-import { generateBotUsername, generateGatewayBotScript, sanitizeInput } from "./telegram-bot";
-import { createVerificationRequest, generateVerificationMessage } from "./verification";
+import { generateBotUsername, sanitizeInput } from "./telegram-bot";
+import { createVerificationRequest } from "./verification";
+import { tryCreateBotWithFailover, initializeFromEnv } from "./account-manager";
 
 // Environment configuration
 const AWS_REGION = process.env.AWS_REGION || "us-east-1";
@@ -176,7 +177,7 @@ async function configureGateway(
  * Generate the user data script for EC2 instance
  */
 function generateUserDataScript(config: ProvisioningConfig): string {
-  const limits = TIER_LIMITS[config.tier];
+  const limits = DEFAULT_LIMITS;
   
   return `#!/bin/bash
 set -e
@@ -184,7 +185,6 @@ exec > >(tee /var/log/meetmatt-setup.log) 2>&1
 
 echo "=== Meet Matt OpenClaw Setup ==="
 echo "Bot: ${config.botName}"
-echo "Tier: ${config.tier}"
 echo "Started: $(date)"
 
 # Update system
@@ -216,14 +216,12 @@ cat > /home/ubuntu/.openclaw/config.json << 'EOF'
 }
 EOF
 
-# Create rate limits config
+# Create service limits config
 cat > /home/ubuntu/bot-data/limits.json << 'EOF'
 {
-  "messagesPerDay": ${limits.messagesPerDay},
   "maxContextTokens": ${limits.maxContextTokens},
   "maxResponseTokens": ${limits.maxResponseTokens},
-  "responseTimeoutMs": ${limits.responseTimeoutMs},
-  "tier": "${config.tier}"
+  "responseTimeoutMs": ${limits.responseTimeoutMs}
 }
 EOF
 

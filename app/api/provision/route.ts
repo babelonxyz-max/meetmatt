@@ -12,37 +12,28 @@ import {
   ProvisioningConfig, 
   PackageType 
 } from "@/lib/provisioning/types";
-import { checkIPRateLimit } from "@/lib/provisioning/rate-limiter";
+import { validateAndSanitizeInput } from "@/lib/provisioning/rate-limiter";
 
 // POST: Create new agent instance
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit by IP
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
-    const rateCheck = checkIPRateLimit(ip);
-    if (!rateCheck.allowed) {
-      return NextResponse.json(
-        { error: "Too many requests", retryAfter: rateCheck.retryAfter },
-        { status: 429 }
-      );
-    }
-
     const body = await request.json();
     
     // Validate required fields
-    const { userId, botName, package: packageType, tier, features, paymentId } = body;
+    const { userId, botName, package: packageType, features, paymentId } = body;
     
-    if (!userId || !botName || !packageType || !tier) {
+    if (!userId || !botName || !packageType) {
       return NextResponse.json(
-        { error: "Missing required fields: userId, botName, package, tier" },
+        { error: "Missing required fields: userId, botName, package" },
         { status: 400 }
       );
     }
 
-    // Validate tier
-    if (!["basic", "pro", "enterprise"].includes(tier)) {
+    // Sanitize inputs
+    const sanitizedBotName = validateAndSanitizeInput(botName);
+    if (!sanitizedBotName.valid) {
       return NextResponse.json(
-        { error: "Invalid tier. Must be: basic, pro, or enterprise" },
+        { error: sanitizedBotName.error || "Invalid bot name" },
         { status: 400 }
       );
     }
@@ -68,12 +59,11 @@ export async function POST(request: NextRequest) {
     // Create provisioning config
     const config: ProvisioningConfig = {
       userId,
-      botName,
+      botName: sanitizedBotName.sanitized || botName,
       botUsername: body.botUsername || "",
       botDescription: body.botDescription,
       package: packageType,
       features: features || [],
-      tier,
     };
 
     // Start provisioning

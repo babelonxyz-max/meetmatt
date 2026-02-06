@@ -248,8 +248,8 @@ print("Gateway bot script generated")
 export function sanitizeInput(input: string): string {
   // Remove potential command injection characters
   let sanitized = input
-    .replace(/[\\$\`]/g, "")  // Remove shell special chars
-    .replace(/<script[^>]*>.*?<\\/script>/gi, "")  // Remove script tags
+    .replace(/[$`\\]/g, "")  // Remove shell special chars
+    .replace(/<script[^>]*>.*?<\/script>/gi, "")  // Remove script tags
     .replace(/javascript:/gi, "")  // Remove javascript: URLs
     .trim();
   

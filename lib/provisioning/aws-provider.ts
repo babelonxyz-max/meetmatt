@@ -5,7 +5,8 @@ import {
   CloudProvider, 
   ProvisioningConfig, 
   ProvisionedInstance, 
-  InstanceStatus 
+  InstanceStatus,
+  DEFAULT_LIMITS 
 } from "./types";
 
 const AWS_REGION = process.env.AWS_REGION || "us-east-1";
@@ -72,7 +73,7 @@ export class AWSProvider implements CloudProvider {
   }
   
   private generateUserDataScript(config: ProvisioningConfig): string {
-    const limits = this.getTierLimits(config.tier);
+    const limits = DEFAULT_LIMITS;
     
     return `#!/bin/bash
 set -e
@@ -82,7 +83,6 @@ exec > >(tee /var/log/meetmatt-setup.log) 2>&1
 
 echo "=== Meet Matt OpenClaw Setup ==="
 echo "Instance: ${config.botName}"
-echo "Tier: ${config.tier}"
 echo "Started at: $(date)"
 
 # Update system
@@ -111,14 +111,12 @@ cat > /home/ubuntu/.openclaw/config.json << 'EOFCONFIG'
 }
 EOFCONFIG
 
-# Create rate limiting config
+# Create service limits config
 cat > /home/ubuntu/bot-data/limits.json << 'EOFLIMITS'
 {
-  "messagesPerDay": ${limits.messagesPerDay},
   "maxContextTokens": ${limits.maxContextTokens},
   "maxResponseTokens": ${limits.maxResponseTokens},
-  "responseTimeoutMs": ${limits.responseTimeoutMs},
-  "tier": "${config.tier}"
+  "responseTimeoutMs": ${limits.responseTimeoutMs}
 }
 EOFLIMITS
 
@@ -130,30 +128,6 @@ pip3 install telethon
 echo "SETUP_COMPLETE" > /home/ubuntu/bot-data/status
 echo "Completed at: $(date)"
 `;
-  }
-  
-  private getTierLimits(tier: ProvisioningConfig["tier"]) {
-    const limits = {
-      basic: {
-        messagesPerDay: 100,
-        maxContextTokens: 8000,
-        maxResponseTokens: 2000,
-        responseTimeoutMs: 60000,
-      },
-      pro: {
-        messagesPerDay: 500,
-        maxContextTokens: 32000,
-        maxResponseTokens: 4000,
-        responseTimeoutMs: 90000,
-      },
-      enterprise: {
-        messagesPerDay: -1,
-        maxContextTokens: 128000,
-        maxResponseTokens: 8000,
-        responseTimeoutMs: 120000,
-      },
-    };
-    return limits[tier];
   }
 }
 

@@ -1,120 +1,7 @@
-// Rate Limiting System for Meet Matt
-// Prevents abuse and enforces tier-based limits
+// Security and Input Validation for Meet Matt
+// Handles input sanitization and content safety checks
 
-import { RateLimits, TIER_LIMITS } from "./types";
-
-interface RateLimitEntry {
-  count: number;
-  windowStart: number;
-  lastRequest: number;
-}
-
-// In-memory rate limit storage (would use Redis in production)
-const rateLimitStore = new Map<string, RateLimitEntry>();
-
-// Window duration (24 hours for daily limits)
-const WINDOW_DURATION_MS = 24 * 60 * 60 * 1000;
-
-// Request cooldown (minimum time between requests)
-const MIN_REQUEST_INTERVAL_MS = 1000; // 1 second
-
-/**
- * Check if a request is allowed under rate limits
- */
-export function checkRateLimit(
-  userId: string,
-  tier: "basic" | "pro" | "enterprise"
-): { allowed: boolean; remaining: number; resetAt: Date; error?: string } {
-  const limits = TIER_LIMITS[tier];
-  const now = Date.now();
-  
-  // Get or create entry
-  let entry = rateLimitStore.get(userId);
-  
-  if (!entry) {
-    entry = {
-      count: 0,
-      windowStart: now,
-      lastRequest: 0,
-    };
-  }
-  
-  // Check if window has expired
-  if (now - entry.windowStart > WINDOW_DURATION_MS) {
-    // Reset window
-    entry = {
-      count: 0,
-      windowStart: now,
-      lastRequest: entry.lastRequest,
-    };
-  }
-  
-  // Check request cooldown (anti-spam)
-  if (now - entry.lastRequest < MIN_REQUEST_INTERVAL_MS) {
-    return {
-      allowed: false,
-      remaining: limits.messagesPerDay === -1 ? -1 : limits.messagesPerDay - entry.count,
-      resetAt: new Date(entry.windowStart + WINDOW_DURATION_MS),
-      error: "Too many requests. Please wait a moment.",
-    };
-  }
-  
-  // Check daily limit (skip if unlimited)
-  if (limits.messagesPerDay !== -1 && entry.count >= limits.messagesPerDay) {
-    return {
-      allowed: false,
-      remaining: 0,
-      resetAt: new Date(entry.windowStart + WINDOW_DURATION_MS),
-      error: `Daily limit reached (${limits.messagesPerDay} messages). Resets at ${new Date(entry.windowStart + WINDOW_DURATION_MS).toISOString()}`,
-    };
-  }
-  
-  // Allow request and update entry
-  entry.count++;
-  entry.lastRequest = now;
-  rateLimitStore.set(userId, entry);
-  
-  return {
-    allowed: true,
-    remaining: limits.messagesPerDay === -1 ? -1 : limits.messagesPerDay - entry.count,
-    resetAt: new Date(entry.windowStart + WINDOW_DURATION_MS),
-  };
-}
-
-/**
- * Get current usage stats for a user
- */
-export function getUsageStats(
-  userId: string,
-  tier: "basic" | "pro" | "enterprise"
-): { used: number; limit: number; remaining: number; resetAt: Date } {
-  const limits = TIER_LIMITS[tier];
-  const entry = rateLimitStore.get(userId);
-  const now = Date.now();
-  
-  if (!entry || now - entry.windowStart > WINDOW_DURATION_MS) {
-    return {
-      used: 0,
-      limit: limits.messagesPerDay,
-      remaining: limits.messagesPerDay,
-      resetAt: new Date(now + WINDOW_DURATION_MS),
-    };
-  }
-  
-  return {
-    used: entry.count,
-    limit: limits.messagesPerDay,
-    remaining: limits.messagesPerDay === -1 ? -1 : limits.messagesPerDay - entry.count,
-    resetAt: new Date(entry.windowStart + WINDOW_DURATION_MS),
-  };
-}
-
-/**
- * Reset rate limits for a user (admin function)
- */
-export function resetRateLimits(userId: string): void {
-  rateLimitStore.delete(userId);
-}
+import { DEFAULT_LIMITS } from "./types";
 
 /**
  * Input validation and sanitization
@@ -180,7 +67,7 @@ export function checkContentSafety(content: string): {
   // Basic content safety checks
   // In production, would use a proper content moderation API
   
-  const unsafePatterns = [
+  const unsafePatterns: RegExp[] = [
     // Explicit harmful content patterns would go here
     // This is a simplified example
   ];
@@ -195,27 +82,8 @@ export function checkContentSafety(content: string): {
 }
 
 /**
- * IP-based rate limiting for API endpoints
+ * Get default service limits
  */
-const ipRateLimits = new Map<string, { count: number; windowStart: number }>();
-const IP_RATE_LIMIT = 60; // requests per minute
-const IP_WINDOW_MS = 60 * 1000; // 1 minute
-
-export function checkIPRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
-  const now = Date.now();
-  let entry = ipRateLimits.get(ip);
-  
-  if (!entry || now - entry.windowStart > IP_WINDOW_MS) {
-    entry = { count: 0, windowStart: now };
-  }
-  
-  if (entry.count >= IP_RATE_LIMIT) {
-    const retryAfter = Math.ceil((entry.windowStart + IP_WINDOW_MS - now) / 1000);
-    return { allowed: false, retryAfter };
-  }
-  
-  entry.count++;
-  ipRateLimits.set(ip, entry);
-  
-  return { allowed: true };
+export function getServiceLimits() {
+  return DEFAULT_LIMITS;
 }

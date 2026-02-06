@@ -14,9 +14,6 @@ export interface ProvisioningConfig {
   // Features/packages
   package: PackageType;
   features: string[];
-  
-  // Tier determines limits
-  tier: "basic" | "pro" | "enterprise";
 }
 
 export type PackageType = 
@@ -35,6 +32,8 @@ export interface ProvisionedInstance {
   verificationCode?: string;
   createdAt: Date;
   expiresAt?: Date;
+  // Track which account was used to create the bot
+  creatorAccountId?: string;
 }
 
 export type InstanceStatus = 
@@ -46,32 +45,17 @@ export type InstanceStatus =
   | "suspended"      // Temporarily disabled
   | "terminated";    // Shut down
 
-export interface RateLimits {
-  messagesPerDay: number;
+// Default limits for all users (no tiers)
+export interface ServiceLimits {
   maxContextTokens: number;
   maxResponseTokens: number;
   responseTimeoutMs: number;
 }
 
-export const TIER_LIMITS: Record<ProvisioningConfig["tier"], RateLimits> = {
-  basic: {
-    messagesPerDay: 100,
-    maxContextTokens: 8000,
-    maxResponseTokens: 2000,
-    responseTimeoutMs: 60000,
-  },
-  pro: {
-    messagesPerDay: 500,
-    maxContextTokens: 32000,
-    maxResponseTokens: 4000,
-    responseTimeoutMs: 90000,
-  },
-  enterprise: {
-    messagesPerDay: -1, // unlimited
-    maxContextTokens: 128000,
-    maxResponseTokens: 8000,
-    responseTimeoutMs: 120000,
-  },
+export const DEFAULT_LIMITS: ServiceLimits = {
+  maxContextTokens: 128000,  // K2.5 supports large context
+  maxResponseTokens: 8000,
+  responseTimeoutMs: 120000, // 2 minutes
 };
 
 export interface VerificationRequest {
@@ -79,6 +63,29 @@ export interface VerificationRequest {
   code: string;
   telegramUserId: number;
   expiresAt: Date;
+}
+
+// Telegram account for bot creation (with fallback support)
+export interface TelegramCreatorAccount {
+  id: string;
+  phone: string;
+  apiId: number;
+  apiHash: string;
+  sessionFile: string;
+  status: "active" | "locked" | "banned" | "unknown";
+  priority: number;  // Lower = higher priority (0 = primary)
+  lastUsed?: Date;
+  lastError?: string;
+  createdBots: number;
+}
+
+export interface AccountHealthAlert {
+  accountId: string;
+  phone: string;
+  status: TelegramCreatorAccount["status"];
+  error: string;
+  timestamp: Date;
+  requiresAction: boolean;
 }
 
 // Cloud provider abstraction
