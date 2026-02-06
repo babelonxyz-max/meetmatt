@@ -221,7 +221,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm safe-area-padding"
+          className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm safe-area-padding"
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div

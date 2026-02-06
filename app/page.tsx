@@ -71,6 +71,18 @@ const CONTACT_OPTIONS = [
   { id: "slack", label: "Slack", icon: "💻", available: false },
 ];
 
+// Fun responses when clicking Matt
+const ORB_CLICK_RESPONSES = [
+  "Hey! I'm here to help! 👋",
+  "Ready to create something amazing? ✨",
+  "Click me all you want, I don't mind! 😄",
+  "Your future AI agent awaits! 🤖",
+  "Let's build something cool together! 🚀",
+  "I'm listening... 👂",
+  "Matt at your service! 💪",
+  "Want to deploy an agent? Let's go! ⚡",
+];
+
 export default function Home() {
   const { authenticated, login, user, ready } = usePrivy();
   const [sessionId] = useState<string>(() => getOrCreateSessionId());
@@ -92,9 +104,15 @@ export default function Home() {
   const [currentAgent, setCurrentAgent] = useState<AgentData | null>(null);
   const [awaitingAuthCode, setAwaitingAuthCode] = useState(false);
   const [showContinue, setShowContinue] = useState(false);
+  const [orbMessage, setOrbMessage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activationPollRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const getWizardState = (): AIOrbProps["wizardState"] => {
     if (step === "intro") return "idle";
@@ -191,6 +209,14 @@ export default function Home() {
     };
   }, [step, currentAgent?.id]);
 
+  // Clear orb message after 3 seconds
+  useEffect(() => {
+    if (orbMessage) {
+      const timer = setTimeout(() => setOrbMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [orbMessage]);
+
   const addMessage = (role: "assistant" | "user", content: string, options?: string[]) => {
     setMessages((prev) => [...prev, { id: Date.now().toString(), role, content, options }]);
     if (role === "assistant" && audioEnabled) playMessageReceived();
@@ -202,6 +228,11 @@ export default function Home() {
     setIsTyping(false);
     addMessage("assistant", content, options);
   };
+
+  const handleOrbClick = useCallback(() => {
+    const randomResponse = ORB_CLICK_RESPONSES[Math.floor(Math.random() * ORB_CLICK_RESPONSES.length)];
+    setOrbMessage(randomResponse);
+  }, []);
 
   const startCreating = async () => {
     await enableAudio();
@@ -269,22 +300,6 @@ export default function Home() {
       ? selectedScopes.filter((s) => s !== scopeLabel) 
       : [...selectedScopes, scopeLabel];
     setSelectedScopes(newScopes);
-    
-    setMessages((prev) => {
-      const newMessages = [...prev];
-      const lastIdx = newMessages.length - 1;
-      if (newMessages[lastIdx]?.role === "user" && newMessages[lastIdx]?.id.startsWith("selection-")) {
-        newMessages.pop();
-      }
-      if (newScopes.length > 0) {
-        newMessages.push({
-          id: `selection-${Date.now()}`,
-          role: "user",
-          content: newScopes.join(", "),
-        });
-      }
-      return newMessages;
-    });
   };
 
   const handleContinue = async () => {
@@ -294,15 +309,8 @@ export default function Home() {
     const scopeString = selectedScopes.join(", ");
     setConfig((prev) => ({ ...prev, scope: scopeString }));
     setShowContinue(false);
-    setMessages((prev) => {
-      const newMessages = [...prev];
-      newMessages.push({
-        id: `confirm-${Date.now()}`,
-        role: "user",
-        content: scopeString,
-      });
-      return newMessages;
-    });
+    // Only add ONE message with the final selection
+    addMessage("user", scopeString);
     setSelectedScopes([]);
     
     setStep("contact");
@@ -451,8 +459,8 @@ export default function Home() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
-      {/* Single Header */}
-      <header className="flex-none h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-[var(--background)]/80 backdrop-blur-md">
+      {/* Single Header - Always visible with highest z-index */}
+      <header className="flex-none h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-[var(--background)] z-[100]">
         <div className="flex items-center gap-3">
           <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
             <Sparkles className="w-7 h-7 text-[var(--accent)]" />
@@ -542,7 +550,11 @@ export default function Home() {
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                               onClick={() => handleOptionClick(opt)}
-                              className="px-4 py-2 text-base font-medium rounded-full transition-colors bg-white/10 hover:bg-white/20 border border-white/20"
+                              className={`px-4 py-2 text-base font-medium rounded-full transition-colors ${
+                                step === "scope" && selectedScopes.includes(opt.replace(/^\S+\s/, ""))
+                                  ? "bg-[var(--accent)] text-white"
+                                  : "bg-white/10 hover:bg-white/20 border border-white/20"
+                              }`}
                             >
                               {opt}
                             </motion.button>
@@ -570,9 +582,32 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Orb Section */}
-        <div className="flex-none flex flex-col items-center justify-center py-2">
-          <div className="w-48 h-48 sm:w-56 sm:h-56">
+        {/* Orb Section with Click Message */}
+        <div className="flex-none flex flex-col items-center justify-center py-2 relative">
+          {/* Orb Click Message */}
+          <AnimatePresence>
+            {orbMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.9 }}
+                className="absolute -top-12 z-10"
+              >
+                <div className="px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm text-[var(--foreground)] shadow-lg whitespace-nowrap">
+                  {orbMessage}
+                </div>
+                <div className="flex justify-center">
+                  <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-[var(--border)]" />
+                </div>
+                <div className="flex justify-center -mt-[5px]">
+                  <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-[var(--card)]" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* The Orb */}
+          <div className="w-48 h-48 sm:w-56 sm:h-56" onClick={handleOrbClick}>
             <AIOrb wizardState={getWizardState()} />
           </div>
         </div>
@@ -655,7 +690,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Payment Modal */}
+      {/* Payment Modal - with z-index below header */}
       <PaymentModal
         isOpen={showPayment}
         onClose={() => setShowPayment(false)}
