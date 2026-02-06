@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 
 const geistSans = Geist({
@@ -26,8 +25,23 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Meet Matt | Deploy AI Assistants in Minutes",
-  description: "Matt helps you deploy AI assistants in minutes. No signup, no KYC. Just describe what you need and get your own AI agent.",
+  title: "Matt AI - Deploy Custom AI Agents in 15 Minutes",
+  description: "Create and deploy AI-powered Telegram bots with Matt. No coding required. $150 setup, $50/month. Live build viewing, Devin AI powered, deploy anywhere.",
+  keywords: ["AI agent", "Telegram bot", "AI assistant", "deploy AI", "custom bot", "Kimi K2.5", "Devin AI"],
+  authors: [{ name: "Matt AI" }],
+  openGraph: {
+    title: "Matt AI - Deploy Custom AI Agents in 15 Minutes",
+    description: "Create and deploy AI-powered Telegram bots. No coding required.",
+    type: "website",
+  },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180' },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -42,10 +56,9 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: 'window.__PRIVY_APP_ID__=' + JSON.stringify(privyAppId) + ';' }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-mesh min-h-screen`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)]`}>
         <Providers>
           <div className="flex flex-col min-h-screen">
-            <Navbar />
             <main className="flex-1">
               {children}
             </main>

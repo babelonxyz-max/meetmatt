@@ -4,30 +4,24 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="w-full py-6 px-4 border-t border-[var(--border)] bg-[var(--background)]/50 backdrop-blur-sm">
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+    <footer className="w-full py-4 px-6 sm:px-8 bg-[var(--background)] border-t border-[var(--border)]">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-[var(--muted)]">© 2025 Matt AI</span>
+          <span className="text-base text-[var(--muted)]">© 2025 Matt AI</span>
         </div>
         
         <div className="flex items-center gap-6">
           <Link 
             href="/privacy" 
-            className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+            className="text-base text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
           >
             Privacy Policy
           </Link>
           <Link 
             href="/terms" 
-            className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+            className="text-base text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
           >
             Terms of Service
-          </Link>
-          <Link 
-            href="mailto:support@meetmatt.xyz" 
-            className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
-          >
-            Contact
           </Link>
         </div>
       </div>

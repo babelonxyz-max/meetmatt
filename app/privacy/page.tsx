@@ -80,8 +80,8 @@ export default function PrivacyPage() {
           <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-[var(--accent)]/10 flex items-center justify-center">
             <Shield className="w-8 h-8 text-[var(--accent)]" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4">Privacy Policy</h1>
-          <p className="text-[var(--muted)]">Last updated: February 2025</p>
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4">Privacy Policy</h1>
+          <p className="text-[var(--muted)] text-lg">Last updated: February 2025</p>
         </motion.div>
 
         {/* Intro */}

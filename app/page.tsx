@@ -71,36 +71,6 @@ const CONTACT_OPTIONS = [
   { id: "slack", label: "Slack", icon: "💻", available: false },
 ];
 
-// Dynamic orb text based on current step
-const getOrbText = (step: Step): string => {
-  switch (step) {
-    case "intro":
-      return "👋 Hi! I am MATT";
-    case "name":
-      return "💭 What should I call your agent?";
-    case "login":
-      return "🔐 Please log in to continue";
-    case "usecase":
-      return "🎯 Choose the use case";
-    case "scope":
-      return "⚡ Select capabilities";
-    case "contact":
-      return "📱 Pick contact method";
-    case "confirm":
-      return "🚀 Ready to deploy!";
-    case "deploying":
-      return "💫 Deploying your agent...";
-    case "activating":
-      return "⚡ Activating...";
-    case "awaiting_verification":
-      return "📩 Check Telegram for code";
-    case "success":
-      return "✨ All done!";
-    default:
-      return "👋 Hi! I am MATT";
-  }
-};
-
 export default function Home() {
   const { authenticated, login, user, ready } = usePrivy();
   const [sessionId] = useState<string>(() => getOrCreateSessionId());
@@ -146,12 +116,10 @@ export default function Home() {
     }
   }, [audioEnabled]);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // Check for pending config after login
   useEffect(() => {
     if (ready && authenticated && step === "login") {
       const pending = getPendingConfig();
@@ -190,7 +158,6 @@ export default function Home() {
     }
   }, [step]);
 
-  // Poll for activation status
   useEffect(() => {
     if (step === "activating" && currentAgent?.id) {
       activationPollRef.current = setInterval(async () => {
@@ -474,8 +441,8 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center safe-area-padding">
-        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-[var(--muted)] font-mono text-base">
+      <div className="h-screen w-screen flex items-center justify-center">
+        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-[var(--muted)] font-mono text-lg">
           Initializing...
         </motion.div>
       </div>
@@ -483,37 +450,37 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col text-base">
-      {/* Header */}
-      <header className="flex-none h-16 sm:h-20 flex items-center justify-between px-4 sm:px-6 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
-        <div className="flex items-center gap-2">
+    <div className="h-screen w-screen overflow-hidden flex flex-col">
+      {/* Single Header */}
+      <header className="flex-none h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-[var(--background)]/80 backdrop-blur-md">
+        <div className="flex items-center gap-3">
           <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
-            <Sparkles className="w-6 h-6 text-[var(--accent)]" />
+            <Sparkles className="w-7 h-7 text-[var(--accent)]" />
           </motion.div>
-          <span className="font-bold text-xl tracking-tight">Matt</span>
+          <span className="font-bold text-2xl tracking-tight">Matt</span>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Link href="/pricing" className="px-3 py-1.5 text-sm text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
+        <div className="flex items-center gap-6">
+          <Link href="/pricing" className="text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
             Pricing
           </Link>
           <ThemeToggle />
           {authenticated ? (
-            <Link href="/dashboard" className="px-3 py-1.5 text-sm text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
+            <Link href="/dashboard" className="text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
               Dashboard
             </Link>
           ) : (
             <button 
               onClick={login} 
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
+              className="flex items-center gap-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
             >
-              <User className="w-4 h-4" />
+              <User className="w-5 h-5" />
               <span>Log in</span>
             </button>
           )}
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content - No scroll */}
       <main className="flex-1 flex flex-col min-h-0 relative">
         {/* Back Button */}
         {canGoBack && (
@@ -524,15 +491,15 @@ export default function Home() {
               else if (step === "contact") setStep("scope");
               else setStep("intro");
             }}
-            className="absolute top-3 left-3 z-40 px-3 py-1.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors bg-[var(--card)]/80 rounded-lg backdrop-blur-sm border border-[var(--border)] shadow-sm"
+            className="absolute top-4 left-4 z-40 px-4 py-2 text-base text-[var(--muted)] hover:text-[var(--foreground)] transition-colors bg-[var(--card)]/80 rounded-lg backdrop-blur-sm border border-[var(--border)] shadow-sm"
           >
             ← Back
           </button>
         )}
 
-        {/* Messages Section - Positioned just above orb */}
+        {/* Messages Section */}
         <div className="flex-1 relative overflow-hidden">
-          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-4 pt-4 pb-40">
+          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-6 pt-4 pb-32">
             <div className="w-full max-w-2xl mx-auto space-y-4">
               <AnimatePresence mode="popLayout">
                 {messages.map((msg, i) => (
@@ -575,7 +542,7 @@ export default function Home() {
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                               onClick={() => handleOptionClick(opt)}
-                              className="px-4 py-2 text-sm font-medium rounded-full transition-colors bg-white/10 hover:bg-white/20 border border-white/20"
+                              className="px-4 py-2 text-base font-medium rounded-full transition-colors bg-white/10 hover:bg-white/20 border border-white/20"
                             >
                               {opt}
                             </motion.button>
@@ -603,72 +570,45 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Fade gradient at bottom of chat */}
-        <div className="flex-none h-16 bg-gradient-to-t from-[var(--background)] to-transparent pointer-events-none" />
-
-        {/* Orb Section - With dynamic speech bubble */}
-        <div className="flex-none flex flex-col items-center justify-center pb-2 relative">
-          {/* Dynamic Orb Text - Speech bubble */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, y: 5, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -5, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              className="mb-2"
-            >
-              <div className="px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm text-[var(--muted)] shadow-sm whitespace-nowrap">
-                {getOrbText(step)}
-              </div>
-              {/* Speech bubble arrow */}
-              <div className="flex justify-center">
-                <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-[var(--border)] -mt-[1px]" />
-              </div>
-              <div className="flex justify-center">
-                <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-[var(--card)] -mt-[6px]" />
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* The Orb */}
-          <div className="w-40 h-40 sm:w-48 sm:h-48">
+        {/* Orb Section */}
+        <div className="flex-none flex flex-col items-center justify-center py-2">
+          <div className="w-48 h-48 sm:w-56 sm:h-56">
             <AIOrb wizardState={getWizardState()} />
           </div>
         </div>
 
-        {/* Bottom Controls Section */}
-        <div className="flex-none px-4 pb-6 pt-2 min-h-[180px]">
+        {/* Bottom Controls */}
+        <div className="flex-none px-6 pb-6 pt-2">
           {step === "intro" && messages.length === 0 ? (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-lg mx-auto"
+              className="max-w-xl mx-auto"
             >
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-lg">
-                <h1 className="text-2xl font-bold mb-3 text-center">
-                  Meet Your AI Agent
+                <h1 className="text-3xl sm:text-4xl font-bold mb-3 text-center">
+                  Deploy Your AI Agent in Minutes
                 </h1>
-                <p className="text-[var(--muted)] text-sm text-center mb-4 leading-relaxed">
+                <p className="text-[var(--muted)] text-base text-center mb-4 leading-relaxed">
                   I&apos;m <strong>MATT</strong> — your AI deployment assistant. I&apos;ll help you create a custom Telegram bot powered by Kimi K2.5.
                 </p>
-                <div className="flex flex-col gap-2 text-sm text-[var(--muted)] mb-4">
+                <div className="flex flex-col gap-2 text-base text-[var(--muted)] mb-4">
                   <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                    <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">1</span>
+                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-sm">1</span>
                     <span>Name your agent & choose its role</span>
                   </div>
                   <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                    <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">2</span>
+                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-sm">2</span>
                     <span>Select capabilities & contact method</span>
                   </div>
                   <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--background)]/50">
-                    <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">3</span>
+                    <span className="w-7 h-7 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-sm">3</span>
                     <span>Pay with crypto & deploy instantly</span>
                   </div>
                 </div>
                 <button
                   onClick={() => handleOptionClick("Start creating")}
-                  className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-bold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-base"
+                  className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-bold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-lg"
                 >
                   <Sparkles className="w-5 h-5" />
                   Start Creating
@@ -677,7 +617,7 @@ export default function Home() {
               </div>
             </motion.div>
           ) : step === "name" || step === "awaiting_verification" ? (
-            <div className="max-w-lg mx-auto">
+            <div className="max-w-xl mx-auto">
               <div className="flex gap-2">
                 <input
                   ref={inputRef}
@@ -698,11 +638,11 @@ export default function Home() {
               </div>
             </div>
           ) : step === "scope" && showContinue ? (
-            <div className="max-w-lg mx-auto">
+            <div className="max-w-xl mx-auto">
               <button
                 onClick={handleContinue}
                 disabled={selectedScopes.length === 0}
-                className="w-full py-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
+                className="w-full py-4 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
               >
                 <span>Continue</span>
                 <ArrowRight className="w-5 h-5" />

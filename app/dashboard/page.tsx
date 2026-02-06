@@ -15,7 +15,8 @@ import {
   Send,
   MessageCircle,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Settings
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -143,12 +144,12 @@ export default function DashboardPage() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4 pt-14">
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4 pt-20">
         <div className="text-center">
-          <Bot className="w-12 h-12 mx-auto mb-3 text-[var(--accent)] opacity-50" />
-          <h1 className="text-xl font-bold mb-1">Welcome to Matt</h1>
-          <p className="text-[var(--muted)] text-sm mb-4">Please sign in to access your dashboard</p>
-          <Link href="/" className="text-[var(--accent)] hover:underline text-sm">
+          <Bot className="w-20 h-20 mx-auto mb-4 text-[var(--accent)] opacity-50" />
+          <h1 className="text-3xl font-bold mb-3">Welcome to Matt</h1>
+          <p className="text-[var(--muted)] text-lg mb-6">Please sign in to access your dashboard</p>
+          <Link href="/" className="text-[var(--accent)] hover:underline text-lg">
             Go Home →
           </Link>
         </div>
@@ -158,10 +159,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center pt-14">
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center pt-20">
         <div className="text-center">
-          <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-[var(--accent)]" />
-          <p className="text-[var(--muted)] text-sm">Loading your workspace...</p>
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-[var(--accent)]" />
+          <p className="text-[var(--muted)] text-lg">Loading your workspace...</p>
         </div>
       </div>
     );
@@ -169,14 +170,14 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4 pt-14">
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4 pt-20">
         <div className="text-center max-w-md">
-          <AlertCircle className="w-10 h-10 mx-auto mb-3 text-red-500" />
-          <h1 className="text-lg font-bold mb-1">Something went wrong</h1>
-          <p className="text-[var(--muted)] text-sm mb-3">{error}</p>
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+          <p className="text-[var(--muted)] text-lg mb-4">{error}</p>
           <button 
             onClick={() => logout()} 
-            className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg hover:bg-[var(--card)]/80 text-sm"
+            className="px-6 py-3 bg-[var(--card)] border border-[var(--border)] rounded-xl hover:bg-[var(--card)]/80 text-lg"
           >
             Sign Out
           </button>
@@ -190,24 +191,24 @@ export default function DashboardPage() {
   const { agents, payments, stats } = data;
 
   return (
-    <div className="pt-14 pb-8">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        {/* Welcome */}
+    <div className="pt-20 pb-12">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8">
+        {/* Welcome - BIGGER */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
+          className="mb-10"
         >
-          <h1 className="text-2xl font-bold mb-1">Your Workspace</h1>
-          <p className="text-[var(--muted)] text-sm">Manage your AI agents and billing</p>
+          <h1 className="text-4xl sm:text-5xl font-bold mb-3">Dashboard</h1>
+          <p className="text-[var(--muted)] text-xl">Manage your AI agents and billing</p>
         </motion.div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - BIGGER */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10"
         >
           <StatCard 
             label="Total Agents" 
@@ -235,24 +236,24 @@ export default function DashboardPage() {
           />
         </motion.div>
 
-        <div className="grid lg:grid-cols-3 gap-4">
+        <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content - Agents */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Create New CTA */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Create New CTA - BIGGER */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
               <Link href="/">
-                <div className="group relative overflow-hidden bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-xl p-4 text-white cursor-pointer">
+                <div className="group relative overflow-hidden bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-2xl p-8 text-white cursor-pointer">
                   <div className="relative z-10 flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-sm mb-0.5">Create New Agent</h3>
-                      <p className="text-white/80 text-xs">Deploy in 15 minutes</p>
+                      <h3 className="font-semibold text-2xl mb-1">Create New Agent</h3>
+                      <p className="text-white/80 text-lg">Deploy in 15 minutes</p>
                     </div>
-                    <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Plus className="w-5 h-5" />
+                    <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Plus className="w-8 h-8" />
                     </div>
                   </div>
                   <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
@@ -260,28 +261,28 @@ export default function DashboardPage() {
               </Link>
             </motion.div>
 
-            {/* Agents Section */}
+            {/* Agents Section - BIGGER */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden"
+              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden"
             >
-              <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
-                <h2 className="font-medium text-sm flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-[var(--accent)]" />
+              <div className="px-6 py-5 border-b border-[var(--border)] flex items-center justify-between">
+                <h2 className="font-semibold text-xl flex items-center gap-3">
+                  <Bot className="w-6 h-6 text-[var(--accent)]" />
                   Your AI Agents
                 </h2>
-                <span className="text-xs text-[var(--muted)]">{agents.length} total</span>
+                <span className="text-base text-[var(--muted)]">{agents.length} total</span>
               </div>
 
               {agents.length === 0 ? (
-                <div className="p-6 text-center">
-                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--card)] border border-[var(--border)] flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-[var(--muted)]" />
+                <div className="p-10 text-center">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[var(--card)] border border-[var(--border)] flex items-center justify-center">
+                    <Bot className="w-10 h-10 text-[var(--muted)]" />
                   </div>
-                  <h3 className="font-medium text-sm mb-0.5">No agents yet</h3>
-                  <p className="text-xs text-[var(--muted)]">Create your first AI agent to get started</p>
+                  <h3 className="font-medium text-xl mb-2">No agents yet</h3>
+                  <p className="text-lg text-[var(--muted)]">Create your first AI agent to get started</p>
                 </div>
               ) : (
                 <div className="divide-y divide-[var(--border)]">
@@ -295,37 +296,37 @@ export default function DashboardPage() {
                     return (
                       <div 
                         key={agent.id} 
-                        className="p-3 hover:bg-[var(--card)]/50 transition-colors"
+                        className="p-6 hover:bg-[var(--card)]/50 transition-colors"
                       >
-                        <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-start justify-between mb-4">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-medium text-sm truncate">{agent.name}</h3>
-                              <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${status.color.replace('bg-', 'bg-').replace('500', '500/10')} ${status.color.replace('bg-', 'text-')}`}>
-                                <StatusIcon className="w-3 h-3" />
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-medium text-xl truncate">{agent.name}</h3>
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5 ${status.color.replace('bg-', 'bg-').replace('500', '500/10')} ${status.color.replace('bg-', 'text-')}`}>
+                                <StatusIcon className="w-4 h-4" />
                                 {status.label}
                               </span>
                             </div>
-                            <p className="text-xs text-[var(--muted)]">
+                            <p className="text-base text-[var(--muted)]">
                               {agent.subscriptionType === 'annual' ? 'Annual plan' : 'Monthly plan'}
                               {agent.currentPeriodEnd && ` • Renews ${new Date(agent.currentPeriodEnd).toLocaleDateString()}`}
                             </p>
                           </div>
-                          <div className="flex items-center gap-1 ml-3">
+                          <div className="flex items-center gap-2 ml-4">
                             {agent.devinUrl && (
                               <a
                                 href={agent.devinUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] rounded-lg hover:bg-[var(--card)] transition-colors"
+                                className="p-3 text-[var(--muted)] hover:text-[var(--foreground)] rounded-xl hover:bg-[var(--card)] transition-colors"
                                 title="View Agent"
                               >
-                                <ArrowRight className="w-4 h-4" />
+                                <ArrowRight className="w-6 h-6" />
                               </a>
                             )}
                             {agent.subscriptionStatus === "expired" && (
                               <Link href="/billing">
-                                <button className="px-2.5 py-1 bg-[var(--accent)] text-white text-xs font-medium rounded-lg hover:opacity-90">
+                                <button className="px-4 py-2 bg-[var(--accent)] text-white text-base font-medium rounded-xl hover:opacity-90">
                                   Renew
                                 </button>
                               </Link>
@@ -334,42 +335,42 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Activation Status */}
-                        <div className="mb-2">
-                          <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${activationStatus.color.replace('bg-', 'bg-').replace('500', '500/10')} ${activationStatus.color.replace('bg-', 'text-')}`}>
-                            <ActivationIcon className="w-3 h-3" />
+                        <div className="mb-4">
+                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-base ${activationStatus.color.replace('bg-', 'bg-').replace('500', '500/10')} ${activationStatus.color.replace('bg-', 'text-')}`}>
+                            <ActivationIcon className="w-4 h-4" />
                             {activationStatus.label}
                           </div>
                         </div>
 
                         {/* Bot Info (if available) */}
                         {(agent.botUsername || agent.telegramLink) && (
-                          <div className="bg-[var(--background)] rounded-lg p-2 space-y-1.5">
+                          <div className="bg-[var(--background)] rounded-xl p-4 space-y-3">
                             {agent.botUsername && (
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-[var(--muted)]">Bot:</span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-medium">@{agent.botUsername}</span>
+                                <span className="text-base text-[var(--muted)]">Bot:</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg font-medium">@{agent.botUsername}</span>
                                   <button
                                     onClick={() => copyToClipboard(`@${agent.botUsername}`)}
-                                    className="p-1 hover:bg-[var(--card)] rounded transition-colors"
+                                    className="p-2 hover:bg-[var(--card)] rounded-lg transition-colors"
                                     title="Copy username"
                                   >
-                                    <Copy className="w-3 h-3 text-[var(--muted)]" />
+                                    <Copy className="w-5 h-5 text-[var(--muted)]" />
                                   </button>
                                 </div>
                               </div>
                             )}
                             {agent.telegramLink && (
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-[var(--muted)]">Link:</span>
+                                <span className="text-base text-[var(--muted)]">Link:</span>
                                 <a
                                   href={agent.telegramLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-xs text-[var(--accent)] hover:underline"
+                                  className="flex items-center gap-1.5 text-base text-[var(--accent)] hover:underline"
                                 >
                                   Open in Telegram
-                                  <ExternalLink className="w-3 h-3" />
+                                  <ExternalLink className="w-4 h-4" />
                                 </a>
                               </div>
                             )}
@@ -378,20 +379,20 @@ export default function DashboardPage() {
 
                         {/* Verification Section */}
                         {needsVerification && (
-                          <div className="mt-2 pt-2 border-t border-[var(--border)]">
+                          <div className="mt-4 pt-4 border-t border-[var(--border)]">
                             {verifyingAgent === agent.id ? (
-                              <div className="flex gap-2">
+                              <div className="flex gap-3">
                                 <input
                                   type="text"
                                   value={authCode}
                                   onChange={(e) => setAuthCode(e.target.value)}
                                   placeholder="Enter auth code..."
-                                  className="flex-1 px-3 py-1.5 bg-[var(--background)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-[var(--accent)]"
+                                  className="flex-1 px-4 py-3 bg-[var(--background)] border border-[var(--border)] rounded-xl text-base focus:outline-none focus:border-[var(--accent)]"
                                 />
                                 <button
                                   onClick={() => handleVerify(agent.id)}
                                   disabled={!authCode.trim()}
-                                  className="px-3 py-1.5 bg-[var(--accent)] text-white text-xs font-medium rounded-lg hover:opacity-90 disabled:opacity-50"
+                                  className="px-6 py-3 bg-[var(--accent)] text-white text-base font-medium rounded-xl hover:opacity-90 disabled:opacity-50"
                                 >
                                   Verify
                                 </button>
@@ -400,7 +401,7 @@ export default function DashboardPage() {
                                     setVerifyingAgent(null);
                                     setAuthCode("");
                                   }}
-                                  className="px-2 py-1.5 text-[var(--muted)] hover:text-[var(--foreground)] text-xs"
+                                  className="px-4 py-3 text-[var(--muted)] hover:text-[var(--foreground)] text-base"
                                 >
                                   Cancel
                                 </button>
@@ -408,9 +409,9 @@ export default function DashboardPage() {
                             ) : (
                               <button
                                 onClick={() => setVerifyingAgent(agent.id)}
-                                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-purple-500/10 text-purple-500 text-xs font-medium rounded-lg hover:bg-purple-500/20 transition-colors"
+                                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-purple-500/10 text-purple-500 text-lg font-medium rounded-xl hover:bg-purple-500/20 transition-colors"
                               >
-                                <Send className="w-3 h-3" />
+                                <Send className="w-5 h-5" />
                                 Enter Auth Code to Activate
                               </button>
                             )}
@@ -425,61 +426,81 @@ export default function DashboardPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Billing Summary */}
+          <div className="space-y-8">
+            {/* Billing Summary - BIGGER */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"
+              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6"
             >
-              <h3 className="font-medium mb-3 text-sm flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-[var(--muted)]" />
+              <h3 className="font-semibold mb-5 text-xl flex items-center gap-3">
+                <CreditCard className="w-6 h-6 text-[var(--muted)]" />
                 Billing
               </h3>
               
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)] text-xs">Current Plan</span>
-                  <span className="font-medium text-sm">Pro</span>
+              <div className="space-y-4">
+                <div className="flex justify-between text-lg">
+                  <span className="text-[var(--muted)]">Current Plan</span>
+                  <span className="font-medium">Pro</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)] text-xs">Next billing</span>
-                  <span className="font-medium text-sm">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
+                <div className="flex justify-between text-lg">
+                  <span className="text-[var(--muted)]">Next billing</span>
+                  <span className="font-medium">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
                 </div>
               </div>
 
               <Link href="/billing">
-                <button className="w-full mt-3 px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity">
+                <button className="w-full mt-6 px-6 py-4 bg-[var(--accent)] text-white text-lg font-medium rounded-xl hover:opacity-90 transition-opacity">
                   Manage Billing
                 </button>
               </Link>
             </motion.div>
 
-            {/* Recent Activity */}
+            {/* Recent Activity - BIGGER */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"
+              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6"
             >
-              <h3 className="font-medium mb-3 text-sm">Recent Activity</h3>
+              <h3 className="font-semibold mb-5 text-xl">Recent Activity</h3>
               
               {payments.length === 0 ? (
-                <p className="text-xs text-[var(--muted)]">No recent payments</p>
+                <p className="text-lg text-[var(--muted)]">No recent payments</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   {payments.slice(0, 5).map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between text-xs">
+                    <div key={payment.id} className="flex items-center justify-between text-lg">
                       <div>
                         <p className="font-medium">{payment.tier} Plan</p>
-                        <p className="text-[var(--muted)]">{new Date(payment.createdAt).toLocaleDateString()}</p>
+                        <p className="text-base text-[var(--muted)]">{new Date(payment.createdAt).toLocaleDateString()}</p>
                       </div>
                       <span className="font-medium">${payment.amount}</span>
                     </div>
                   ))}
                 </div>
               )}
+            </motion.div>
+
+            {/* Settings Quick Link */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Settings className="w-6 h-6 text-[var(--muted)]" />
+                  <span className="text-lg font-medium">Settings</span>
+                </div>
+                <Link href="/settings">
+                  <button className="p-2 hover:bg-[var(--card)] rounded-lg transition-colors">
+                    <ArrowRight className="w-5 h-5 text-[var(--muted)]" />
+                  </button>
+                </Link>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -497,12 +518,12 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
   };
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
-      <div className={`w-8 h-8 rounded-lg ${colorClasses[color]} flex items-center justify-center mb-2`}>
-        <Icon className="w-4 h-4" />
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6">
+      <div className={`w-14 h-14 rounded-xl ${colorClasses[color]} flex items-center justify-center mb-4`}>
+        <Icon className="w-7 h-7" />
       </div>
-      <p className="text-xl font-bold">{value}</p>
-      <p className="text-xs text-[var(--muted)]">{label}</p>
+      <p className="text-4xl font-bold">{value}</p>
+      <p className="text-lg text-[var(--muted)]">{label}</p>
     </div>
   );
 }
