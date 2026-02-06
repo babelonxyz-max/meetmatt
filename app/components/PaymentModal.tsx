@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, Check, Loader2, AlertCircle, Wallet, MessageCircle } from "lucide-react";
+import { X, Copy, Check, Loader2, AlertCircle, Wallet, MessageCircle, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createPayment, getPaymentStatus, SUPPORTED_CRYPTO, createMockPayment } from "@/lib/nowpayments";
@@ -14,6 +14,8 @@ interface PaymentData {
   amount: number;
   currency: string;
   status: string;
+  network?: string;
+  discount?: string;
 }
 
 interface PaymentModalProps {
@@ -30,6 +32,26 @@ interface PaymentModalProps {
 }
 
 const PLAN_PRICE = 150;
+const DISCOUNTED_PRICE = 135;
+
+interface CryptoOption {
+  code: string;
+  name: string;
+  icon: string;
+  network?: string;
+  discount?: string;
+}
+
+const ALL_CRYPTO_OPTIONS: CryptoOption[] = [
+  ...SUPPORTED_CRYPTO.slice(0, 6).map(c => ({ ...c })),
+  {
+    code: "usdh",
+    name: "USDH",
+    icon: "🏦",
+    network: "HyperEVM",
+    discount: "10%",
+  },
+];
 
 export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: PaymentModalProps) {
   const [selectedCurrency, setSelectedCurrency] = useState("usdt");
@@ -38,6 +60,9 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
   const [payment, setPayment] = useState<PaymentData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(3600);
+
+  const isUSDH = selectedCurrency === "usdh";
+  const displayPrice = isUSDH ? DISCOUNTED_PRICE : PLAN_PRICE;
 
   useEffect(() => {
     if (isOpen) {
@@ -60,6 +85,22 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
     const interval = setInterval(async () => {
       try {
+        if (payment.currency === "usdh") {
+          const response = await fetch(`/api/payment/hyperevm/status?sessionId=${sessionId}`);
+          const data = await response.json();
+          
+          if (data.status === "transferred") {
+            setStatus("confirming");
+            playPaymentSuccess();
+            setTimeout(() => {
+              setStatus("confirmed");
+              setTimeout(onSuccess, 1000);
+            }, 1500);
+            clearInterval(interval);
+          }
+          return;
+        }
+
         if (process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !process.env.NOWPAYMENTS_API_KEY) {
           if (timeLeft < 3590) {
             setStatus("confirming");
@@ -89,13 +130,38 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [payment, status, timeLeft, onSuccess]);
+  }, [payment, status, timeLeft, onSuccess, sessionId]);
 
   const createNewPayment = useCallback(async () => {
     setStatus("creating");
     setError(null);
 
     try {
+      if (selectedCurrency === "usdh") {
+        const response = await fetch("/api/payment/hyperevm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
+        
+        if (!response.ok) {
+          throw new Error("Failed to create HyperEVM payment");
+        }
+        
+        const data = await response.json();
+        setPayment({
+          id: `usdh-${sessionId}`,
+          address: data.address,
+          amount: parseFloat(data.amount),
+          currency: "usdh",
+          status: "waiting",
+          network: "HyperEVM",
+          discount: "10%",
+        });
+        setStatus("waiting");
+        return;
+      }
+
       if (process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !process.env.NOWPAYMENTS_API_KEY) {
         await new Promise((resolve) => setTimeout(resolve, 1500));
         const mockPayment = createMockPayment(PLAN_PRICE, selectedCurrency);
@@ -146,7 +212,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const selectedCrypto = SUPPORTED_CRYPTO.find((c) => c.code === selectedCurrency);
+  const selectedCrypto = ALL_CRYPTO_OPTIONS.find((c) => c.code === selectedCurrency);
 
   return (
     <AnimatePresence>
@@ -164,7 +230,6 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
             exit={{ scale: 0.95, opacity: 0 }}
             className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-gradient-to-r from-[#0ea5e9]/10 to-transparent">
               <div className="flex items-center gap-3">
                 <Wallet className="w-5 h-5 text-[#0ea5e9]" />
@@ -179,13 +244,19 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
             </div>
 
             <div className="p-4 space-y-4">
-              {/* Amount */}
               <div className="text-center py-4 bg-gradient-to-b from-[var(--card)] to-transparent rounded-xl border border-[var(--border)]">
-                <span className="text-4xl font-bold text-[#0ea5e9]">${PLAN_PRICE}</span>
-                <p className="text-xs text-[var(--muted)] mt-1">First month • Unlimited usage</p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-4xl font-bold text-[#0ea5e9]">${displayPrice}</span>
+                  {isUSDH && (
+                    <span className="text-sm text-green-400 bg-green-400/10 px-2 py-1 rounded-full">-10%</span>
+                  )}
+                </div>
+                <p className="text-xs text-[var(--muted)] mt-1">
+                  First month
+                  {isUSDH && <span className="text-green-400 ml-1">(Save $15 with USDH)</span>}
+                </p>
               </div>
 
-              {/* Agent Summary */}
               <div className="bg-[var(--card)] rounded-xl p-3 border border-[var(--border)] text-sm space-y-1">
                 <div className="flex items-center gap-2">
                   <MessageCircle className="w-4 h-4 text-[#0ea5e9]" />
@@ -194,12 +265,11 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                 </div>
               </div>
 
-              {/* Currency Selection */}
               {status === "selecting" && (
                 <div className="space-y-3">
                   <label className="text-xs font-mono text-[var(--muted)]">SELECT CRYPTOCURRENCY</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {SUPPORTED_CRYPTO.slice(0, 6).map((crypto) => (
+                    {ALL_CRYPTO_OPTIONS.map((crypto) => (
                       <motion.button
                         key={crypto.code}
                         onClick={() => setSelectedCurrency(crypto.code)}
@@ -212,9 +282,13 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                         }`}
                       >
                         <span className="text-lg">{crypto.icon}</span>
-                        <div className="text-left">
+                        <div className="text-left flex-1">
                           <p className="text-xs font-semibold">{crypto.name}</p>
+                          {crypto.network && (
+                            <p className="text-[10px] text-[var(--muted)]">{crypto.network}</p>
+                          )}
                         </div>
+                        {crypto.discount && <Zap className="w-3 h-3 text-green-400" />}
                       </motion.button>
                     ))}
                   </div>
@@ -225,7 +299,6 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                 </div>
               )}
 
-              {/* Creating */}
               {status === "creating" && (
                 <div className="flex flex-col items-center gap-4 py-8">
                   <Loader2 className="w-8 h-8 text-[#0ea5e9] animate-spin" />
@@ -233,12 +306,17 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                 </div>
               )}
 
-              {/* Waiting */}
               {status === "waiting" && payment && (
                 <div className="space-y-4">
                   <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                    <p className="text-xs text-amber-400 font-mono text-center">AWAITING PAYMENT // {formatTime(timeLeft)}</p>
+                    <p className="text-xs text-amber-400 font-mono text-center">AWAITING PAYMENT</p>
                   </div>
+
+                  {payment.network && (
+                    <div className="p-2 bg-[#0ea5e9]/10 rounded-lg text-center">
+                      <p className="text-xs text-[#0ea5e9]">Network: {payment.network}</p>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <label className="text-xs font-mono text-[var(--muted)]">SEND {selectedCrypto?.name.toUpperCase()} TO:</label>
@@ -253,15 +331,20 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                   <div className="p-3 bg-[var(--card)] rounded-lg border border-[var(--border)]">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-[var(--muted)]">Amount:</span>
-                      <span className="font-mono">
-                        {payment.amount} {selectedCrypto?.code.toUpperCase()}
-                      </span>
+                      <span className="font-mono">{payment.amount} {selectedCrypto?.code.toUpperCase()}</span>
                     </div>
+                    {payment.discount && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-green-400">Discount:</span>
+                        <span className="text-green-400">{payment.discount}</span>
+                      </div>
+                    )}
                   </div>
+
+                  <p className="text-xs text-[var(--muted)] text-center">Funds will be automatically transferred after confirmation.</p>
                 </div>
               )}
 
-              {/* Confirming */}
               {status === "confirming" && (
                 <div className="flex flex-col items-center gap-4 py-8">
                   <Loader2 className="w-8 h-8 text-green-400 animate-spin" />
@@ -269,7 +352,6 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                 </div>
               )}
 
-              {/* Confirmed */}
               {status === "confirmed" && (
                 <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex flex-col items-center gap-4 py-8">
                   <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
@@ -279,7 +361,6 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                 </motion.div>
               )}
 
-              {/* Error */}
               {error && (
                 <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
