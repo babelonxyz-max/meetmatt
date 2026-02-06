@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Settings,
   Send,
   MessageCircle,
   Copy,
@@ -129,7 +128,6 @@ export default function DashboardPage() {
       if (response.ok) {
         setVerifyingAgent(null);
         setAuthCode("");
-        // Refresh dashboard
         window.location.reload();
       } else {
         alert("Invalid auth code. Please try again.");
@@ -145,12 +143,12 @@ export default function DashboardPage() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 pt-20">
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4 pt-14">
         <div className="text-center">
-          <Bot className="w-16 h-16 mx-auto mb-4 text-[var(--accent)] opacity-50" />
-          <h1 className="text-2xl font-bold mb-2">Welcome to Matt</h1>
-          <p className="text-[var(--muted)] mb-6">Please sign in to access your dashboard</p>
-          <Link href="/" className="text-[var(--accent)] hover:underline">
+          <Bot className="w-12 h-12 mx-auto mb-3 text-[var(--accent)] opacity-50" />
+          <h1 className="text-xl font-bold mb-1">Welcome to Matt</h1>
+          <p className="text-[var(--muted)] text-sm mb-4">Please sign in to access your dashboard</p>
+          <Link href="/" className="text-[var(--accent)] hover:underline text-sm">
             Go Home →
           </Link>
         </div>
@@ -160,10 +158,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center pt-20">
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center pt-14">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-[var(--accent)]" />
-          <p className="text-[var(--muted)]">Loading your workspace...</p>
+          <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-[var(--accent)]" />
+          <p className="text-[var(--muted)] text-sm">Loading your workspace...</p>
         </div>
       </div>
     );
@@ -171,14 +169,14 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 pt-20">
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4 pt-14">
         <div className="text-center max-w-md">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-          <h1 className="text-xl font-bold mb-2">Something went wrong</h1>
-          <p className="text-[var(--muted)] mb-4">{error}</p>
+          <AlertCircle className="w-10 h-10 mx-auto mb-3 text-red-500" />
+          <h1 className="text-lg font-bold mb-1">Something went wrong</h1>
+          <p className="text-[var(--muted)] text-sm mb-3">{error}</p>
           <button 
             onClick={() => logout()} 
-            className="px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-lg hover:bg-[var(--card)]/80"
+            className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg hover:bg-[var(--card)]/80 text-sm"
           >
             Sign Out
           </button>
@@ -192,16 +190,16 @@ export default function DashboardPage() {
   const { agents, payments, stats } = data;
 
   return (
-    <div className="min-h-screen bg-[var(--background)] pt-20 pb-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+    <div className="pt-14 pb-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
         {/* Welcome */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6"
         >
-          <h1 className="text-3xl font-bold mb-2">Your Workspace</h1>
-          <p className="text-[var(--muted)]">Manage your AI agents and billing</p>
+          <h1 className="text-2xl font-bold mb-1">Your Workspace</h1>
+          <p className="text-[var(--muted)] text-sm">Manage your AI agents and billing</p>
         </motion.div>
 
         {/* Quick Stats */}
@@ -209,7 +207,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
         >
           <StatCard 
             label="Total Agents" 
@@ -237,9 +235,9 @@ export default function DashboardPage() {
           />
         </motion.div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-4">
           {/* Main Content - Agents */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4">
             {/* Create New CTA */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -247,14 +245,14 @@ export default function DashboardPage() {
               transition={{ delay: 0.2 }}
             >
               <Link href="/">
-                <div className="group relative overflow-hidden bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-xl p-6 text-white cursor-pointer">
+                <div className="group relative overflow-hidden bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-xl p-4 text-white cursor-pointer">
                   <div className="relative z-10 flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold mb-1">Create New Agent</h3>
-                      <p className="text-white/80 text-sm">Deploy in 15 minutes</p>
+                      <h3 className="font-semibold text-sm mb-0.5">Create New Agent</h3>
+                      <p className="text-white/80 text-xs">Deploy in 15 minutes</p>
                     </div>
-                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Plus className="w-6 h-6" />
+                    <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Plus className="w-5 h-5" />
                     </div>
                   </div>
                   <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
@@ -269,8 +267,8 @@ export default function DashboardPage() {
               transition={{ delay: 0.3 }}
               className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden"
             >
-              <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
-                <h2 className="font-semibold flex items-center gap-2">
+              <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+                <h2 className="font-medium text-sm flex items-center gap-2">
                   <Bot className="w-4 h-4 text-[var(--accent)]" />
                   Your AI Agents
                 </h2>
@@ -278,12 +276,12 @@ export default function DashboardPage() {
               </div>
 
               {agents.length === 0 ? (
-                <div className="p-8 text-center">
-                  <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-[var(--card)] border border-[var(--border)] flex items-center justify-center">
-                    <Bot className="w-6 h-6 text-[var(--muted)]" />
+                <div className="p-6 text-center">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--card)] border border-[var(--border)] flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-[var(--muted)]" />
                   </div>
-                  <h3 className="font-medium mb-1">No agents yet</h3>
-                  <p className="text-sm text-[var(--muted)]">Create your first AI agent to get started</p>
+                  <h3 className="font-medium text-sm mb-0.5">No agents yet</h3>
+                  <p className="text-xs text-[var(--muted)]">Create your first AI agent to get started</p>
                 </div>
               ) : (
                 <div className="divide-y divide-[var(--border)]">
@@ -297,13 +295,13 @@ export default function DashboardPage() {
                     return (
                       <div 
                         key={agent.id} 
-                        className="p-4 hover:bg-[var(--card)]/50 transition-colors group"
+                        className="p-3 hover:bg-[var(--card)]/50 transition-colors"
                       >
-                        <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-medium truncate">{agent.name}</h3>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${status.color.replace('bg-', 'bg-').replace('500', '500/10')} ${status.color.replace('bg-', 'text-')}`}>
+                              <h3 className="font-medium text-sm truncate">{agent.name}</h3>
+                              <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${status.color.replace('bg-', 'bg-').replace('500', '500/10')} ${status.color.replace('bg-', 'text-')}`}>
                                 <StatusIcon className="w-3 h-3" />
                                 {status.label}
                               </span>
@@ -313,13 +311,13 @@ export default function DashboardPage() {
                               {agent.currentPeriodEnd && ` • Renews ${new Date(agent.currentPeriodEnd).toLocaleDateString()}`}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 ml-4">
+                          <div className="flex items-center gap-1 ml-3">
                             {agent.devinUrl && (
                               <a
                                 href={agent.devinUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-2 text-[var(--muted)] hover:text-[var(--foreground)] rounded-lg hover:bg-[var(--card)] transition-colors"
+                                className="p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] rounded-lg hover:bg-[var(--card)] transition-colors"
                                 title="View Agent"
                               >
                                 <ArrowRight className="w-4 h-4" />
@@ -327,7 +325,7 @@ export default function DashboardPage() {
                             )}
                             {agent.subscriptionStatus === "expired" && (
                               <Link href="/billing">
-                                <button className="px-3 py-1.5 bg-[var(--accent)] text-white text-xs font-medium rounded-lg hover:opacity-90">
+                                <button className="px-2.5 py-1 bg-[var(--accent)] text-white text-xs font-medium rounded-lg hover:opacity-90">
                                   Renew
                                 </button>
                               </Link>
@@ -336,8 +334,8 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Activation Status */}
-                        <div className="mb-3">
-                          <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs ${activationStatus.color.replace('bg-', 'bg-').replace('500', '500/10')} ${activationStatus.color.replace('bg-', 'text-')}`}>
+                        <div className="mb-2">
+                          <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${activationStatus.color.replace('bg-', 'bg-').replace('500', '500/10')} ${activationStatus.color.replace('bg-', 'text-')}`}>
                             <ActivationIcon className="w-3 h-3" />
                             {activationStatus.label}
                           </div>
@@ -345,12 +343,12 @@ export default function DashboardPage() {
 
                         {/* Bot Info (if available) */}
                         {(agent.botUsername || agent.telegramLink) && (
-                          <div className="bg-[var(--background)] rounded-lg p-3 space-y-2">
+                          <div className="bg-[var(--background)] rounded-lg p-2 space-y-1.5">
                             {agent.botUsername && (
                               <div className="flex items-center justify-between">
                                 <span className="text-xs text-[var(--muted)]">Bot:</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium">@{agent.botUsername}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-medium">@{agent.botUsername}</span>
                                   <button
                                     onClick={() => copyToClipboard(`@${agent.botUsername}`)}
                                     className="p-1 hover:bg-[var(--card)] rounded transition-colors"
@@ -368,7 +366,7 @@ export default function DashboardPage() {
                                   href={agent.telegramLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-sm text-[var(--accent)] hover:underline"
+                                  className="flex items-center gap-1 text-xs text-[var(--accent)] hover:underline"
                                 >
                                   Open in Telegram
                                   <ExternalLink className="w-3 h-3" />
@@ -380,20 +378,20 @@ export default function DashboardPage() {
 
                         {/* Verification Section */}
                         {needsVerification && (
-                          <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                          <div className="mt-2 pt-2 border-t border-[var(--border)]">
                             {verifyingAgent === agent.id ? (
                               <div className="flex gap-2">
                                 <input
                                   type="text"
                                   value={authCode}
                                   onChange={(e) => setAuthCode(e.target.value)}
-                                  placeholder="Enter auth code from bot..."
-                                  className="flex-1 px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)]"
+                                  placeholder="Enter auth code..."
+                                  className="flex-1 px-3 py-1.5 bg-[var(--background)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-[var(--accent)]"
                                 />
                                 <button
                                   onClick={() => handleVerify(agent.id)}
                                   disabled={!authCode.trim()}
-                                  className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="px-3 py-1.5 bg-[var(--accent)] text-white text-xs font-medium rounded-lg hover:opacity-90 disabled:opacity-50"
                                 >
                                   Verify
                                 </button>
@@ -402,7 +400,7 @@ export default function DashboardPage() {
                                     setVerifyingAgent(null);
                                     setAuthCode("");
                                   }}
-                                  className="px-3 py-2 text-[var(--muted)] hover:text-[var(--foreground)]"
+                                  className="px-2 py-1.5 text-[var(--muted)] hover:text-[var(--foreground)] text-xs"
                                 >
                                   Cancel
                                 </button>
@@ -410,9 +408,9 @@ export default function DashboardPage() {
                             ) : (
                               <button
                                 onClick={() => setVerifyingAgent(agent.id)}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500/10 text-purple-500 text-sm font-medium rounded-lg hover:bg-purple-500/20 transition-colors"
+                                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-purple-500/10 text-purple-500 text-xs font-medium rounded-lg hover:bg-purple-500/20 transition-colors"
                               >
-                                <Send className="w-4 h-4" />
+                                <Send className="w-3 h-3" />
                                 Enter Auth Code to Activate
                               </button>
                             )}
@@ -427,32 +425,32 @@ export default function DashboardPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Billing Summary */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5"
+              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"
             >
-              <h3 className="font-medium mb-4 text-sm flex items-center gap-2">
+              <h3 className="font-medium mb-3 text-sm flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-[var(--muted)]" />
                 Billing
               </h3>
               
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)]">Current Plan</span>
-                  <span className="font-medium">Pro</span>
+                  <span className="text-[var(--muted)] text-xs">Current Plan</span>
+                  <span className="font-medium text-sm">Pro</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)]">Next billing</span>
-                  <span className="font-medium">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
+                  <span className="text-[var(--muted)] text-xs">Next billing</span>
+                  <span className="font-medium text-sm">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
                 </div>
               </div>
 
               <Link href="/billing">
-                <button className="w-full mt-4 px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity">
+                <button className="w-full mt-3 px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity">
                   Manage Billing
                 </button>
               </Link>
@@ -463,19 +461,19 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5"
+              className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4"
             >
-              <h3 className="font-medium mb-4 text-sm">Recent Activity</h3>
+              <h3 className="font-medium mb-3 text-sm">Recent Activity</h3>
               
               {payments.length === 0 ? (
-                <p className="text-sm text-[var(--muted)]">No recent payments</p>
+                <p className="text-xs text-[var(--muted)]">No recent payments</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {payments.slice(0, 5).map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between text-sm">
+                    <div key={payment.id} className="flex items-center justify-between text-xs">
                       <div>
                         <p className="font-medium">{payment.tier} Plan</p>
-                        <p className="text-xs text-[var(--muted)]">{new Date(payment.createdAt).toLocaleDateString()}</p>
+                        <p className="text-[var(--muted)]">{new Date(payment.createdAt).toLocaleDateString()}</p>
                       </div>
                       <span className="font-medium">${payment.amount}</span>
                     </div>
@@ -499,12 +497,12 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
   };
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4">
-      <div className={`w-10 h-10 rounded-lg ${colorClasses[color]} flex items-center justify-center mb-3`}>
-        <Icon className="w-5 h-5" />
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3">
+      <div className={`w-8 h-8 rounded-lg ${colorClasses[color]} flex items-center justify-center mb-2`}>
+        <Icon className="w-4 h-4" />
       </div>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-sm text-[var(--muted)]">{label}</p>
+      <p className="text-xl font-bold">{value}</p>
+      <p className="text-xs text-[var(--muted)]">{label}</p>
     </div>
   );
 }
