@@ -9,4 +9,5 @@ export * from "./rate-limiter";
 export * from "./account-manager";
 export * from "./skills-config";
 export * from "./bitlaunch-provider";
+export * from "./contabo-provider";
 export * from "./provisioner";
