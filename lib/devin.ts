@@ -12,7 +12,8 @@ function getDevinHeaders() {
 }
 
 // Feature flag: Use cost-effective template deployment instead of Devin per agent
-const USE_DEVIN_PER_AGENT = true; // Set to true only for complex custom builds
+// NOTE: Devin API auth currently failing, using templates until fixed
+const USE_DEVIN_PER_AGENT = false; // Temporarily disabled due to API auth issues
 
 interface DevinConfig {
   name: string;
