@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Heart } from "lucide-react";
 
 export function Footer() {
   return (
@@ -19,10 +20,13 @@ export function Footer() {
         <div className="max-w-7xl mx-auto bg-[var(--card)]/80 backdrop-blur-xl border border-[var(--border)] rounded-2xl px-6 py-3 shadow-2xl shadow-black/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--muted)]">© 2026 Matt AI</span>
+              <span className="text-sm text-[var(--muted)]">© 2026 Meet Matt</span>
             </div>
             
             <div className="flex items-center gap-6">
+              <span className="text-sm text-[var(--muted)] flex items-center gap-1.5">
+                Created with <Heart className="w-3.5 h-3.5 text-red-400 fill-red-400" /> @ VIBEST
+              </span>
               <Link 
                 href="/privacy" 
                 className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"

@@ -27,13 +27,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Matt AI - Deploy Custom AI Agents in 15 Minutes",
-  description: "Create and deploy AI-powered Telegram bots with Matt. No coding required. $150 setup, $50/month. Live build viewing, Devin AI powered, deploy anywhere.",
-  keywords: ["AI agent", "Telegram bot", "AI assistant", "deploy AI", "custom bot", "Kimi K2.5", "Devin AI"],
-  authors: [{ name: "Matt AI" }],
+  title: "Meet Matt - Deploy Custom AI Agents in 15 Minutes",
+  description: "Create and deploy AI-powered assistants with Meet Matt. No coding required. $150 setup, $50/month. Deploy AI assistants, coworkers, or digital employees.",
+  keywords: ["AI agent", "AI assistant", "deploy AI", "custom AI", "digital employee", "AI coworker"],
+  authors: [{ name: "Meet Matt" }],
   openGraph: {
-    title: "Matt AI - Deploy Custom AI Agents in 15 Minutes",
-    description: "Create and deploy AI-powered Telegram bots. No coding required.",
+    title: "Meet Matt - Deploy Custom AI Agents in 15 Minutes",
+    description: "Create and deploy AI-powered assistants. No coding required.",
     type: "website",
   },
   icons: {

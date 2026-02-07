@@ -7,7 +7,7 @@ import { useState } from "react";
 
 const features = [
   "Live Build Viewing",
-  "Devin AI Powered", 
+  "AI Powered", 
   "Deploy Anywhere",
   "1 Month Included",
 ];
@@ -38,7 +38,7 @@ const moreStats = [
 ];
 
 const trustBadges = [
-  { icon: Bot, label: "Devin AI Powered", desc: "World's best AI engineer" },
+  { icon: Bot, label: "AI Powered", desc: "Smart, capable agents" },
   { icon: Clock, label: "15-min Deploy", desc: "From idea to live agent" },
   { icon: TrendingDown, label: "60% Less Email", desc: "Automated responses" },
   { icon: Users, label: "500+ Founders", desc: "Already using Matt" },

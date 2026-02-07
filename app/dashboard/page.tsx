@@ -191,7 +191,7 @@ export default function DashboardPage() {
   const { agents, payments, stats } = data;
 
   return (
-    <div className="py-8 pt-20 sm:pt-24">
+    <div className="py-8 pt-20 sm:pt-24 pb-24">
       <div className="max-w-7xl mx-auto px-6 sm:px-8">
         {/* Welcome - BIGGER */}
         <motion.div 

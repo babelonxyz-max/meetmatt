@@ -14,8 +14,9 @@ export interface AIOrbProps {
 type ReactionType = "giggle" | "spin" | "bounce" | "wink" | "pulse" | "backflip" | null;
 
 // Easter egg states
-const EASTER_EGG_THRESHOLD = 15; // Mouse movements needed
-const EASTER_EGG_TIME_WINDOW = 2000; // Time window in ms
+const EASTER_EGG_THRESHOLD = 25; // Mouse movements needed (increased)
+const EASTER_EGG_TIME_WINDOW = 1500; // Time window in ms (shorter)
+const MIN_MOVEMENT_DISTANCE = 50; // Minimum pixels to count as movement
 
 export const AIOrb = memo(function AIOrb({ 
   isListening = false, 
@@ -40,6 +41,9 @@ export const AIOrb = memo(function AIOrb({
   const [angerLevel, setAngerLevel] = useState(0);
   const controls = useAnimation();
 
+  // Track mouse position history for easter egg
+  const mouseHistory = useRef<{x: number, y: number, time: number}[]>([]);
+  
   // Normal eye tracking
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -49,35 +53,72 @@ export const AIOrb = memo(function AIOrb({
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       
-      // Easter egg detection - rapid mouse movement over orb
       const now = Date.now();
-      const timeSinceLastMove = now - lastMouseMoveTime.current;
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
       
-      if (timeSinceLastMove < 100) {
-        mouseMoveCount.current++;
+      // Check if mouse is over the orb
+      const isOverOrb = mouseX >= rect.left && mouseX <= rect.right && 
+                        mouseY >= rect.top && mouseY <= rect.bottom;
+      
+      if (isOverOrb) {
+        // Add to history
+        mouseHistory.current.push({ x: mouseX, y: mouseY, time: now });
         
-        if (mouseMoveCount.current > 5 && mouseMoveCount.current < EASTER_EGG_THRESHOLD) {
-          setCrazyEyes(true);
-          setAngerLevel(Math.min(mouseMoveCount.current / EASTER_EGG_THRESHOLD, 1));
-        }
+        // Keep only last 500ms of history
+        mouseHistory.current = mouseHistory.current.filter(p => now - p.time < 500);
         
-        if (mouseMoveCount.current >= EASTER_EGG_THRESHOLD && !isSuperSaiyan) {
-          triggerSuperSaiyan();
+        // Calculate rapid movements (direction changes)
+        if (mouseHistory.current.length >= 3) {
+          let directionChanges = 0;
+          let totalDistance = 0;
+          
+          for (let i = 2; i < mouseHistory.current.length; i++) {
+            const p1 = mouseHistory.current[i - 2];
+            const p2 = mouseHistory.current[i - 1];
+            const p3 = mouseHistory.current[i];
+            
+            const d1x = p2.x - p1.x;
+            const d1y = p2.y - p1.y;
+            const d2x = p3.x - p2.x;
+            const d2y = p3.y - p2.y;
+            
+            // Check for direction change (dot product < 0 means > 90 degree turn)
+            const dotProduct = d1x * d2x + d1y * d2y;
+            if (dotProduct < 0) {
+              directionChanges++;
+            }
+            
+            totalDistance += Math.sqrt(d1x * d1x + d1y * d1y);
+          }
+          
+          // Trigger easter egg only on rapid back-and-forth
+          if (directionChanges >= 3 && totalDistance > 200) {
+            const progress = Math.min(directionChanges / 5, 1);
+            setCrazyEyes(true);
+            setAngerLevel(progress);
+            
+            if (directionChanges >= 5 && !isSuperSaiyan) {
+              triggerSuperSaiyan();
+              mouseHistory.current = [];
+            }
+          } else if (mouseHistory.current.length > 10) {
+            // Reset if not enough rapid movement
+            mouseHistory.current = [];
+            setCrazyEyes(false);
+            setAngerLevel(0);
+          }
         }
       } else {
-        // Reset if pause too long
-        if (timeSinceLastMove > EASTER_EGG_TIME_WINDOW) {
-          mouseMoveCount.current = 0;
-          setCrazyEyes(false);
-          setAngerLevel(0);
-        }
+        // Mouse left orb - reset
+        mouseHistory.current = [];
+        setCrazyEyes(false);
+        setAngerLevel(0);
       }
       
-      lastMouseMoveTime.current = now;
-      
       // Normal eye movement
-      const offsetX = Math.max(-8, Math.min(8, (e.clientX - centerX) / 12));
-      const offsetY = Math.max(-6, Math.min(6, (e.clientY - centerY) / 12));
+      const offsetX = Math.max(-8, Math.min(8, (mouseX - centerX) / 12));
+      const offsetY = Math.max(-6, Math.min(6, (mouseY - centerY) / 12));
       setEyeOffset({ x: offsetX, y: offsetY });
     };
 

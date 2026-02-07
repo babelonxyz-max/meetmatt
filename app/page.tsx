@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles, Zap, Bot, Rocket } from "lucide-react";
+import { ArrowRight, Sparkles, Rocket, Bot, Zap } from "lucide-react";
 import { PaymentModal } from "./components/PaymentModal";
 import { AIOrb, type AIOrbProps } from "./components/AIOrb";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig, getPendingConfig } from "@/lib/session";
@@ -574,7 +574,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Bottom Controls - Compact */}
+        {/* Bottom Controls - Compact with visible Start button */}
         <div className="flex-none px-6 pb-4 pt-2">
           {step === "intro" && messages.length === 0 ? (
             <motion.div 
@@ -582,37 +582,37 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               className="max-w-md mx-auto"
             >
-              {/* Redesigned Welcome Card - More playful */}
+              {/* Redesigned Welcome Card - More playful and visible */}
               <div className="text-center">
                 {/* Fun headline */}
-                <div className="mb-3">
-                  <h1 className="text-2xl sm:text-3xl font-bold mb-1 flex items-center justify-center gap-2">
+                <div className="mb-4">
+                  <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center justify-center gap-2">
                     <Rocket className="w-7 h-7 text-[var(--accent)]" />
                     Meet Matt
                   </h1>
                   <p className="text-[var(--muted)] text-base">
-                    Your AI agent builder. Deploy in 15 min.
+                    Deploy your AI agent in 15 minutes
                   </p>
                 </div>
 
-                {/* Playful feature tags */}
+                {/* Playful feature tags - generic, no technical terms */}
                 <div className="flex flex-wrap justify-center gap-2 mb-4">
                   <span className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm flex items-center gap-1.5">
                     <Bot className="w-4 h-4 text-[var(--accent)]" />
-                    Telegram bots
+                    AI Assistant
                   </span>
                   <span className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm flex items-center gap-1.5">
                     <Zap className="w-4 h-4 text-amber-400" />
-                    Devin AI powered
+                    15-min Setup
                   </span>
                   <span className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-purple-400" />
-                    Kimi K2.5
+                    24/7 Active
                   </span>
                 </div>
 
                 {/* Simple steps */}
-                <div className="flex items-center justify-center gap-2 text-sm text-[var(--muted)] mb-4">
+                <div className="flex items-center justify-center gap-2 text-sm text-[var(--muted)] mb-5">
                   <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">1</span>
                   <span>Name</span>
                   <span className="text-[var(--border)]">→</span>
@@ -623,14 +623,17 @@ export default function Home() {
                   <span>Deploy</span>
                 </div>
 
-                <button
+                {/* Big visible Start button */}
+                <motion.button
                   onClick={() => handleOptionClick("Start creating")}
-                  className="w-full py-3.5 bg-[var(--accent)] text-white rounded-xl font-bold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-base"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2 text-lg shadow-lg shadow-[var(--accent)]/20"
                 >
                   <Sparkles className="w-5 h-5" />
                   Start Creating
                   <ArrowRight className="w-5 h-5" />
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           ) : step === "name" || step === "awaiting_verification" ? (
