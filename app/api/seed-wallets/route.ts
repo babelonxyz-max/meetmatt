@@ -3,57 +3,59 @@ import { prisma } from "@/lib/prisma";
 import { ethers } from "ethers";
 import crypto from "crypto";
 
-const ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY || "";
-
-function encryptPrivateKey(privateKey: string): string {
-  const key = ENCRYPTION_KEY.slice(0, 32);
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv("aes-256-gcm", Buffer.from(key), iv);
-  let encrypted = cipher.update(privateKey, "utf8", "hex");
-  encrypted += cipher.final("hex");
-  const authTag = cipher.getAuthTag();
-  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
-}
-
 export async function POST() {
   try {
-    // Check current count
-    const beforeCount = await prisma.walletPool.count();
+    // Check database URL
+    const dbUrl = process.env.DATABASE_URL || "not set";
+    const dbUrlMasked = dbUrl.replace(/\/\/[^:]+:[^@]+@/, "//***:***@");
     
-    const wallets = [];
-    for (let i = 1; i <= 5; i++) {
-      const wallet = ethers.Wallet.createRandom();
-      const encryptedKey = encryptPrivateKey(wallet.privateKey);
-      
-      try {
-        await prisma.walletPool.create({
-          data: {
-            id: `wallet_${Date.now()}_${i}`,
-            address: wallet.address,
-            encryptedPrivateKey: encryptedKey,
-            status: "available",
-            pmApproved: false,
-            hyperBalance: "0",
-          },
-        });
-        wallets.push({ id: i, address: wallet.address, status: "created" });
-      } catch (err: any) {
-        wallets.push({ id: i, address: wallet.address, error: err.message });
-      }
+    // Test connection
+    let connectionTest = "not tested";
+    try {
+      await prisma.$connect();
+      const result = await prisma.$queryRaw`SELECT 1 as test`;
+      connectionTest = "success: " + JSON.stringify(result);
+    } catch (e: any) {
+      connectionTest = "failed: " + e.message;
     }
     
-    // Check count after
-    const afterCount = await prisma.walletPool.count();
+    // Check if we can write
+    let writeTest = "not tested";
+    try {
+      const wallet = ethers.Wallet.createRandom();
+      const encryptedKey = "test:" + crypto.randomBytes(32).toString("hex");
+      
+      const created = await prisma.walletPool.create({
+        data: {
+          id: `test_${Date.now()}`,
+          address: wallet.address,
+          encryptedPrivateKey: encryptedKey,
+          status: "available",
+          pmApproved: false,
+          hyperBalance: "0",
+        },
+      });
+      
+      writeTest = "success: created " + created.id;
+      
+      // Verify it was written
+      const verify = await prisma.walletPool.findUnique({
+        where: { id: created.id }
+      });
+      
+      writeTest += verify ? " (verified)" : " (NOT FOUND!)";
+      
+    } catch (e: any) {
+      writeTest = "failed: " + e.message;
+    }
     
     return NextResponse.json({
-      success: true,
-      beforeCount,
-      afterCount,
-      wallets,
+      dbUrl: dbUrlMasked,
+      connectionTest,
+      writeTest,
     });
   } catch (error: any) {
     return NextResponse.json({ 
-      success: false,
       error: error.message 
     }, { status: 500 });
   }
