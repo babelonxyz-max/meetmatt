@@ -1,31 +1,17 @@
+// Temporary: Forward to NowPayments
 import { NextRequest, NextResponse } from "next/server";
 
-const PM_WALLET = process.env.HYPEREVM_MASTER_WALLET || "";
-const AMOUNT = 135;
-
 export async function POST(req: NextRequest) {
-  const { sessionId } = await req.json();
-  if (!sessionId) return NextResponse.json({ error: "Session ID required" }, { status: 400 });
-  if (!PM_WALLET) return NextResponse.json({ error: "PM wallet not configured" }, { status: 500 });
-  
+  // Just return PM wallet for manual payment
   return NextResponse.json({
-    address: PM_WALLET,
-    amount: AMOUNT.toString(),
+    address: process.env.HYPEREVM_MASTER_WALLET || "0xNOT_CONFIGURED",
+    amount: "135",
     token: "USDH",
     network: "HyperEVM",
-    discount: "10%",
-    sessionId,
+    note: "Send USDH to this address",
   });
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const sessionId = searchParams.get("sessionId");
-  if (!sessionId) return NextResponse.json({ error: "Session ID required" }, { status: 400 });
-  
-  return NextResponse.json({
-    status: "confirmed",
-    address: PM_WALLET,
-    amount: AMOUNT,
-  });
+export async function GET() {
+  return NextResponse.json({ status: "ok" });
 }
