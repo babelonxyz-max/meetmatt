@@ -21,18 +21,9 @@ export const PRICES = {
 };
 
 // Supported currencies with their details
+// SIMPLIFIED: Only accepting USDH for payments
 export const SUPPORTED_CURRENCIES = {
-  // USDT
-  'USDT-BSC': { name: 'USDT', chain: 'BSC', logo: '🔶', type: 'BEP20' },
-  'USDT-SOL': { name: 'USDT', chain: 'Solana', logo: '💜', type: 'SPL' },
-  'USDT-TRC20': { name: 'USDT', chain: 'TRON', logo: '🔴', type: 'TRC20' },
-  'USDT-HYPE': { name: 'USDT', chain: 'HyperEVM', logo: '⚡', type: 'ERC20' },
-  // USDC
-  'USDC-BASE': { name: 'USDC', chain: 'Base', logo: '🔵', type: 'ERC20' },
-  'USDC-SOL': { name: 'USDC', chain: 'Solana', logo: '💜', type: 'SPL' },
-  'USDC-HYPE': { name: 'USDC', chain: 'HyperEVM', logo: '⚡', type: 'ERC20' },
-  'USDC-ARB': { name: 'USDC', chain: 'Arbitrum', logo: '🔷', type: 'ERC20' },
-  // USDH (HyperEVM native stablecoin)
+  // USDH (HyperEVM native stablecoin) - PRIMARY
   'USDH-HYPE': { name: 'USDH', chain: 'HyperEVM', logo: '🟣', type: 'ERC20' },
 };
 

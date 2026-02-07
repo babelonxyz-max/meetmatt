@@ -42,8 +42,8 @@ interface CryptoOption {
   discount?: string;
 }
 
+// SIMPLIFIED: Only USDH accepted
 const ALL_CRYPTO_OPTIONS: CryptoOption[] = [
-  ...SUPPORTED_CRYPTO.slice(0, 6).map(c => ({ ...c })),
   {
     code: "usdh",
     name: "USDH",
@@ -54,7 +54,7 @@ const ALL_CRYPTO_OPTIONS: CryptoOption[] = [
 ];
 
 export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: PaymentModalProps) {
-  const [selectedCurrency, setSelectedCurrency] = useState("usdt");
+  const [selectedCurrency, setSelectedCurrency] = useState("usdh");
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState<"selecting" | "creating" | "waiting" | "confirming" | "confirmed" | "error">("selecting");
   const [payment, setPayment] = useState<PaymentData | null>(null);
