@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateWalletPool, getWalletPoolStats, recoverStuckFunds } from "@/lib/walletPool";
+import { generateWalletPool, getWalletPoolStats } from "@/lib/walletPool";
 
 const ADMIN_TOKEN = process.env.ADMIN_AUTH_TOKEN!;
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       generated: addresses.length,
-      addresses: addresses.slice(0, 10), // Only show first 10 for security
+      addresses: addresses.slice(0, 10),
       totalAvailable: addresses.length,
     });
   } catch (error: any) {
@@ -60,45 +60,6 @@ export async function GET(request: NextRequest) {
     console.error("Failed to get wallet pool stats:", error);
     return NextResponse.json(
       { error: "Failed to get stats", details: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-// PATCH /api/admin/wallet-pool - Recover stuck funds
-export async function PATCH(request: NextRequest) {
-  if (!verifyAuth(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const body = await request.json();
-    const { walletId, toAddress } = body;
-
-    if (!walletId) {
-      return NextResponse.json(
-        { error: "walletId required" },
-        { status: 400 }
-      );
-    }
-
-    const result = await recoverStuckFunds(walletId, toAddress);
-
-    if (result.success) {
-      return NextResponse.json({
-        success: true,
-        txHash: result.txHash,
-      });
-    } else {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 400 }
-      );
-    }
-  } catch (error: any) {
-    console.error("Recovery failed:", error);
-    return NextResponse.json(
-      { error: "Recovery failed", details: error.message },
       { status: 500 }
     );
   }
