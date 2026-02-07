@@ -19,6 +19,7 @@ import {
   playTyping 
 } from "@/lib/audio";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 interface Message {
   id: string;
@@ -148,6 +149,7 @@ export default function Home() {
   const [showPayment, setShowPayment] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const { data: session, status } = useSession();
 
   const enableAudio = useCallback(async () => {
     if (!audioEnabled) {
@@ -289,6 +291,13 @@ export default function Home() {
     if (action === "Deploy my agent!") {
       playOptionSelected();
       savePendingConfig({ ...config, createdAt: Date.now() });
+      
+      // Check if user is logged in
+      if (!session?.user) {
+        addMessage("assistant", "Please sign in to deploy your agent. [Sign in](/auth/signin)", ["Sign in"]);
+        return;
+      }
+      
       setShowPayment(true);
     }
   };
