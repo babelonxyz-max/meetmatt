@@ -8,7 +8,6 @@ import { AIOrb, type AIOrbProps } from "./components/AIOrb";
 import { getOrCreateSessionId, savePendingConfig, clearPendingConfig, getPendingConfig } from "@/lib/session";
 import { initAudio, playMessageSent, playMessageReceived, playOptionSelected, playSuccess } from "@/lib/audio";
 import { usePrivy } from "@privy-io/react-auth";
-import { track, trackImmediate, createInputTracker } from "@/lib/tracking";
 
 interface Message {
   id: string;
@@ -107,7 +106,6 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activationPollRef = useRef<NodeJS.Timeout | null>(null);
-  const nameTrackerRef = useRef(createInputTracker("agent_name", 1500));
 
   const getWizardState = (): AIOrbProps["wizardState"] => {
     if (step === "intro") return "idle";
@@ -231,7 +229,6 @@ export default function Home() {
   const startCreating = async () => {
     await enableAudio();
     playOptionSelected();
-    trackImmediate("flow_started", { step: "name" });
     setStep("name");
     setTimeout(() => {
       simulateTyping("What should be the name of your agent?");
@@ -249,15 +246,6 @@ export default function Home() {
     await enableAudio();
     playMessageSent();
     const name = input.trim();
-    
-    // Track name submission
-    trackImmediate("agent_name_submitted", {
-      name: name.slice(0, 100),
-      nameLength: name.length,
-      authenticated,
-      userId: user?.id,
-    });
-    
     setConfig((prev) => ({ ...prev, agentName: name }));
     addMessage("user", name);
     setInput("");
@@ -283,7 +271,6 @@ export default function Home() {
     await enableAudio();
     playOptionSelected();
     const useCaseId = USE_CASE_OPTIONS.find((o) => option.includes(o.label))?.id || "";
-    trackImmediate("use_case_selected", { useCase: useCaseId });
     setConfig((prev) => ({ ...prev, useCase: useCaseId }));
     addMessage("user", option.replace(/^\S+\s/, ""));
     setStep("scope");
@@ -335,13 +322,8 @@ export default function Home() {
     setConfig((prev) => ({ ...prev, contactMethod: contactId }));
     addMessage("user", "Telegram");
     setStep("confirm");
-    
-    // Check if this is the special user
-    const SPECIAL_USER_ID = "cmlbr0nx403wzl40d6s7p3du6";
-    const isSpecialUser = user?.id === SPECIAL_USER_ID;
-    
     await simulateTyping(
-      `Ready to deploy **${config.agentName}**! 🚀\n\nUse case: ${USE_CASE_OPTIONS.find((u) => u.id === config.useCase)?.label}\nScope: ${config.scope}${selectedScopes.length > 0 ? `, ${selectedScopes.join(", ")}` : ""}\nContact: Telegram${isSpecialUser ? "\n\n✅ Payment already verified!" : ""}`,
+      `Ready to deploy **${config.agentName}**! 🚀\n\nUse case: ${USE_CASE_OPTIONS.find((u) => u.id === config.useCase)?.label}\nScope: ${config.scope}${selectedScopes.length > 0 ? `, ${selectedScopes.join(", ")}` : ""}\nContact: Telegram`,
       ["Proceed to payment"]
     );
   };
@@ -350,69 +332,13 @@ export default function Home() {
     await enableAudio();
     if (action === "Proceed to payment") {
       playOptionSelected();
-      
-      // Check if this is the special user who already paid
-      const SPECIAL_USER_ID = "cmlbr0nx403wzl40d6s7p3du6";
-      if (user?.id === SPECIAL_USER_ID) {
-        // Skip payment and deploy directly
-        await handleDirectDeploy();
-        return;
-      }
-      
-      trackImmediate("payment_started", { 
-        agentName: config.agentName,
-        useCase: config.useCase,
-      });
       savePendingConfig({ ...config, createdAt: Date.now() });
       setShowPayment(true);
-    }
-  };
-  
-  const handleDirectDeploy = async () => {
-    setIsDeploying(true);
-    setStep("deploying");
-    addMessage("assistant", "✅ Payment verified! Initializing deployment...", []);
-    
-    try {
-      const response = await fetch("/api/deploy-and-notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          privyId: user?.id,
-          agentName: config.agentName,
-          useCase: config.useCase,
-          scope: config.scope,
-          contactMethod: config.contactMethod,
-          sessionId,
-        }),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Deployment failed");
-      }
-      
-      const data = await response.json();
-      setCurrentAgent(data.agent);
-      clearPendingConfig();
-      setIsDeploying(false);
-      setStep("activating");
-      addMessage("assistant", `⏳ ${data.notification?.message || "Your agent is being activated..."}`, []);
-      
-    } catch (error: any) {
-      setIsDeploying(false);
-      setStep("confirm");
-      addMessage("assistant", `❌ Error: ${error.message}. Please try again.`, ["Retry deployment"]);
     }
   };
 
   const handlePaymentSuccess = async () => {
     playSuccess();
-    trackImmediate("payment_completed", { 
-      agentName: config.agentName,
-      useCase: config.useCase,
-      userId: user?.id,
-    });
     setShowPayment(false);
     setIsDeploying(true);
     setStep("deploying");
@@ -717,14 +643,7 @@ export default function Home() {
                   ref={inputRef}
                   type="text"
                   value={input}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setInput(value);
-                    // Track name input as user types (only during name step)
-                    if (step === "name") {
-                      nameTrackerRef.current(value);
-                    }
-                  }}
+                  onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={step === "awaiting_verification" ? "Enter auth code from bot..." : "Type your agent's name..."}
                   className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--accent)]"

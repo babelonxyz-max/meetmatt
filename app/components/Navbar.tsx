@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, User, ChevronDown, LogOut } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useRef, useEffect } from "react";
 
@@ -56,7 +55,6 @@ export function Navbar() {
         <Link href="/pricing" className="text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
           Pricing
         </Link>
-        <ThemeToggle />
         {authenticated ? (
           <div className="relative" ref={dropdownRef}>
             <button

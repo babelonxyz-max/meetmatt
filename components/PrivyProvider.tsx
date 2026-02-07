@@ -1,7 +1,6 @@
 "use client";
 
 import { PrivyProvider as BasePrivyProvider } from "@privy-io/react-auth";
-import { hyperLiquid } from "@/lib/chains";
 import { useEffect, useState } from "react";
 
 export default function PrivyProvider({
@@ -49,8 +48,6 @@ export default function PrivyProvider({
             createOnLogin: "users-without-wallets",
           },
         },
-        defaultChain: hyperLiquid,
-        supportedChains: [hyperLiquid],
       }}
     >
       {children}
