@@ -25,6 +25,7 @@ model Agent {
   slug               String    @unique
   features           String[]
   userId             String?   @map("user_id")
+  user               User?     @relation(fields: [userId], references: [id])
   subscriptionStatus String    @default("trial") @map("subscription_status")
   subscriptionType   String    @default("monthly") @map("subscription_type")
   currentPeriodStart DateTime? @map("current_period_start")

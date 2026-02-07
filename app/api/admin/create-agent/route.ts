@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: agentName,
         purpose: useCase || "Custom agent",
-        scope: scope || "General purpose",
+        description: scope || "General purpose",
         tier: "pro",
         userId: userId,
         status: "pending",
