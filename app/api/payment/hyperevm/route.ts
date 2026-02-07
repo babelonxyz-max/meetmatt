@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initUSDHPayment, pollForPayment, getPaymentStatus } from "@/lib/hyperevm";
 import { getWalletPoolStats } from "@/lib/walletPool";
+import { Pool } from "pg";
 
 // POST /api/payment/hyperevm/create
 export async function POST(req: NextRequest) {
@@ -12,18 +13,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Session ID required" }, { status: 400 });
     }
 
+    // Debug: Direct query
+    const pool = new Pool({ 
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+    const directResult = await pool.query("SELECT COUNT(*) as c FROM wallet_pool WHERE status = 'available'");
+    const directCount = parseInt(directResult.rows[0].c);
+    await pool.end();
+    
     // Debug: Check wallet pool stats first
     const stats = await getWalletPoolStats();
-    console.log("[HyperEVM] Pool stats:", stats);
-    
-    // Check required env vars
-    const envCheck = {
-      hasWalletEncryptionKey: !!process.env.WALLET_ENCRYPTION_KEY,
-      hasMasterWallet: !!process.env.HYPEREVM_MASTER_WALLET,
-      hasPMWalletKey: !!process.env.PM_WALLET_KEY,
-      encryptionKeyLength: process.env.WALLET_ENCRYPTION_KEY?.length || 0,
-    };
-    console.log("[HyperEVM] Env check:", envCheck);
+    console.log("[HyperEVM] Pool stats:", stats, "Direct query:", directCount);
 
     // Link to user if provided
     let linkedUserId = userId;
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (!payment) {
       return NextResponse.json({ 
         error: "No wallets available in pool. Contact admin.",
-        debug: { stats, env: envCheck }
+        debug: { stats, directCount, env: { hasWalletEncryptionKey: !!process.env.WALLET_ENCRYPTION_KEY } }
       }, { status: 503 });
     }
 
