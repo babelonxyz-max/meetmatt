@@ -6,5 +6,6 @@
   "framework": "nextjs",
   "github": {
     "silent": true
-  }
+  },
+  "alias": ["meetmatt.xyz"]
 }
