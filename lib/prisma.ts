@@ -1,6 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { Pool } from "@neondatabase/serverless";
-import { PrismaNeon } from "@prisma/adapter-neon";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -62,18 +60,14 @@ function getPrismaClient(): PrismaClient | typeof mockDb {
     }
 
     try {
-      // Use Neon adapter for serverless compatibility
-      const pool = new Pool({ connectionString });
-      const adapter = new PrismaNeon(pool);
-      
+      // Standard Prisma client
       globalForPrisma.prisma = new PrismaClient({
-        adapter,
         log: process.env.NODE_ENV === "development" 
           ? ["query", "error", "warn"] 
           : ["error"],
       });
       
-      console.log("[Prisma] Client initialized with Neon adapter");
+      console.log("[Prisma] Client initialized");
     } catch (error) {
       console.error("[Prisma] Failed to initialize:", error);
       return mockDb as any;
