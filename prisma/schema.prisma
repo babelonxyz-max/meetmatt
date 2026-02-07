@@ -88,38 +88,24 @@ model WalletPool {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  privyId       String    @unique @map("privy_id")
-  email         String?
-  walletAddress String?   @map("wallet_address")
-  name          String?
-  avatar        String?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  lastLoginAt   DateTime? @map("last_login_at")
+  id               String    @id @default(cuid())
+  privyId          String    @unique @map("privy_id")
+  email            String?
+  walletAddress    String?   @map("wallet_address")
+  name             String?
+  avatar           String?
+  stripeCustomerId String?   @map("stripe_customer_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  lastLoginAt      DateTime? @map("last_login_at")
 
   // Relations
   agents Agent[]
-  events AnalyticsEvent[]
 
   @@index([email])
   @@index([walletAddress])
+  @@index([stripeCustomerId])
   @@map("users")
 }
 
-model AnalyticsEvent {
-  id          String    @id @default(cuid())
-  event       String
-  properties  Json      @default("{}")
-  sessionId   String    @map("session_id")
-  userId      String?   @map("user_id")
-  user        User?     @relation(fields: [userId], references: [id])
-  timestamp   DateTime  @default(now())
-  createdAt   DateTime  @default(now()) @map("created_at")
 
-  @@index([event])
-  @@index([sessionId])
-  @@index([userId])
-  @@index([timestamp])
-  @@map("analytics_events")
-}

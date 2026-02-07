@@ -1,688 +1,153 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles, Rocket, Bot, Zap } from "lucide-react";
-import { PaymentModal } from "./components/PaymentModal";
-import { AIOrb, type AIOrbProps } from "./components/AIOrb";
-import { getOrCreateSessionId, savePendingConfig, clearPendingConfig, getPendingConfig } from "@/lib/session";
-import { initAudio, playMessageSent, playMessageReceived, playOptionSelected, playSuccess } from "@/lib/audio";
 import { usePrivy } from "@privy-io/react-auth";
+import { StepName } from "./components/wizard/StepName";
+import { StepPersonality } from "./components/wizard/StepPersonality";
+import { StepDemo } from "./components/wizard/StepDemo";
+import { StepPayment } from "./components/wizard/StepPayment";
+import { StepDeploy } from "./components/wizard/StepDeploy";
+import { AIOrb } from "./components/AIOrb";
 
-interface Message {
-  id: string;
-  role: "assistant" | "user";
-  content: string;
-  options?: string[];
-}
-
-type Step = "intro" | "name" | "login" | "usecase" | "scope" | "contact" | "confirm" | "deploying" | "activating" | "awaiting_verification" | "success";
-
-interface SetupConfig {
-  agentName: string;
-  useCase: string;
-  scope: string;
-  contactMethod: string;
-}
-
-interface AgentData {
-  id: string;
-  activationStatus: string;
-  botUsername?: string;
-  telegramLink?: string;
-  authCode?: string;
-}
-
-const USE_CASE_OPTIONS = [
-  { id: "assistant", label: "AI Assistant", icon: "🤖", desc: "Personal helper for daily tasks" },
-  { id: "coworker", label: "Coworker", icon: "👥", desc: "Team member for collaboration" },
-  { id: "employee", label: "Digital Employee", icon: "💼", desc: "Autonomous worker for your business" },
-];
-
-const SCOPE_OPTIONS: Record<string, { id: string; label: string; icon: string }[]> = {
-  assistant: [
-    { id: "scheduling", label: "Schedule management", icon: "📅" },
-    { id: "email", label: "Email handling", icon: "📧" },
-    { id: "research", label: "Research & summaries", icon: "🔍" },
-    { id: "writing", label: "Writing & editing", icon: "✍️" },
-    { id: "reminders", label: "Reminders & tasks", icon: "⏰" },
-  ],
-  coworker: [
-    { id: "brainstorm", label: "Brainstorming", icon: "💡" },
-    { id: "documents", label: "Document collaboration", icon: "📄" },
-    { id: "meetings", label: "Meeting notes", icon: "📝" },
-    { id: "planning", label: "Project planning", icon: "🎯" },
-    { id: "analysis", label: "Data analysis", icon: "📊" },
-  ],
-  employee: [
-    { id: "customers", label: "Customer support", icon: "🎧" },
-    { id: "leads", label: "Lead generation", icon: "🎯" },
-    { id: "content", label: "Content creation", icon: "📱" },
-    { id: "sales", label: "Sales outreach", icon: "💰" },
-    { id: "operations", label: "Operations", icon: "⚙️" },
-  ],
-};
-
-const CONTACT_OPTIONS = [
-  { id: "telegram", label: "Telegram", icon: "✈️", available: true },
-  { id: "whatsapp", label: "WhatsApp", icon: "💬", available: false },
-  { id: "slack", label: "Slack", icon: "💻", available: false },
-];
-
-// Fun responses when clicking Matt
-const ORB_CLICK_RESPONSES = [
-  "Hey! I'm here to help! 👋",
-  "Ready to create something amazing? ✨",
-  "Click me all you want, I don't mind! 😄",
-  "Your future AI agent awaits! 🤖",
-  "Let's build something cool together! 🚀",
-  "I'm listening... 👂",
-  "Matt at your service! 💪",
-  "Want to deploy an agent? Let's go! ⚡",
-];
+type Step = "name" | "personality" | "demo" | "payment" | "deploy";
+type DeployStatus = "deploying" | "completed" | "failed";
 
 export default function Home() {
-  const { authenticated, login, user, ready } = usePrivy();
-  const [sessionId] = useState<string>(() => getOrCreateSessionId());
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [config, setConfig] = useState<SetupConfig>({
-    agentName: "",
-    useCase: "",
-    scope: "",
-    contactMethod: "",
-  });
-  const [step, setStep] = useState<Step>("intro");
-  const [showPayment, setShowPayment] = useState(false);
-  const [isDeploying, setIsDeploying] = useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(false);
-  const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
-  const [currentAgent, setCurrentAgent] = useState<AgentData | null>(null);
-  const [awaitingAuthCode, setAwaitingAuthCode] = useState(false);
-  const [showContinue, setShowContinue] = useState(false);
-  const [orbMessage, setOrbMessage] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const activationPollRef = useRef<NodeJS.Timeout | null>(null);
+  const { login, authenticated, user } = usePrivy();
+  const [step, setStep] = useState<Step>("name");
+  const [agentName, setAgentName] = useState("");
+  const [personality, setPersonality] = useState("");
+  const [deployStatus, setDeployStatus] = useState<DeployStatus>("deploying");
+  const [deployProgress, setDeployProgress] = useState(0);
+  const [telegramLink, setTelegramLink] = useState("");
+  const [authCode, setAuthCode] = useState("");
 
-  const getWizardState = (): AIOrbProps["wizardState"] => {
-    if (step === "intro") return "idle";
-    if (step === "name" || step === "login") return "initializing";
-    if (step === "usecase" || step === "scope" || step === "contact") return "processing";
-    if (step === "deploying" || step === "activating") return "deploying";
-    if (step === "success") return "success";
-    return "idle";
+  const handleNameSubmit = (name: string) => {
+    setAgentName(name);
+    setStep("personality");
   };
 
-  const enableAudio = useCallback(async () => {
-    if (!audioEnabled) {
-      try {
-        await initAudio();
-        setAudioEnabled(true);
-      } catch (e) {
-        console.log("Audio init failed:", e);
-      }
-    }
-  }, [audioEnabled]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
-
-  useEffect(() => {
-    if (ready && authenticated && step === "login") {
-      const pending = getPendingConfig();
-      if (pending && pending.agentName) {
-        setConfig({
-          agentName: pending.agentName,
-          useCase: pending.useCase || "",
-          scope: pending.scope || "",
-          contactMethod: "",
-        });
-        setStep("usecase");
-        setMessages((prev) => [
-          ...prev,
-          { id: "logged-in", role: "assistant", content: `✅ Logged in! Welcome back.`, options: [] }
-        ]);
-        setTimeout(() => {
-          simulateTyping(
-            `What's the use case for ${pending.agentName}?`,
-            USE_CASE_OPTIONS.map((o) => `${o.icon} ${o.label}`)
-          );
-        }, 800);
-      }
-    }
-  }, [ready, authenticated, step]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if ((step === "name" || step === "awaiting_verification") && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 300);
-    }
-  }, [step]);
-
-  useEffect(() => {
-    if (step === "activating" && currentAgent?.id) {
-      activationPollRef.current = setInterval(async () => {
-        try {
-          const response = await fetch(`/api/agents?id=${currentAgent.id}`);
-          if (response.ok) {
-            const agent = await response.json();
-            if (agent.activationStatus === "awaiting_verification") {
-              setCurrentAgent(agent);
-              setStep("awaiting_verification");
-              addMessage("assistant", `🎉 Your bot **@${agent.botUsername}** is ready!\n\n👉 [Click here to open Telegram](${agent.telegramLink})\n\n**Please message the bot now.** It will give you an auth code. Paste that code here:`, []);
-              setAwaitingAuthCode(true);
-              if (activationPollRef.current) clearInterval(activationPollRef.current);
-            } else if (agent.activationStatus === "active") {
-              setCurrentAgent(agent);
-              setStep("success");
-              addMessage("assistant", `✅ **${config.agentName}** is now active and ready to help you!\n\nYou can chat with your bot anytime at **@${agent.botUsername}**`, ["Create another"]);
-              if (activationPollRef.current) clearInterval(activationPollRef.current);
-            } else if (agent.activationStatus === "failed") {
-              addMessage("assistant", "❌ Activation failed. Please contact support.", ["Try again"]);
-              if (activationPollRef.current) clearInterval(activationPollRef.current);
-            }
-          }
-        } catch (err) {
-          console.error("Poll error:", err);
-        }
-      }, 5000);
-    }
-    return () => {
-      if (activationPollRef.current) clearInterval(activationPollRef.current);
-    };
-  }, [step, currentAgent?.id]);
-
-  useEffect(() => {
-    if (orbMessage) {
-      const timer = setTimeout(() => setOrbMessage(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [orbMessage]);
-
-  const addMessage = (role: "assistant" | "user", content: string, options?: string[]) => {
-    setMessages((prev) => [...prev, { id: Date.now().toString(), role, content, options }]);
-    if (role === "assistant" && audioEnabled) playMessageReceived();
+  const handlePersonalitySelect = (p: string) => {
+    setPersonality(p);
+    setStep("demo");
   };
 
-  const simulateTyping = async (content: string, options?: string[]) => {
-    setIsTyping(true);
-    await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 300));
-    setIsTyping(false);
-    addMessage("assistant", content, options);
-  };
-
-  const handleOrbClick = useCallback(() => {
-    const randomResponse = ORB_CLICK_RESPONSES[Math.floor(Math.random() * ORB_CLICK_RESPONSES.length)];
-    setOrbMessage(randomResponse);
-  }, []);
-
-  const startCreating = async () => {
-    await enableAudio();
-    playOptionSelected();
-    setStep("name");
-    setTimeout(() => {
-      simulateTyping("What should be the name of your agent?");
-    }, 400);
-  };
-
-  const handleLogin = async () => {
-    await enableAudio();
-    playOptionSelected();
-    login();
-  };
-
-  const handleNameSubmit = async () => {
-    if (!input.trim()) return;
-    await enableAudio();
-    playMessageSent();
-    const name = input.trim();
-    setConfig((prev) => ({ ...prev, agentName: name }));
-    addMessage("user", name);
-    setInput("");
-    
+  const handleDemoComplete = () => {
     if (!authenticated) {
-      setStep("login");
-      await simulateTyping(
-        `Nice to meet **${name}**! To proceed with creating your agent, please log in.`,
-        ["Log in"]
-      );
-      savePendingConfig({ agentName: name, useCase: "", scope: "", contactMethod: "", createdAt: Date.now() });
+      login();
       return;
     }
+    setStep("payment");
+  };
+
+  const handlePayment = async (method: "card" | "crypto") => {
+    setStep("deploy");
     
-    setStep("usecase");
-    await simulateTyping(
-      `Nice to meet ${name}! What's the use case for ${name}?`,
-      USE_CASE_OPTIONS.map((o) => `${o.icon} ${o.label}`)
-    );
-  };
-
-  const handleUseCaseSelect = async (option: string) => {
-    await enableAudio();
-    playOptionSelected();
-    const useCaseId = USE_CASE_OPTIONS.find((o) => option.includes(o.label))?.id || "";
-    setConfig((prev) => ({ ...prev, useCase: useCaseId }));
-    addMessage("user", option.replace(/^\S+\s/, ""));
-    setStep("scope");
-    setSelectedScopes([]);
-    setShowContinue(false);
-    const scopeOptions = SCOPE_OPTIONS[useCaseId] || [];
-    await simulateTyping(
-      "What should your agent help with? Select all that apply:",
-      scopeOptions.map((o) => `${o.icon} ${o.label}`)
-    );
-    setTimeout(() => setShowContinue(true), 500);
-  };
-
-  const handleScopeToggle = async (option: string) => {
-    await enableAudio();
-    const scopeLabel = option.replace(/^\S+\s/, "");
-    
-    const newScopes = selectedScopes.includes(scopeLabel) 
-      ? selectedScopes.filter((s) => s !== scopeLabel) 
-      : [...selectedScopes, scopeLabel];
-    setSelectedScopes(newScopes);
-  };
-
-  const handleContinue = async () => {
-    if (selectedScopes.length === 0) return;
-    await enableAudio();
-    playOptionSelected();
-    const scopeString = selectedScopes.join(", ");
-    setConfig((prev) => ({ ...prev, scope: scopeString }));
-    setShowContinue(false);
-    addMessage("user", scopeString);
-    setSelectedScopes([]);
-    
-    setStep("contact");
-    await simulateTyping(
-      "How would you like to contact your agent?",
-      CONTACT_OPTIONS.map((o) => `${o.icon} ${o.label}${o.available ? "" : " (soon)"}`)
-    );
-  };
-
-  const handleContactSelect = async (option: string) => {
-    await enableAudio();
-    playOptionSelected();
-    const contactId = option.replace(/^\S+\s/, "").replace(" (soon)", "").toLowerCase();
-    if (contactId !== "telegram") {
-      await simulateTyping("This option will be available soon. Please select Telegram for now.");
-      return;
-    }
-    setConfig((prev) => ({ ...prev, contactMethod: contactId }));
-    addMessage("user", "Telegram");
-    setStep("confirm");
-    await simulateTyping(
-      `Ready to deploy **${config.agentName}**! 🚀\n\nUse case: ${USE_CASE_OPTIONS.find((u) => u.id === config.useCase)?.label}\nScope: ${config.scope}${selectedScopes.length > 0 ? `, ${selectedScopes.join(", ")}` : ""}\nContact: Telegram`,
-      ["Proceed to payment"]
-    );
-  };
-
-  const handleConfirm = async (action: string) => {
-    await enableAudio();
-    if (action === "Proceed to payment") {
-      playOptionSelected();
-      savePendingConfig({ ...config, createdAt: Date.now() });
-      setShowPayment(true);
-    }
-  };
-
-  const handlePaymentSuccess = async () => {
-    playSuccess();
-    setShowPayment(false);
-    setIsDeploying(true);
-    setStep("deploying");
-    addMessage("assistant", "💳 Payment confirmed! Initializing deployment...", []);
-
-    try {
-      const response = await fetch("/api/agents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...config, sessionId, userId: user?.id }),
+    // Simulate deployment progress
+    const interval = setInterval(() => {
+      setDeployProgress((p) => {
+        if (p >= 100) {
+          clearInterval(interval);
+          setDeployStatus("completed");
+          setTelegramLink(`https://t.me/${agentName.toLowerCase()}_bot`);
+          setAuthCode(Math.random().toString(36).substring(2, 8).toUpperCase());
+          return 100;
+        }
+        return p + 10;
       });
+    }, 500);
 
-      if (!response.ok) throw new Error("Deployment failed");
-
-      const agent = await response.json();
-      setCurrentAgent(agent);
-      clearPendingConfig();
-      setIsDeploying(false);
-      setStep("activating");
-      addMessage("assistant", "⏳ Payment received! Your agent is being activated. This may take a few minutes...", []);
-    } catch (error: any) {
-      setIsDeploying(false);
-      setStep("confirm");
-      addMessage("assistant", `Error: ${error.message}. Retry?`, ["Retry deployment"]);
-    }
+    // TODO: Real deployment via API
+    // const response = await fetch("/api/agents", { ... });
   };
-
-  const handleAuthCodeSubmit = async (code: string) => {
-    if (!currentAgent?.id) return;
-    
-    addMessage("user", code);
-    setInput("");
-    
-    try {
-      const response = await fetch("/api/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instanceId: currentAgent.id,
-          code: code,
-          telegramUserId: user?.id,
-        }),
-      });
-
-      if (response.ok) {
-        setAwaitingAuthCode(false);
-        setStep("success");
-        addMessage("assistant", `✅ **${config.agentName}** is now active and you're the admin!\n\nYou can chat with your bot anytime at **@${currentAgent.botUsername}**`, ["Create another"]);
-      } else {
-        addMessage("assistant", "❌ Invalid auth code. Please try again:", []);
-      }
-    } catch (err) {
-      addMessage("assistant", "❌ Error verifying code. Please try again:", []);
-    }
-  };
-
-  const handleSend = () => {
-    if (!input.trim()) return;
-    if (step === "name") handleNameSubmit();
-    else if (step === "awaiting_verification" && awaitingAuthCode) {
-      handleAuthCodeSubmit(input.trim());
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleOptionClick = async (option: string) => {
-    await enableAudio();
-    if (option === "Start creating") {
-      startCreating();
-    } else if (option === "Log in") {
-      handleLogin();
-    } else if (step === "usecase") {
-      handleUseCaseSelect(option);
-    } else if (step === "scope") {
-      handleScopeToggle(option);
-    } else if (step === "contact") {
-      handleContactSelect(option);
-    } else if (step === "confirm" || step === "success") {
-      if (option === "Create another") {
-        setStep("intro");
-        setConfig({ agentName: "", useCase: "", scope: "", contactMethod: "" });
-        setSelectedScopes([]);
-        setCurrentAgent(null);
-        setAwaitingAuthCode(false);
-        setMessages([]);
-      } else {
-        handleConfirm(option);
-      }
-    }
-  };
-
-  const canGoBack = step !== "intro" && step !== "name" && step !== "login" && step !== "confirm" && !isDeploying && step !== "success" && step !== "activating" && step !== "awaiting_verification";
-
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 top-16 sm:top-20 flex items-center justify-center">
-        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-[var(--muted)] font-mono text-lg">
-          Initializing...
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
-    <div className="fixed inset-0 top-16 sm:top-20 bottom-20 overflow-hidden flex flex-col">
-      {/* Main Content - No scroll */}
-      <main className="flex-1 flex flex-col min-h-0 relative">
-        {/* Back Button */}
-        {canGoBack && (
-          <button
-            onClick={() => {
-              if (step === "usecase") setStep("name");
-              else if (step === "scope") setStep("usecase");
-              else if (step === "contact") setStep("scope");
-              else setStep("intro");
-            }}
-            className="absolute top-4 left-4 z-40 px-4 py-2 text-base text-[var(--muted)] hover:text-[var(--foreground)] transition-colors bg-[var(--card)]/80 rounded-lg backdrop-blur-sm border border-[var(--border)] shadow-sm"
-          >
-            ← Back
-          </button>
-        )}
-
-        {/* Messages Section */}
-        <div className="flex-1 relative overflow-hidden">
-          <div className="absolute inset-0 overflow-y-auto scrollbar-hide px-6 pt-4 pb-24">
-            <div className="w-full max-w-2xl mx-auto space-y-4">
-              <AnimatePresence mode="popLayout">
-                {messages.map((msg, i) => (
-                  <motion.div
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ delay: i * 0.03, duration: 0.2 }}
-                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div 
-                      className={`
-                        max-w-[85%]
-                        ${msg.role === "user" 
-                          ? "bg-[var(--accent)] text-white rounded-2xl rounded-br-md" 
-                          : "bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] rounded-2xl rounded-bl-md"
-                        } 
-                        px-5 py-4 shadow-sm
-                      `}
-                    >
-                      <p 
-                        className="text-base leading-relaxed whitespace-pre-wrap" 
-                        dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} 
-                      />
-                      
-                      {msg.options && msg.options.length > 0 && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ staggerChildren: 0.05, delayChildren: 0.1 }}
-                          className="flex flex-wrap gap-2 mt-3"
-                        >
-                          {msg.options.map((opt, idx) => (
-                            <motion.button
-                              key={opt}
-                              initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              transition={{ delay: idx * 0.08, duration: 0.3, ease: "easeOut" }}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => handleOptionClick(opt)}
-                              className={`px-4 py-2 text-base font-medium rounded-full transition-colors ${
-                                step === "scope" && selectedScopes.includes(opt.replace(/^\S+\s/, ""))
-                                  ? "bg-[var(--accent)] text-white"
-                                  : "bg-white/10 hover:bg-white/20 border border-white/20"
-                              }`}
-                            >
-                              {opt}
-                            </motion.button>
-                          ))}
-                        </motion.div>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              
-              {isTyping && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                  <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl rounded-bl-md px-5 py-4">
-                    <div className="flex gap-1">
-                      <span className="w-2.5 h-2.5 bg-[var(--muted)] rounded-full animate-bounce" />
-                      <span className="w-2.5 h-2.5 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
-                      <span className="w-2.5 h-2.5 bg-[var(--muted)] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gray-950/80 backdrop-blur-md border-b border-gray-800">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600" />
+            <span className="font-bold text-xl">Matt</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href="/pricing" className="text-sm text-gray-400 hover:text-white">Pricing</a>
+            <a href="/dashboard" className="text-sm text-gray-400 hover:text-white">Dashboard</a>
           </div>
         </div>
+      </header>
 
-        {/* Orb Section with Click Message */}
-        <div className="flex-none flex flex-col items-center justify-center relative">
-          {/* Orb Click Message */}
-          <AnimatePresence>
-            {orbMessage && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                className="absolute -top-10 z-10"
-              >
-                <div className="px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm text-[var(--foreground)] shadow-lg whitespace-nowrap">
-                  {orbMessage}
-                </div>
-                <div className="flex justify-center">
-                  <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-[var(--border)]" />
-                </div>
-                <div className="flex justify-center -mt-[5px]">
-                  <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-[var(--card)]" />
-                </div>
+      {/* Progress Bar */}
+      <div className="fixed top-16 left-0 right-0 z-40">
+        <div className="h-1 bg-gray-800">
+          <motion.div
+            className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+            initial={{ width: "0%" }}
+            animate={{ width: `${["name", "personality", "demo", "payment", "deploy"].indexOf(step) * 25}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="pt-32 pb-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          {/* AI Orb (visual flair) */}
+          <div className="flex justify-center mb-8">
+            <div className="w-24 h-24">
+              <AIOrb wizardState={step === "deploy" ? "deploying" : step === "demo" ? "processing" : "idle"} />
+            </div>
+          </div>
+
+          {/* Step Content */}
+          <AnimatePresence mode="wait">
+            {step === "name" && (
+              <motion.div key="name" exit={{ opacity: 0, x: -20 }}>
+                <StepName onSubmit={handleNameSubmit} />
+              </motion.div>
+            )}
+
+            {step === "personality" && (
+              <motion.div key="personality" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepPersonality onSelect={handlePersonalitySelect} />
+              </motion.div>
+            )}
+
+            {step === "demo" && (
+              <motion.div key="demo" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepDemo 
+                  agentName={agentName} 
+                  personality={personality} 
+                  onContinue={handleDemoComplete} 
+                />
+              </motion.div>
+            )}
+
+            {step === "payment" && (
+              <motion.div key="payment" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepPayment 
+                  agentName={agentName}
+                  onPayWithCard={() => handlePayment("card")}
+                  onPayWithCrypto={() => handlePayment("crypto")}
+                />
+              </motion.div>
+            )}
+
+            {step === "deploy" && (
+              <motion.div key="deploy" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                <StepDeploy 
+                  agentName={agentName}
+                  status={deployStatus}
+                  progress={deployProgress}
+                  telegramLink={telegramLink}
+                  authCode={authCode}
+                />
               </motion.div>
             )}
           </AnimatePresence>
-
-          {/* The Orb */}
-          <div className="w-44 h-44 sm:w-52 sm:h-52" onClick={handleOrbClick}>
-            <AIOrb wizardState={getWizardState()} />
-          </div>
-        </div>
-
-        {/* Bottom Controls - Compact with visible Start button */}
-        <div className="flex-none px-6 pb-4 pt-2">
-          {step === "intro" && messages.length === 0 ? (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-md mx-auto"
-            >
-              {/* Redesigned Welcome Card - More playful and visible */}
-              <div className="text-center">
-                {/* Fun headline */}
-                <div className="mb-4">
-                  <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center justify-center gap-2">
-                    <Rocket className="w-7 h-7 text-[var(--accent)]" />
-                    Meet Matt
-                  </h1>
-                  <p className="text-[var(--muted)] text-base">
-                    Deploy your AI agent in 15 minutes
-                  </p>
-                </div>
-
-                {/* Playful feature tags - generic, no technical terms */}
-                <div className="flex flex-wrap justify-center gap-2 mb-4">
-                  <span className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm flex items-center gap-1.5">
-                    <Bot className="w-4 h-4 text-[var(--accent)]" />
-                    AI Assistant
-                  </span>
-                  <span className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm flex items-center gap-1.5">
-                    <Zap className="w-4 h-4 text-amber-400" />
-                    15-min Setup
-                  </span>
-                  <span className="px-3 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-purple-400" />
-                    24/7 Active
-                  </span>
-                </div>
-
-                {/* Simple steps */}
-                <div className="flex items-center justify-center gap-2 text-sm text-[var(--muted)] mb-5">
-                  <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">1</span>
-                  <span>Name</span>
-                  <span className="text-[var(--border)]">→</span>
-                  <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">2</span>
-                  <span>Configure</span>
-                  <span className="text-[var(--border)]">→</span>
-                  <span className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)] font-bold text-xs">3</span>
-                  <span>Deploy</span>
-                </div>
-
-                {/* Big visible Start button */}
-                <motion.button
-                  onClick={() => handleOptionClick("Start creating")}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2 text-lg shadow-lg shadow-[var(--accent)]/20"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  Start Creating
-                  <ArrowRight className="w-5 h-5" />
-                </motion.button>
-              </div>
-            </motion.div>
-          ) : step === "name" || step === "awaiting_verification" ? (
-            <div className="max-w-lg mx-auto">
-              <div className="flex gap-2">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={step === "awaiting_verification" ? "Enter auth code from bot..." : "Type your agent's name..."}
-                  className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-[var(--accent)]"
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim()}
-                  className="w-12 h-12 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all hover:scale-105 active:scale-95"
-                >
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          ) : step === "scope" && showContinue ? (
-            <div className="max-w-lg mx-auto">
-              <button
-                onClick={handleContinue}
-                disabled={selectedScopes.length === 0}
-                className="w-full py-3.5 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
-              >
-                <span>Continue</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              {selectedScopes.length === 0 && (
-                <p className="text-center text-sm text-[var(--muted)] mt-2">Select at least one capability</p>
-              )}
-            </div>
-          ) : null}
         </div>
       </main>
-
-      {/* Payment Modal */}
-      <PaymentModal
-        isOpen={showPayment}
-        onClose={() => setShowPayment(false)}
-        config={config}
-        sessionId={sessionId}
-        onSuccess={handlePaymentSuccess}
-      />
     </div>
   );
 }
