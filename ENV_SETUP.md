@@ -166,7 +166,41 @@ AFFILIATE_COOKIE_DAYS="30"
 
 ---
 
-## 7. Analytics (Optional)
+## 7. HyperEVM / USDH Payments (Self-Hosted)
+
+For accepting USDH payments on HyperEVM with auto-transfers:
+
+```env
+# HyperEVM RPC
+HYPEREVM_RPC_URL="https://rpc.hyperliquid.xyz/evm"
+
+# USDH Token Contract
+USDH_CONTRACT_ADDRESS="0x54e00a5988577cb0b0c9ab0cb6ef7f4b"
+
+# Master wallet (receives all USDH payments)
+HYPEREVM_MASTER_WALLET="0xYourMasterWalletAddress"
+
+# Master wallet private key (for gas funding & transfers)
+# NEVER expose this in frontend code!
+HYPEREVM_MASTER_KEY="0xYourMasterWalletPrivateKey"
+
+# Wallet encryption key (32+ chars)
+# Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+WALLET_ENCRYPTION_KEY="your-64-char-hex-key"
+
+# Admin API token for wallet pool management
+ADMIN_AUTH_TOKEN="your-random-token"
+```
+
+**Setup Steps:**
+1. Create a HyperEVM wallet (use MetaMask with HyperEVM network)
+2. Fund it with HYPE for gas
+3. Add the address and private key to env vars
+4. Generate burner wallets: `POST /api/admin/wallet-pool`
+
+---
+
+## 8. Analytics (Optional)
 
 ```env
 # Vercel Analytics (auto-enabled on Vercel)
