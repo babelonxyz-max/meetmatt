@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -39,6 +41,14 @@ const mockDb = {
     update: () => Promise.resolve({}),
     count: () => Promise.resolve(0),
   },
+  analyticsEvent: {
+    findMany: () => Promise.resolve([]),
+    findUnique: () => Promise.resolve(null),
+    create: (args: any) => Promise.resolve({ id: "analytics-" + Date.now(), ...args.data }),
+    update: () => Promise.resolve({}),
+    delete: () => Promise.resolve({}),
+    count: () => Promise.resolve(0),
+  },
   $connect: () => Promise.resolve(),
   $disconnect: () => Promise.resolve(),
   $transaction: (fn: any) => Promise.resolve(fn(mockDb)),
@@ -60,14 +70,19 @@ function getPrismaClient(): PrismaClient | typeof mockDb {
     }
 
     try {
-      // Standard Prisma client
+      // Use pg adapter for PostgreSQL
+      const pool = new Pool({ 
+        connectionString: process.env.POSTGRES_PRISMA_URL || connectionString 
+      });
+      const adapter = new PrismaPg(pool);
       globalForPrisma.prisma = new PrismaClient({
+        adapter,
         log: process.env.NODE_ENV === "development" 
           ? ["query", "error", "warn"] 
           : ["error"],
       });
       
-      console.log("[Prisma] Client initialized");
+      console.log("[Prisma] Client initialized with pg adapter");
     } catch (error) {
       console.error("[Prisma] Failed to initialize:", error);
       return mockDb as any;

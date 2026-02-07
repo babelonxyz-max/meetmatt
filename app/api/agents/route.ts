@@ -43,10 +43,32 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sessionId, agentName, useCase, scope, contactMethod, userId } = body;
+    const { sessionId, agentName, useCase, scope, contactMethod, userId: privyId } = body;
 
     if (!sessionId || !agentName || !useCase) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Look up or create the user from the Privy ID
+    let dbUserId: string | null = null;
+    if (privyId) {
+      let user = await prisma.user.findUnique({
+        where: { privyId },
+        select: { id: true },
+      });
+      
+      // Create user if they don't exist
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            privyId,
+            lastLoginAt: new Date(),
+          },
+          select: { id: true },
+        });
+      }
+      
+      dbUserId = user.id;
     }
 
     // Generate unique slug from agent name
@@ -63,7 +85,7 @@ export async function POST(req: NextRequest) {
         features: [JSON.stringify({ useCase, scope, contactMethod })],
         tier: "matt",
         status: "pending",
-        userId: userId || null,
+        userId: dbUserId,
         activationStatus: "activating",
       },
     });

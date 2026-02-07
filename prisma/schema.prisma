@@ -100,8 +100,26 @@ model User {
 
   // Relations
   agents Agent[]
+  events AnalyticsEvent[]
 
   @@index([email])
   @@index([walletAddress])
   @@map("users")
+}
+
+model AnalyticsEvent {
+  id          String    @id @default(cuid())
+  event       String
+  properties  Json      @default("{}")
+  sessionId   String    @map("session_id")
+  userId      String?   @map("user_id")
+  user        User?     @relation(fields: [userId], references: [id])
+  timestamp   DateTime  @default(now())
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([event])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("analytics_events")
 }
