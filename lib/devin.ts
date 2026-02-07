@@ -18,7 +18,7 @@ const DEVIN_API_URL = "https://api.devin.ai/v1";
 const DEVIN_API_KEY = process.env.DEVIN_API_KEY || "";
 
 // Feature flag: Use cost-effective template deployment instead of Devin per agent
-const USE_DEVIN_PER_AGENT = false; // Set to true only for complex custom builds
+const USE_DEVIN_PER_AGENT = true; // Set to true only for complex custom builds
 
 /**
  * Create agent using cost-effective method

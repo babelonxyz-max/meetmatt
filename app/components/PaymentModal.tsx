@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Copy, Check, Loader2, AlertCircle, Wallet, MessageCircle, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createPayment, getPaymentStatus, SUPPORTED_CRYPTO, createMockPayment } from "@/lib/nowpayments";
+import { SUPPORTED_CRYPTO } from "@/lib/nowpayments";
 import { playPaymentSuccess } from "@/lib/audio";
 
 interface PaymentData {
@@ -110,20 +110,15 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
           return;
         }
 
-        if (process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !process.env.NOWPAYMENTS_API_KEY) {
-          if (timeLeft < 3590) {
-            setStatus("confirming");
-            playPaymentSuccess();
-            setTimeout(() => {
-              setStatus("confirmed");
-              setTimeout(onSuccess, 1000);
-            }, 1500);
-          }
+        // Check NowPayments status via server API
+
+        const response = await fetch(`/api/payment/nowpayments?paymentId=${payment.id}`);
+        if (!response.ok) {
+          console.error("Failed to check payment status");
           return;
         }
-
-        const data = await getPaymentStatus(payment.id);
-        if (data.payment_status === "finished" || data.payment_status === "confirmed") {
+        const data = await response.json();
+        if (data.payment_status === "finished" || data.payment_status === "confirmed" || data.payment_status === "sending") {
           setStatus("confirmed");
           playPaymentSuccess();
           setTimeout(onSuccess, 1000);
@@ -147,11 +142,8 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
     try {
       if (selectedCurrency === "usdh") {
-        // Direct PM wallet - no API call needed
-        const PM_WALLET = process.env.NEXT_PUBLIC_HYPEREVM_MASTER_WALLET || "";
-        if (!PM_WALLET) {
-          throw new Error("USDH payment not configured");
-        }
+        // Direct PM wallet - hardcoded
+        const PM_WALLET = "0x2cc517dACE1e0076211356edf0447c79a432449D";
         setPayment({
           id: `usdh-${sessionId}`,
           address: PM_WALLET,
@@ -165,34 +157,33 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
         return;
       }
 
-      if (process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !process.env.NOWPAYMENTS_API_KEY) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        const mockPayment = createMockPayment(PLAN_PRICE, selectedCurrency);
-        setPayment({
-          id: mockPayment.payment_id,
-          address: mockPayment.pay_address,
-          amount: mockPayment.pay_amount,
-          currency: selectedCurrency,
-          status: "waiting",
-        });
-        setStatus("waiting");
-        return;
-      }
+      // Real NowPayments via server API
 
-      const response = await createPayment({
-        price_amount: PLAN_PRICE,
-        price_currency: "usd",
-        pay_currency: selectedCurrency,
-        order_id: `${sessionId}-${Date.now()}`,
-        order_description: `Deploy ${config.agentName}`,
+      // Use server-side API to avoid exposing API key
+      const response = await fetch("/api/payment/nowpayments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          price_amount: PLAN_PRICE,
+          price_currency: "usd",
+          pay_currency: selectedCurrency,
+          order_id: `${sessionId}-${Date.now()}`,
+          order_description: `Deploy ${config.agentName}`,
+        }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Payment creation failed");
+      }
+
+      const data = await response.json();
       setPayment({
-        id: response.payment_id,
-        address: response.pay_address,
-        amount: response.pay_amount,
-        currency: response.pay_currency,
-        status: response.payment_status,
+        id: data.payment_id,
+        address: data.pay_address,
+        amount: data.pay_amount,
+        currency: data.pay_currency,
+        status: data.payment_status,
       });
       setStatus("waiting");
     } catch (e: any) {
