@@ -63,7 +63,7 @@ export default function RootLayout({
           <AnimatedBackground />
           <div className="relative z-10">
             <Navbar />
-            <main className="min-h-screen pb-20">
+            <main className="min-h-screen pb-16">
               {children}
             </main>
             <Footer />

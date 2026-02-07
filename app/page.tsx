@@ -449,7 +449,7 @@ export default function Home() {
   }
 
   return (
-    <div className="fixed inset-0 top-16 sm:top-20 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 top-16 sm:top-20 bottom-20 overflow-hidden flex flex-col">
       {/* Main Content - No scroll */}
       <main className="flex-1 flex flex-col min-h-0 relative">
         {/* Back Button */}

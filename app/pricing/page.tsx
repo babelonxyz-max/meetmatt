@@ -87,7 +87,7 @@ export default function PricingPage() {
               >
                 Annual
                 <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded-full font-bold">
-                  -44%
+                  -$800
                 </span>
               </button>
             </div>
