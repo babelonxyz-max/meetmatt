@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { Pool } from "pg";
 import { ethers } from "ethers";
 import crypto from "crypto";
 
@@ -16,49 +16,63 @@ function encryptPrivateKey(privateKey: string): string {
 }
 
 export async function POST() {
+  const connectionString = process.env.DATABASE_URL;
+  
+  if (!connectionString) {
+    return NextResponse.json({ error: "DATABASE_URL not set" }, { status: 500 });
+  }
+  
+  const pool = new Pool({ 
+    connectionString,
+    ssl: { rejectUnauthorized: false }
+  });
+  
   try {
     // Count before
-    const before = await prisma.walletPool.count();
+    const beforeResult = await pool.query("SELECT COUNT(*) as c FROM wallet_pool");
+    const before = parseInt(beforeResult.rows[0].c);
     
-    // Create 5 wallets
+    // Create 5 wallets using raw SQL
     const created = [];
     for (let i = 1; i <= 5; i++) {
       const wallet = ethers.Wallet.createRandom();
       const encryptedKey = encryptPrivateKey(wallet.privateKey);
+      const id = `wallet_${Date.now()}_${i}`;
       
-      const w = await prisma.walletPool.create({
-        data: {
-          id: `wallet_${Date.now()}_${i}`,
-          address: wallet.address,
-          encryptedPrivateKey: encryptedKey,
-          status: "available",
-          pmApproved: false,
-          hyperBalance: "0",
-        },
-      });
+      await pool.query(
+        `INSERT INTO wallet_pool (id, address, encrypted_private_key, status, pm_approved, hyper_balance, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [id, wallet.address, encryptedKey, "available", false, "0"]
+      );
       
-      created.push(w.id);
+      created.push(id);
     }
     
-    // Count after  
-    const after = await prisma.walletPool.count();
+    // Count after
+    const afterResult = await pool.query("SELECT COUNT(*) as c FROM wallet_pool");
+    const after = parseInt(afterResult.rows[0].c);
     
-    // List all wallets
-    const all = await prisma.walletPool.findMany({
-      select: { id: true, address: true, status: true },
-      take: 10,
-    });
+    // List all
+    const allResult = await pool.query(
+      "SELECT id, address, status FROM wallet_pool ORDER BY created_at DESC LIMIT 10"
+    );
+    
+    await pool.end();
     
     return NextResponse.json({
       before,
       after,
       created,
-      all: all.map(w => ({ id: w.id, address: w.address.slice(0, 10) + "...", status: w.status })),
+      all: allResult.rows.map((w: any) => ({ 
+        id: w.id, 
+        address: w.address?.slice(0, 10) + "...", 
+        status: w.status 
+      })),
     });
   } catch (error: any) {
+    await pool.end();
     return NextResponse.json({ 
-      error: error.message,
-      stack: error.stack?.split("\n")[0],
+      error: error.message 
     }, { status: 500 });
   }
 }
