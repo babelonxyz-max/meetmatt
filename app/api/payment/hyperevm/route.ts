@@ -1,9 +1,50 @@
+// v2.0 - Complete rewrite with pg driver
 import { NextRequest, NextResponse } from "next/server";
-import { initUSDHPayment, pollForPayment, getPaymentStatus } from "@/lib/hyperevm";
-import { getWalletPoolStats } from "@/lib/walletPool";
 import { Pool } from "pg";
+import { ethers } from "ethers";
 
-// POST /api/payment/hyperevm/create
+const DISCOUNTED_AMOUNT = 135; // 10% discount
+
+async function getPoolStats() {
+  const pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+  try {
+    const result = await pool.query("SELECT COUNT(*) as c FROM wallet_pool WHERE status = 'available'");
+    return parseInt(result.rows[0].c);
+  } finally {
+    await pool.end();
+  }
+}
+
+async function assignWallet(sessionId: string) {
+  const pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+  try {
+    // Find available wallet
+    const findResult = await pool.query(
+      "SELECT id, address FROM wallet_pool WHERE status = 'available' ORDER BY created_at ASC LIMIT 1"
+    );
+    
+    if (findResult.rowCount === 0) return null;
+    
+    const wallet = findResult.rows[0];
+    
+    // Mark as assigned
+    await pool.query(
+      "UPDATE wallet_pool SET status = 'assigned', assigned_to_session = $1, assigned_at = NOW() WHERE id = $2",
+      [sessionId, wallet.id]
+    );
+    
+    return { id: wallet.id, address: wallet.address };
+  } finally {
+    await pool.end();
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -13,101 +54,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Session ID required" }, { status: 400 });
     }
 
-    // Debug: Direct query
-    const pool = new Pool({ 
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    });
-    const directResult = await pool.query("SELECT COUNT(*) as c FROM wallet_pool WHERE status = 'available'");
-    const directCount = parseInt(directResult.rows[0].c);
-    await pool.end();
+    // Check available wallets
+    const availableCount = await getPoolStats();
     
-    // Debug: Check wallet pool stats first
-    const stats = await getWalletPoolStats();
-    console.log("[HyperEVM] Pool stats:", stats, "Direct query:", directCount);
-
-    // Link to user if provided
-    let linkedUserId = userId;
-    if (!linkedUserId) {
-      const cookieUserId = req.cookies.get("userId")?.value;
-      linkedUserId = cookieUserId;
-    }
-
-    // Initialize payment with wallet from secure pool
-    const payment = await initUSDHPayment(sessionId, linkedUserId);
-    
-    if (!payment) {
+    if (availableCount === 0) {
       return NextResponse.json({ 
-        error: "No wallets available in pool. Contact admin.",
-        debug: { stats, directCount, env: { hasWalletEncryptionKey: !!process.env.WALLET_ENCRYPTION_KEY } }
+        error: "No wallets available in pool",
+        debug: { availableCount, hasDbUrl: !!process.env.DATABASE_URL }
       }, { status: 503 });
     }
 
-    // Start polling in background (don't await)
-    pollForPayment(sessionId, (status) => {
-      console.log(`[HyperEVM Payment] Status update for ${sessionId}: ${status}`);
-    }).then((success) => {
-      if (success) {
-        console.log(`[HyperEVM Payment] Completed for ${sessionId}`);
-      } else {
-        console.log(`[HyperEVM Payment] Timeout for ${sessionId}`);
-      }
-    });
+    // Assign wallet
+    const wallet = await assignWallet(sessionId);
+    
+    if (!wallet) {
+      return NextResponse.json({ error: "Failed to assign wallet" }, { status: 503 });
+    }
 
     return NextResponse.json({
-      address: payment.walletAddress,
-      amount: payment.amount.toString(),
+      address: wallet.address,
+      amount: DISCOUNTED_AMOUNT.toString(),
       token: "USDH",
       network: "HyperEVM",
       discount: "10%",
     });
   } catch (error: any) {
-    console.error("[HyperEVM] Create payment error:", error);
-    return NextResponse.json({ error: error.message || "Failed to create payment" }, { status: 500 });
+    console.error("[HyperEVM] Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// GET /api/payment/hyperevm/status?sessionId=xxx
 export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const sessionId = searchParams.get("sessionId");
-    const check = searchParams.get("check");
-
-    // Debug endpoint: /api/payment/hyperevm/status?check=pool
-    if (check === "pool") {
-      const stats = await getWalletPoolStats();
-      return NextResponse.json({
-        stats,
-        env: {
-          hasWalletEncryptionKey: !!process.env.WALLET_ENCRYPTION_KEY,
-          hasMasterWallet: !!process.env.HYPEREVM_MASTER_WALLET,
-          hasPMWalletKey: !!process.env.PM_WALLET_KEY,
-          encryptionKeyLength: process.env.WALLET_ENCRYPTION_KEY?.length || 0,
-          nodeEnv: process.env.NODE_ENV,
-        }
-      });
-    }
-
-    if (!sessionId) {
-      return NextResponse.json({ error: "Session ID required" }, { status: 400 });
-    }
-
-    const status = getPaymentStatus(sessionId);
-
-    if (!status) {
-      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      status: status.status,
-      address: status.walletAddress,
-      amount: status.amount,
-      txHash: status.txHash,
-    });
-  } catch (error: any) {
-    console.error("[HyperEVM] Status check error:", error);
-    return NextResponse.json({ error: error.message || "Failed to check status" }, { status: 500 });
+  const { searchParams } = new URL(req.url);
+  const check = searchParams.get("check");
+  
+  if (check === "pool") {
+    const count = await getPoolStats();
+    return NextResponse.json({ availableWallets: count });
   }
+  
+  return NextResponse.json({ status: "ok", version: "2.0" });
 }
-// Deployed at Fri Feb  6 22:08:59 -03 2026
