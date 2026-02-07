@@ -150,10 +150,26 @@ export function createMockPayment(
   amount: number,
   currency: string
 ): PaymentResponse {
+  // Generate proper mock address based on currency
+  let address: string;
+  if (currency.startsWith('usdt') || currency.startsWith('usdc') || currency.includes('erc20')) {
+    // Ethereum address (42 chars: 0x + 40 hex)
+    address = '0x' + Array.from({length: 40}, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+  } else if (currency.includes('sol')) {
+    // Solana address (44 chars base58)
+    address = Array.from({length: 44}, () => '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(Math.random() * 58)]).join('');
+  } else if (currency.includes('trx') || currency.includes('trc20')) {
+    // TRON address (34 chars, starts with T)
+    address = 'T' + Array.from({length: 33}, () => '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(Math.random() * 58)]).join('');
+  } else {
+    // Default EVM address
+    address = '0x' + Array.from({length: 40}, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+  }
+  
   return {
     payment_id: `mock-${Date.now()}`,
     payment_status: "waiting",
-    pay_address: `0x${Math.random().toString(36).substring(2, 42)}`,
+    pay_address: address,
     pay_amount: amount,
     pay_currency: currency,
     order_id: `order-${Date.now()}`,

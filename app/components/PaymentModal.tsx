@@ -147,21 +147,15 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
     try {
       if (selectedCurrency === "usdh") {
-        const response = await fetch("/api/payment/usdh", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId }),
-        });
-        
-        if (!response.ok) {
-          throw new Error("Failed to create HyperEVM payment");
+        // Direct PM wallet - no API call needed
+        const PM_WALLET = process.env.NEXT_PUBLIC_HYPEREVM_MASTER_WALLET || "";
+        if (!PM_WALLET) {
+          throw new Error("USDH payment not configured");
         }
-        
-        const data = await response.json();
         setPayment({
           id: `usdh-${sessionId}`,
-          address: data.address,
-          amount: parseFloat(data.amount),
+          address: PM_WALLET,
+          amount: DISCOUNTED_PRICE,
           currency: "usdh",
           status: "waiting",
           network: "HyperEVM",
@@ -327,11 +321,25 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                     </div>
                   )}
 
+                  {/* QR Code */}
+                  <div className="flex justify-center">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payment.address)}`}
+                      alt="Payment QR Code"
+                      className="rounded-lg border border-[var(--border)]"
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <label className="text-xs font-mono text-[var(--muted)]">SEND {selectedCrypto?.name.toUpperCase()} TO:</label>
                     <div className="flex gap-2">
-                      <Input value={payment.address} readOnly className="flex-1 bg-[var(--card)] border-[var(--border)] text-xs font-mono h-12" />
-                      <Button onClick={copyAddress} size="sm" className="h-12 w-12 p-0 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)]">
+                      <textarea 
+                        value={payment.address} 
+                        readOnly 
+                        rows={3}
+                        className="flex-1 bg-[var(--card)] border border-[var(--border)] text-xs font-mono p-3 rounded-lg resize-none break-all"
+                      />
+                      <Button onClick={copyAddress} size="sm" className="h-auto w-12 p-0 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)]">
                         {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                       </Button>
                     </div>
@@ -350,7 +358,11 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                     )}
                   </div>
 
-                  <p className="text-xs text-[var(--muted)] text-center">Funds will be automatically transferred after confirmation.</p>
+                  <p className="text-xs text-[var(--muted)] text-center">
+                    {selectedCurrency === "usdh" 
+                      ? "Send USDH to the address above. Payment will be confirmed manually."
+                      : "Funds will be automatically transferred after confirmation."}
+                  </p>
                 </div>
               )}
 
