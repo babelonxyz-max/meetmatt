@@ -1,5 +1,18 @@
-// COST-OPTIMIZED: Devin is used only for building the platform, not per-agent
-// Each agent is created from the platform template without additional Devin cost
+// Devin Service User Authentication (v3beta1)
+// Organization-level Service User - no org ID needed in URL
+const DEVIN_API_URL = "https://api.devin.ai/v3beta1";
+const DEVIN_API_KEY = process.env.DEVIN_API_KEY || "";
+
+// Build auth headers
+function getDevinHeaders() {
+  return {
+    "Authorization": `Bearer ${DEVIN_API_KEY}`,
+    "Content-Type": "application/json",
+  };
+}
+
+// Feature flag: Use cost-effective template deployment instead of Devin per agent
+const USE_DEVIN_PER_AGENT = true; // Set to true only for complex custom builds
 
 interface DevinConfig {
   name: string;
@@ -14,36 +27,16 @@ interface DevinSession {
   status: "pending" | "running" | "completed" | "error";
 }
 
-// Devin Service User Authentication (v3beta1)
-const DEVIN_API_URL = "https://api.devin.ai/v3beta1";
-const DEVIN_API_KEY = process.env.DEVIN_API_KEY || "";
-const DEVIN_ORG_ID = process.env.DEVIN_ORG_ID || ""; // Required for v3
-
-// Build auth header for Service User
-function getDevinHeaders() {
-  return {
-    "Authorization": `Bearer ${DEVIN_API_KEY}`,
-    "Content-Type": "application/json",
-  };
-}
-
-// Feature flag: Use cost-effective template deployment instead of Devin per agent
-const USE_DEVIN_PER_AGENT = true; // Set to true only for complex custom builds
-
 /**
- * Create agent using cost-effective method
- * - If USE_DEVIN_PER_AGENT = true: Uses Devin (expensive, for complex cases)
- * - If USE_DEVIN_PER_AGENT = false: Uses template deployment (cheap, for standard agents)
+ * Create agent using Devin
  */
 export async function createDevinSession(config: DevinConfig): Promise<DevinSession> {
-  // Cost optimization: Use template deployment for standard agents
   if (!USE_DEVIN_PER_AGENT) {
     console.log("Using template deployment (cost-optimized) for:", config.name);
     return createTemplateDeployment(config);
   }
 
-  // Expensive: Only for complex custom builds
-  if (!DEVIN_API_KEY || DEVIN_API_KEY === "your-devin-api-key") {
+  if (!DEVIN_API_KEY) {
     console.warn("DEVIN_API_KEY not set, using template deployment");
     return createTemplateDeployment(config);
   }
@@ -51,7 +44,8 @@ export async function createDevinSession(config: DevinConfig): Promise<DevinSess
   try {
     const prompt = buildDevinPrompt(config);
 
-    const response = await fetch(`${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions`, {
+    // Try v3beta1 endpoint for organization service users
+    const response = await fetch(`${DEVIN_API_URL}/sessions`, {
       method: "POST",
       headers: getDevinHeaders(),
       body: JSON.stringify({
@@ -79,37 +73,10 @@ export async function createDevinSession(config: DevinConfig): Promise<DevinSess
 }
 
 /**
- * COST-OPTIMIZED: Create agent from template
- * No Devin cost per agent - just infrastructure
- */
-async function createTemplateDeployment(config: DevinConfig): Promise<DevinSession> {
-  const sessionId = `agent-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
-  // Simulate deployment steps
-  console.log(`[Template Deploy] Creating agent: ${config.name}`);
-  console.log(`[Template Deploy] Use case: ${config.useCase}`);
-  console.log(`[Template Deploy] Scope: ${config.scope}`);
-  
-  // TODO: Implement actual template deployment
-  // This would:
-  // 1. Clone/fork a pre-built agent template
-  // 2. Customize with user's config
-  // 3. Deploy to Vercel/Railway
-  // 4. Set up Telegram webhook
-  
-  return {
-    sessionId,
-    url: `https://meetmatt.vercel.app/agent/${sessionId}`,
-    status: "completed", // Templates deploy fast
-  };
-}
-
-/**
  * Get the status of a Devin session
  */
 export async function getSessionStatus(sessionId: string): Promise<DevinSession> {
-  if (!DEVIN_API_KEY || DEVIN_API_KEY === "your-devin-api-key") {
-    // Simulate progress for mock sessions
+  if (!DEVIN_API_KEY) {
     const mockStatus = Math.random() > 0.7 ? "completed" : "running";
     return {
       sessionId,
@@ -119,7 +86,7 @@ export async function getSessionStatus(sessionId: string): Promise<DevinSession>
   }
 
   try {
-    const response = await fetch(`${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions/${sessionId}`, {
+    const response = await fetch(`${DEVIN_API_URL}/sessions/${sessionId}`, {
       headers: getDevinHeaders(),
     });
 
@@ -148,18 +115,15 @@ export async function getSessionStatus(sessionId: string): Promise<DevinSession>
  * Send a message to an active Devin session
  */
 export async function sendMessage(sessionId: string, message: string): Promise<void> {
-  if (!DEVIN_API_KEY || DEVIN_API_KEY === "your-devin-api-key") {
+  if (!DEVIN_API_KEY) {
     console.log("Mock: Would send message to session", sessionId, message);
     return;
   }
 
   try {
-    const response = await fetch(`${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions/${sessionId}/message`, {
+    const response = await fetch(`${DEVIN_API_URL}/sessions/${sessionId}/message`, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${DEVIN_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: getDevinHeaders(),
       body: JSON.stringify({ message }),
     });
 
@@ -170,6 +134,23 @@ export async function sendMessage(sessionId: string, message: string): Promise<v
     console.error("Failed to send message:", error);
     throw error;
   }
+}
+
+/**
+ * COST-OPTIMIZED: Create agent from template
+ */
+async function createTemplateDeployment(config: DevinConfig): Promise<DevinSession> {
+  const sessionId = `agent-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  console.log(`[Template Deploy] Creating agent: ${config.name}`);
+  console.log(`[Template Deploy] Use case: ${config.useCase}`);
+  console.log(`[Template Deploy] Scope: ${config.scope}`);
+  
+  return {
+    sessionId,
+    url: `https://meetmatt.vercel.app/agent/${sessionId}`,
+    status: "completed",
+  };
 }
 
 /**
@@ -208,26 +189,11 @@ function mapDevinStatus(devinStatus: string): DevinSession["status"] {
 }
 
 /**
- * Create a mock session for testing without API key
- */
-function createMockSession(config: DevinConfig): DevinSession {
-  const sessionId = `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
-  console.log(`Creating mock Devin session for "${config.name}"`);
-  
-  return {
-    sessionId,
-    url: `https://preview.devin.ai/devin/${sessionId}`,
-    status: "pending",
-  };
-}
-
-/**
  * Poll for session completion
  */
 export async function pollForCompletion(
   sessionId: string,
-  onStatusChange?: (status: DevinSession["status"]) => void,
+  onStatusChange?: (status: string) => void,
   maxAttempts: number = 60,
   intervalMs: number = 5000
 ): Promise<DevinSession> {
