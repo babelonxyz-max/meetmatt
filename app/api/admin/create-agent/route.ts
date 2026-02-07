@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createDevinSession } from "@/lib/devin";
 
-const ADMIN_TOKEN = process.env.ADMIN_AUTH_TOKEN || "c59580a585d66de03ae866b6863b5ee6d1ddfc7885e932e10b31118c289a7590";
+const ADMIN_TOKEN = process.env.ADMIN_AUTH_TOKEN || "ddec17a6bb0809ae085b65653292cf5bbf7a02eabb1d86f671b44f8d16fef7c4";
 
 function verifyAuth(request: NextRequest): boolean {
   const authHeader = request.headers.get("authorization");
