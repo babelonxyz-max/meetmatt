@@ -9,41 +9,46 @@ function encryptPrivateKey(privateKey: string): string {
   const key = ENCRYPTION_KEY.slice(0, 32);
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv("aes-256-gcm", Buffer.from(key), iv);
-  
   let encrypted = cipher.update(privateKey, "utf8", "hex");
   encrypted += cipher.final("hex");
   const authTag = cipher.getAuthTag();
-  
   return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
 }
 
 export async function POST() {
   try {
+    // Check current count
+    const beforeCount = await prisma.walletPool.count();
+    
     const wallets = [];
     for (let i = 1; i <= 5; i++) {
       const wallet = ethers.Wallet.createRandom();
       const encryptedKey = encryptPrivateKey(wallet.privateKey);
       
-      await prisma.walletPool.create({
-        data: {
-          id: `wallet_${i}`,
-          address: wallet.address,
-          encryptedPrivateKey: encryptedKey,
-          status: "available",
-          pmApproved: false,
-          hyperBalance: "0",
-        },
-      });
-      
-      wallets.push({
-        id: `wallet_${i}`,
-        address: wallet.address,
-        privateKey: wallet.privateKey,
-      });
+      try {
+        await prisma.walletPool.create({
+          data: {
+            id: `wallet_${Date.now()}_${i}`,
+            address: wallet.address,
+            encryptedPrivateKey: encryptedKey,
+            status: "available",
+            pmApproved: false,
+            hyperBalance: "0",
+          },
+        });
+        wallets.push({ id: i, address: wallet.address, status: "created" });
+      } catch (err: any) {
+        wallets.push({ id: i, address: wallet.address, error: err.message });
+      }
     }
+    
+    // Check count after
+    const afterCount = await prisma.walletPool.count();
     
     return NextResponse.json({
       success: true,
+      beforeCount,
+      afterCount,
       wallets,
     });
   } catch (error: any) {
