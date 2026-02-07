@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { Pool } from "@neondatabase/serverless";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -27,11 +29,7 @@ const mockDb = {
   payment: {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
-    create: (args: any) => Promise.resolve({ 
-      id: "pay-" + Date.now(), 
-      address: "0x" + "1".repeat(40),
-      ...args.data 
-    }),
+    create: (args: any) => Promise.resolve({ id: "pay-" + Date.now(), address: "0x" + "1".repeat(40), ...args.data }),
     update: () => Promise.resolve({}),
     delete: () => Promise.resolve({}),
   },
@@ -39,11 +37,7 @@ const mockDb = {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
     findFirst: () => Promise.resolve(null),
-    create: (args: any) => Promise.resolve({ 
-      id: "wallet-" + Date.now(), 
-      address: "0x" + "1".repeat(40),
-      ...args.data 
-    }),
+    create: (args: any) => Promise.resolve({ id: "wallet-" + Date.now(), address: "0x" + "1".repeat(40), ...args.data }),
     update: () => Promise.resolve({}),
     count: () => Promise.resolve(0),
   },
@@ -68,14 +62,18 @@ function getPrismaClient(): PrismaClient | typeof mockDb {
     }
 
     try {
-      // Use standard Prisma client without adapter for serverless compatibility
+      // Use Neon adapter for serverless compatibility
+      const pool = new Pool({ connectionString });
+      const adapter = new PrismaNeon(pool);
+      
       globalForPrisma.prisma = new PrismaClient({
+        adapter,
         log: process.env.NODE_ENV === "development" 
           ? ["query", "error", "warn"] 
           : ["error"],
       });
       
-      console.log("[Prisma] Client initialized successfully");
+      console.log("[Prisma] Client initialized with Neon adapter");
     } catch (error) {
       console.error("[Prisma] Failed to initialize:", error);
       return mockDb as any;
