@@ -39,14 +39,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/agents
+// POST /api/agents (V2)
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sessionId, agentName, useCase, scope, contactMethod, userId: privyId } = body;
+    const { agentName, personality, userId: privyId } = body;
 
-    if (!sessionId || !agentName || !useCase) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!agentName || !personality) {
+      return NextResponse.json({ error: "agentName and personality required" }, { status: 400 });
     }
 
     // Look up or create the user from the Privy ID
@@ -57,7 +57,6 @@ export async function POST(req: NextRequest) {
         select: { id: true },
       });
       
-      // Create user if they don't exist
       if (!user) {
         user = await prisma.user.create({
           data: {
@@ -74,15 +73,16 @@ export async function POST(req: NextRequest) {
     // Generate unique slug from agent name
     const baseSlug = agentName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
+    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
-    // Create agent record with activating status
+    // Create agent record
     const agent = await prisma.agent.create({
       data: {
         sessionId,
         slug: uniqueSlug,
         name: agentName,
-        purpose: scope || useCase,
-        features: [JSON.stringify({ useCase, scope, contactMethod })],
+        purpose: personality,
+        features: [JSON.stringify({ personality, useCase: "assistant" })],
         tier: "matt",
         status: "pending",
         userId: dbUserId,
@@ -90,12 +90,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Start deployment in background (don't await)
+    // Trigger Devin deployment in background
     deployAgent(agent.id, {
       name: agentName,
-      useCase,
-      scope,
-      contactMethod,
+      personality,
     });
 
     return NextResponse.json(agent);
@@ -106,24 +104,22 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Deploy agent using Devin
+ * Deploy agent using Devin (V2)
  */
 async function deployAgent(
   agentId: string,
   config: {
     name: string;
-    useCase: string;
-    scope: string;
-    contactMethod: string;
+    personality: string;
   }
 ) {
   try {
-    // Create Devin session
+    // Create Devin session with V2 prompt
     const devinSession = await createDevinSession({
       name: config.name,
-      useCase: config.useCase,
-      scope: config.scope,
-      contactMethod: config.contactMethod,
+      useCase: "assistant",
+      scope: config.personality,
+      contactMethod: "telegram",
     });
 
     // Update agent with Devin session info
@@ -136,13 +132,11 @@ async function deployAgent(
       },
     });
 
-    // Poll for completion
-    await pollForCompletion(devinSession.sessionId, async (status) => {
+    // Poll for completion (backup in case webhook fails)
+    pollForCompletion(devinSession.sessionId, async (status) => {
       console.log(`Agent ${agentId} deployment status: ${status}`);
 
       if (status === "completed") {
-        // When Devin completes, set to awaiting_verification
-        // Devin should provide bot username and auth code via webhook or API
         await prisma.agent.update({
           where: { id: agentId },
           data: {
@@ -161,11 +155,9 @@ async function deployAgent(
       }
     });
 
-    console.log(`Agent ${agentId} deployed successfully`);
+    console.log(`Agent ${agentId} Devin session created:`, devinSession.sessionId);
   } catch (error) {
     console.error(`Failed to deploy agent ${agentId}:`, error);
-
-    // Update status to error
     await prisma.agent.update({
       where: { id: agentId },
       data: { 

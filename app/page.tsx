@@ -41,10 +41,22 @@ export default function Home() {
     setStep("payment");
   };
 
-  const handlePayment = async (method: "card" | "crypto") => {
+  const handlePaymentContinue = async () => {
+    // In V2, we show PaymentModal here
     setStep("deploy");
     
-    // Simulate deployment progress
+    // TODO: Call /api/agents to create agent and trigger Devin
+    // const response = await fetch("/api/agents", {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify({
+    //     agentName,
+    //     personality,
+    //     userId: user?.id,
+    //   }),
+    // });
+    
+    // Simulate for now
     const interval = setInterval(() => {
       setDeployProgress((p) => {
         if (p >= 100) {
@@ -57,9 +69,6 @@ export default function Home() {
         return p + 10;
       });
     }, 500);
-
-    // TODO: Real deployment via API
-    // const response = await fetch("/api/agents", { ... });
   };
 
   return (
@@ -128,8 +137,7 @@ export default function Home() {
               <motion.div key="payment" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <StepPayment 
                   agentName={agentName}
-                  onPayWithCard={() => handlePayment("card")}
-                  onPayWithCrypto={() => handlePayment("crypto")}
+                  onContinue={handlePaymentContinue}
                 />
               </motion.div>
             )}
