@@ -1,0 +1,72 @@
+{
+  "name": "swarm-coordinator",
+  "version": "1.0.0",
+  "description": "Coordinate responses in multi-bot group chats. Prevents multiple bots from responding to the same message using distributed locking.",
+  "author": "Lorely AI",
+  "triggers": [
+    "coordinate",
+    "swarm",
+    "group chat",
+    "multi-bot"
+  ],
+  "tools": [
+    {
+      "name": "swarm_check",
+      "description": "Check if this bot should respond to a message in a group chat. Call this before responding to any group message.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "description": "The Telegram chat ID"
+          },
+          "message_id": {
+            "type": "string",
+            "description": "The message ID to check"
+          },
+          "message_text": {
+            "type": "string",
+            "description": "The message text (for priority detection)"
+          },
+          "is_mention": {
+            "type": "boolean",
+            "description": "Whether the bot was mentioned"
+          }
+        },
+        "required": ["chat_id", "message_id"]
+      }
+    },
+    {
+      "name": "swarm_complete",
+      "description": "Mark a response as complete after successfully responding",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chat_id": {
+            "type": "string",
+            "description": "The Telegram chat ID"
+          },
+          "message_id": {
+            "type": "string",
+            "description": "The message ID"
+          }
+        },
+        "required": ["chat_id", "message_id"]
+      }
+    },
+    {
+      "name": "swarm_status",
+      "description": "Get the current swarm status and statistics",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ],
+  "config": {
+    "coordinator_url": "http://localhost:3847",
+    "bot_id": "${BOT_ID}",
+    "bot_name": "${BOT_NAME}",
+    "bot_weight": 5
+  }
+}
