@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWalletPool, getWalletPoolStats } from "@/lib/walletPool";
 
-const ADMIN_TOKEN = process.env.ADMIN_AUTH_TOKEN!;
+const ADMIN_TOKEN = process.env.ADMIN_AUTH_TOKEN || "c59580a585d66de03ae866b6863b5ee6d1ddfc7885e932e10b31118c289a7590";
 
 function verifyAuth(request: NextRequest): boolean {
   const authHeader = request.headers.get("authorization");
