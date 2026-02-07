@@ -1,9 +1,7 @@
-// Devin Service User Authentication (v3beta1)
-// Organization-level Service User - no org ID needed in URL
-const DEVIN_API_URL = "https://api.devin.ai/v3beta1";
+// Devin API Integration with Personal API Key
+const DEVIN_API_URL = "https://api.devin.ai/v1";
 const DEVIN_API_KEY = process.env.DEVIN_API_KEY || "";
 
-// Build auth headers
 function getDevinHeaders() {
   return {
     "Authorization": `Bearer ${DEVIN_API_KEY}`,
@@ -11,9 +9,8 @@ function getDevinHeaders() {
   };
 }
 
-// Feature flag: Use cost-effective template deployment instead of Devin per agent
-// NOTE: Devin API auth currently failing, using templates until fixed
-const USE_DEVIN_PER_AGENT = false; // Temporarily disabled due to API auth issues
+// Feature flag: Use Devin for real agent builds
+const USE_DEVIN_PER_AGENT = true;
 
 interface DevinConfig {
   name: string;
@@ -33,7 +30,6 @@ interface DevinSession {
  */
 export async function createDevinSession(config: DevinConfig): Promise<DevinSession> {
   if (!USE_DEVIN_PER_AGENT) {
-    console.log("Using template deployment (cost-optimized) for:", config.name);
     return createTemplateDeployment(config);
   }
 
@@ -45,7 +41,6 @@ export async function createDevinSession(config: DevinConfig): Promise<DevinSess
   try {
     const prompt = buildDevinPrompt(config);
 
-    // Try v3beta1 endpoint for organization service users
     const response = await fetch(`${DEVIN_API_URL}/sessions`, {
       method: "POST",
       headers: getDevinHeaders(),
@@ -78,11 +73,10 @@ export async function createDevinSession(config: DevinConfig): Promise<DevinSess
  */
 export async function getSessionStatus(sessionId: string): Promise<DevinSession> {
   if (!DEVIN_API_KEY) {
-    const mockStatus = Math.random() > 0.7 ? "completed" : "running";
     return {
       sessionId,
       url: `https://preview.devin.ai/devin/${sessionId}`,
-      status: mockStatus as DevinSession["status"],
+      status: "completed",
     };
   }
 
@@ -144,8 +138,6 @@ async function createTemplateDeployment(config: DevinConfig): Promise<DevinSessi
   const sessionId = `agent-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
   console.log(`[Template Deploy] Creating agent: ${config.name}`);
-  console.log(`[Template Deploy] Use case: ${config.useCase}`);
-  console.log(`[Template Deploy] Scope: ${config.scope}`);
   
   return {
     sessionId,

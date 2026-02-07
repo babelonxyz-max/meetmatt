@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const DEVIN_API_URL = "https://api.devin.ai/v3beta1";
+const DEVIN_API_URL = "https://api.devin.ai/v1";
 const DEVIN_API_KEY = process.env.DEVIN_API_KEY || "";
-const DEVIN_ORG_ID = "latamapac-gmail-com"; // Hardcoded org ID
 const ADMIN_TOKEN = process.env.ADMIN_AUTH_TOKEN || "ddec17a6bb0809ae085b65653292cf5bbf7a02eabb1d86f671b44f8d16fef7c4";
 
 function verifyAuth(request: NextRequest): boolean {
@@ -23,17 +22,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Try v3beta1 with org ID in path
-    const response = await fetch(
-      `${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions`,
-      {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${DEVIN_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // Try v1 endpoint with Personal API key
+    const response = await fetch(`${DEVIN_API_URL}/sessions`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${DEVIN_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Unknown error" }));
@@ -42,7 +38,6 @@ export async function GET(request: NextRequest) {
         message: "Devin API returned error",
         apiStatus: response.status,
         apiError: error,
-        url: `${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions`,
       });
     }
 
@@ -50,8 +45,15 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
       status: "ok",
-      message: "37787 - Devin connection successful",
+      message: "37787 - Devin connection successful!",
+      hasKey: true,
+      apiStatus: response.status,
       sessions: data.sessions?.length || 0,
+      recentSessions: data.sessions?.slice(0, 3).map((s: any) => ({
+        id: s.session_id,
+        title: s.title,
+        status: s.status,
+      })),
     });
   } catch (error: any) {
     return NextResponse.json({
@@ -71,21 +73,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "DEVIN_API_KEY not configured" }, { status: 500 });
     }
 
-    // Create test session
-    const response = await fetch(
-      `${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions`,
-      {
+    const body = await request.json();
+    const { sessionId, message } = body;
+
+    if (sessionId && message) {
+      // Send message to existing session
+      const response = await fetch(`${DEVIN_API_URL}/sessions/${sessionId}/message`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${DEVIN_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          prompt: "37787 - Connection test. Please respond with ACK.",
-          name: "37787 Test",
-        }),
+        body: JSON.stringify({ message }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Unknown error" }));
+        return NextResponse.json({
+          error: "Failed to send message",
+          status: response.status,
+          details: error,
+        }, { status: 400 });
       }
-    );
+
+      return NextResponse.json({
+        success: true,
+        message: "37787 - Message sent to Devin",
+        sessionId,
+        sentMessage: message,
+      });
+    }
+
+    // Create new test session
+    const response = await fetch(`${DEVIN_API_URL}/sessions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${DEVIN_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: "37787 - Connection test. Please acknowledge receipt of this message.",
+        name: "37787 Test",
+      }),
+    });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Unknown error" }));
@@ -100,10 +130,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      message: "37787 - Test session created!",
       sessionId: data.session_id,
       url: data.url,
       status: data.status,
-      message: "37787 - Session created, check Devin dashboard",
+      note: "Check Devin dashboard to see the session",
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
