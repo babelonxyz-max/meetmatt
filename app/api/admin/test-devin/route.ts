@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${DEVIN_API_KEY}`,
+        "Content-Type": "application/json",
       },
     });
 
@@ -88,7 +89,11 @@ export async function POST(request: NextRequest) {
           "Authorization": `Bearer ${DEVIN_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ 
+          message,
+          // Service user requires specifying output format
+          output_mode: "stream", 
+        }),
       });
 
       if (!response.ok) {
@@ -108,7 +113,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create new test session
+    // Create new test session with Service User format
     const response = await fetch(`${DEVIN_API_URL}/sessions`, {
       method: "POST",
       headers: {
@@ -116,8 +121,8 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: "Test session - please respond with '37787 ACK' to confirm connection",
-        name: "Connection Test 37787",
+        prompt: "37787 - Connection test. Please acknowledge.",
+        name: "Test 37787",
       }),
     });
 

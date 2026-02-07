@@ -14,8 +14,17 @@ interface DevinSession {
   status: "pending" | "running" | "completed" | "error";
 }
 
+// Devin Service User Authentication
 const DEVIN_API_URL = "https://api.devin.ai/v1";
 const DEVIN_API_KEY = process.env.DEVIN_API_KEY || "";
+
+// Build auth header for Service User
+function getDevinHeaders() {
+  return {
+    "Authorization": `Bearer ${DEVIN_API_KEY}`,
+    "Content-Type": "application/json",
+  };
+}
 
 // Feature flag: Use cost-effective template deployment instead of Devin per agent
 const USE_DEVIN_PER_AGENT = true; // Set to true only for complex custom builds
@@ -43,10 +52,7 @@ export async function createDevinSession(config: DevinConfig): Promise<DevinSess
 
     const response = await fetch(`${DEVIN_API_URL}/sessions`, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${DEVIN_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: getDevinHeaders(),
       body: JSON.stringify({
         prompt,
         name: `Deploy ${config.name}`,
@@ -113,9 +119,7 @@ export async function getSessionStatus(sessionId: string): Promise<DevinSession>
 
   try {
     const response = await fetch(`${DEVIN_API_URL}/sessions/${sessionId}`, {
-      headers: {
-        "Authorization": `Bearer ${DEVIN_API_KEY}`,
-      },
+      headers: getDevinHeaders(),
     });
 
     if (!response.ok) {
