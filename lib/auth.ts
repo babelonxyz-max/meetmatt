@@ -1,10 +1,29 @@
-// Auth helper - returns null for now to avoid build issues
-// In production, implement proper session validation
+import { getServerSession } from "next-auth/next";
+import { prisma } from "./prisma";
 
-export async function auth(): Promise<any> {
-  return null;
+// Auth helper using NextAuth
+export async function auth() {
+  try {
+    const session = await getServerSession();
+    return session;
+  } catch (e) {
+    console.error("Auth error:", e);
+    return null;
+  }
 }
 
-export async function getCurrentUser(): Promise<any> {
-  return null;
+export async function getCurrentUser() {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email) return null;
+    
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+    
+    return user;
+  } catch (e) {
+    console.error("Get current user error:", e);
+    return null;
+  }
 }
