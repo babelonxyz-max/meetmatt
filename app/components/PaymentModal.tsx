@@ -95,7 +95,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     const interval = setInterval(async () => {
       try {
         if (payment.currency === "usdh") {
-          const response = await fetch(`/api/payment/hyperevm/status?sessionId=${sessionId}`);
+          const response = await fetch(`/api/payment/usdh?sessionId=${sessionId}`);
           const data = await response.json();
           
           if (data.status === "transferred") {
@@ -147,7 +147,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
     try {
       if (selectedCurrency === "usdh") {
-        const response = await fetch("/api/payment/hyperevm", {
+        const response = await fetch("/api/payment/usdh", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId }),
