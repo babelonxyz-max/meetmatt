@@ -14,9 +14,10 @@ interface DevinSession {
   status: "pending" | "running" | "completed" | "error";
 }
 
-// Devin Service User Authentication
-const DEVIN_API_URL = "https://api.devin.ai/v1";
+// Devin Service User Authentication (v3beta1)
+const DEVIN_API_URL = "https://api.devin.ai/v3beta1";
 const DEVIN_API_KEY = process.env.DEVIN_API_KEY || "";
+const DEVIN_ORG_ID = process.env.DEVIN_ORG_ID || ""; // Required for v3
 
 // Build auth header for Service User
 function getDevinHeaders() {
@@ -50,7 +51,7 @@ export async function createDevinSession(config: DevinConfig): Promise<DevinSess
   try {
     const prompt = buildDevinPrompt(config);
 
-    const response = await fetch(`${DEVIN_API_URL}/sessions`, {
+    const response = await fetch(`${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions`, {
       method: "POST",
       headers: getDevinHeaders(),
       body: JSON.stringify({
@@ -118,7 +119,7 @@ export async function getSessionStatus(sessionId: string): Promise<DevinSession>
   }
 
   try {
-    const response = await fetch(`${DEVIN_API_URL}/sessions/${sessionId}`, {
+    const response = await fetch(`${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions/${sessionId}`, {
       headers: getDevinHeaders(),
     });
 
@@ -153,7 +154,7 @@ export async function sendMessage(sessionId: string, message: string): Promise<v
   }
 
   try {
-    const response = await fetch(`${DEVIN_API_URL}/sessions/${sessionId}/message`, {
+    const response = await fetch(`${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions/${sessionId}/message`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${DEVIN_API_KEY}`,

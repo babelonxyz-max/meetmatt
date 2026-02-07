@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getWalletPoolStats } from "@/lib/walletPool";
 
 export async function GET() {
@@ -14,6 +13,7 @@ export async function GET() {
         hasMasterWallet: !!process.env.HYPEREVM_MASTER_WALLET,
         hasPMWalletKey: !!process.env.PM_WALLET_KEY,
         hasDevinKey: !!process.env.DEVIN_API_KEY,
+        hasDevinOrgId: !!process.env.DEVIN_ORG_ID,
         hasNowPaymentsKey: !!process.env.NOWPAYMENTS_API_KEY,
         encryptionKeyLength: process.env.WALLET_ENCRYPTION_KEY?.length || 0,
         nodeEnv: process.env.NODE_ENV,

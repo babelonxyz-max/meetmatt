@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const DEVIN_API_URL = "https://api.devin.ai/v1";
+// Devin v3beta1 Service User API
+const DEVIN_API_URL = "https://api.devin.ai/v3beta1";
 const DEVIN_API_KEY = process.env.DEVIN_API_KEY || "";
+const DEVIN_ORG_ID = process.env.DEVIN_ORG_ID || "";
 const ADMIN_TOKEN = process.env.ADMIN_AUTH_TOKEN || "ddec17a6bb0809ae085b65653292cf5bbf7a02eabb1d86f671b44f8d16fef7c4";
 
 function verifyAuth(request: NextRequest): boolean {
@@ -15,18 +17,26 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Check if API key is configured
-    if (!DEVIN_API_KEY || DEVIN_API_KEY === "your-devin-api-key") {
+    if (!DEVIN_API_KEY) {
       return NextResponse.json({
         status: "error",
         message: "DEVIN_API_KEY not configured",
         hasKey: false,
-        keyPreview: null,
+        hasOrgId: !!DEVIN_ORG_ID,
       });
     }
 
-    // Try to list sessions (lightweight check)
-    const response = await fetch(`${DEVIN_API_URL}/sessions`, {
+    if (!DEVIN_ORG_ID) {
+      return NextResponse.json({
+        status: "error",
+        message: "DEVIN_ORG_ID not configured (required for v3 API)",
+        hasKey: true,
+        hasOrgId: false,
+      });
+    }
+
+    // Try to list sessions with v3beta1 endpoint
+    const response = await fetch(`${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions`, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${DEVIN_API_KEY}`,
@@ -40,7 +50,7 @@ export async function GET(request: NextRequest) {
         status: "error",
         message: "Devin API returned error",
         hasKey: true,
-        keyPreview: DEVIN_API_KEY.substring(0, 10) + "...",
+        hasOrgId: true,
         apiStatus: response.status,
         apiError: error,
       });
@@ -50,9 +60,9 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
       status: "ok",
-      message: "Devin connection successful",
+      message: "Devin v3beta1 connection successful",
       hasKey: true,
-      keyPreview: DEVIN_API_KEY.substring(0, 10) + "...",
+      hasOrgId: true,
       apiStatus: response.status,
       sessions: data.sessions?.length || 0,
       testMessage: "37787 - Connection verified",
@@ -62,20 +72,21 @@ export async function GET(request: NextRequest) {
       status: "error",
       message: error.message,
       hasKey: !!DEVIN_API_KEY,
-      keyPreview: DEVIN_API_KEY ? DEVIN_API_KEY.substring(0, 10) + "..." : null,
+      hasOrgId: !!DEVIN_ORG_ID,
     }, { status: 500 });
   }
 }
 
-// POST to create a test session and send message
 export async function POST(request: NextRequest) {
   if (!verifyAuth(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    if (!DEVIN_API_KEY || DEVIN_API_KEY === "your-devin-api-key") {
-      return NextResponse.json({ error: "DEVIN_API_KEY not configured" }, { status: 500 });
+    if (!DEVIN_API_KEY || !DEVIN_ORG_ID) {
+      return NextResponse.json({ 
+        error: "DEVIN_API_KEY or DEVIN_ORG_ID not configured" 
+      }, { status: 500 });
     }
 
     const body = await request.json();
@@ -83,18 +94,17 @@ export async function POST(request: NextRequest) {
 
     if (sessionId && message) {
       // Send message to existing session
-      const response = await fetch(`${DEVIN_API_URL}/sessions/${sessionId}/message`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${DEVIN_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          message,
-          // Service user requires specifying output format
-          output_mode: "stream", 
-        }),
-      });
+      const response = await fetch(
+        `${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions/${sessionId}/message`, 
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${DEVIN_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ message }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: "Unknown error" }));
@@ -113,18 +123,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create new test session with Service User format
-    const response = await fetch(`${DEVIN_API_URL}/sessions`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${DEVIN_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: "37787 - Connection test. Please acknowledge.",
-        name: "Test 37787",
-      }),
-    });
+    // Create new test session with v3beta1 endpoint
+    const response = await fetch(
+      `${DEVIN_API_URL}/organizations/${DEVIN_ORG_ID}/sessions`, 
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${DEVIN_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: "37787 - Connection test. Please acknowledge.",
+          name: "Test 37787",
+        }),
+      }
+    );
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Unknown error" }));
