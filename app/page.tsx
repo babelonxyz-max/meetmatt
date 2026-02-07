@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePrivy } from "@privy-io/react-auth";
 import { StepName } from "./components/wizard/StepName";
@@ -8,6 +8,7 @@ import { StepPersonality } from "./components/wizard/StepPersonality";
 import { StepDemo } from "./components/wizard/StepDemo";
 import { StepPayment } from "./components/wizard/StepPayment";
 import { StepDeploy } from "./components/wizard/StepDeploy";
+import { PaymentModal } from "./components/PaymentModal";
 import { AIOrb } from "./components/AIOrb";
 
 type Step = "name" | "personality" | "demo" | "payment" | "deploy";
@@ -22,14 +23,19 @@ export default function Home() {
   const [deployProgress, setDeployProgress] = useState(0);
   const [telegramLink, setTelegramLink] = useState("");
   const [authCode, setAuthCode] = useState("");
+  const [agentId, setAgentId] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [config, setConfig] = useState({ agentName: "", useCase: "", scope: "", contactMethod: "telegram" });
 
   const handleNameSubmit = (name: string) => {
     setAgentName(name);
+    setConfig(prev => ({ ...prev, agentName: name }));
     setStep("personality");
   };
 
   const handlePersonalitySelect = (p: string) => {
     setPersonality(p);
+    setConfig(prev => ({ ...prev, scope: p, useCase: "assistant" }));
     setStep("demo");
   };
 
@@ -41,35 +47,73 @@ export default function Home() {
     setStep("payment");
   };
 
-  const handlePaymentContinue = async () => {
-    // In V2, we show PaymentModal here
+  const handlePaymentContinue = () => {
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = async () => {
+    setShowPaymentModal(false);
     setStep("deploy");
     
-    // TODO: Call /api/agents to create agent and trigger Devin
-    // const response = await fetch("/api/agents", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     agentName,
-    //     personality,
-    //     userId: user?.id,
-    //   }),
-    // });
-    
-    // Simulate for now
-    const interval = setInterval(() => {
-      setDeployProgress((p) => {
-        if (p >= 100) {
-          clearInterval(interval);
-          setDeployStatus("completed");
-          setTelegramLink(`https://t.me/${agentName.toLowerCase()}_bot`);
-          setAuthCode(Math.random().toString(36).substring(2, 8).toUpperCase());
-          return 100;
-        }
-        return p + 10;
+    try {
+      // Create agent via API
+      const response = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentName,
+          personality,
+          userId: user?.id,
+        }),
       });
-    }, 500);
+
+      if (!response.ok) {
+        throw new Error("Failed to create agent");
+      }
+
+      const data = await response.json();
+      setAgentId(data.id);
+      
+      // Start polling for status
+      pollAgentStatus(data.id);
+      
+    } catch (error) {
+      console.error("Deployment error:", error);
+      setDeployStatus("failed");
+    }
   };
+
+  const pollAgentStatus = useCallback(async (id: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/agents/status?agentId=${id}`);
+        if (!response.ok) return;
+        
+        const agent = await response.json();
+        
+        // Update progress based on status
+        if (agent.status === "pending") {
+          setDeployProgress(10);
+        } else if (agent.status === "deploying") {
+          setDeployProgress(50);
+        } else if (agent.status === "active") {
+          setDeployProgress(100);
+          setDeployStatus("completed");
+          setTelegramLink(agent.telegramLink || `https://t.me/${agent.name.toLowerCase()}_bot`);
+          setAuthCode(agent.authCode || "");
+          clearInterval(interval);
+        } else if (agent.status === "error") {
+          setDeployStatus("failed");
+          clearInterval(interval);
+        }
+      } catch (e) {
+        console.error("Poll error:", e);
+      }
+    }, 3000);
+
+    // Cleanup after 5 minutes
+    setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
@@ -156,6 +200,15 @@ export default function Home() {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        config={config}
+        sessionId={`sess_${Date.now()}`}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }
