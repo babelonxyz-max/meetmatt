@@ -177,12 +177,13 @@ HYPEREVM_RPC_URL="https://rpc.hyperliquid.xyz/evm"
 # USDH Token Contract
 USDH_CONTRACT_ADDRESS="0x54e00a5988577cb0b0c9ab0cb6ef7f4b"
 
-# Master wallet (receives all USDH payments)
+# Master wallet (receives all USDH payments - PUBLIC ADDRESS ONLY)
 HYPEREVM_MASTER_WALLET="0xYourMasterWalletAddress"
 
-# Master wallet private key (for gas funding & transfers)
-# NEVER expose this in frontend code!
-HYPEREVM_MASTER_KEY="0xYourMasterWalletPrivateKey"
+# PM Wallet (hot wallet that pays gas for transfers - PRIVATE KEY)
+# This is a SEPARATE hot wallet with small amount of HYPE (~0.5 HYPE)
+# It funds burner wallets and executes transfers
+PM_WALLET_KEY="0xYourHotWalletPrivateKey"
 
 # Wallet encryption key (32+ chars)
 # Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -192,11 +193,16 @@ WALLET_ENCRYPTION_KEY="your-64-char-hex-key"
 ADMIN_AUTH_TOKEN="your-random-token"
 ```
 
+**Security Model:**
+- **Master Wallet**: Cold storage, only address is in env vars (receives USDH)
+- **PM Wallet**: Hot wallet with minimal HYPE (~0.5) for gas (pays transfer fees)
+- **Burner Wallets**: Generated dynamically, encrypted in DB (temporary payment holders)
+
 **Setup Steps:**
-1. Create a HyperEVM wallet (use MetaMask with HyperEVM network)
-2. Fund it with HYPE for gas
-3. Add the address and private key to env vars
-4. Generate burner wallets: `POST /api/admin/wallet-pool`
+1. Create a **cold storage master wallet** - save the address (this receives USDH)
+2. Create a **hot PM wallet** - fund with ~0.5 HYPE, put private key in `PM_WALLET_KEY`
+3. Generate burner wallets in DB
+4. Done!
 
 ---
 

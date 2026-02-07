@@ -7,7 +7,7 @@ import { getHyperEVMProvider } from "./hyperevm";
 
 const ENCRYPTION_KEY = process.env.WALLET_ENCRYPTION_KEY || "";
 const MASTER_WALLET = process.env.HYPEREVM_MASTER_WALLET || "";
-const PM_WALLET_KEY = process.env.PM_WALLET_KEY || process.env.HYPEREVM_MASTER_KEY || "";
+const PM_WALLET_KEY = process.env.PM_WALLET_KEY || "";
 
 // Minimal gas for approval: 0.001 HYPER (~$0.02, covers 1 approval + some buffer)
 const APPROVAL_GAS_FUND = ethers.parseEther("0.001");
@@ -98,7 +98,7 @@ export async function assignWalletFromPool(
 async function setupPMApproval(walletId: string, walletAddress: string): Promise<boolean> {
   try {
     if (!PM_WALLET_KEY) {
-      console.warn("[WalletPool] No PM wallet key, skipping approval setup");
+      console.error("[WalletPool] PM_WALLET_KEY not configured - cannot fund burner wallets");
       return false;
     }
 
