@@ -71,6 +71,22 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get("sessionId");
+    const check = searchParams.get("check");
+
+    // Debug endpoint: /api/payment/hyperevm/status?check=pool
+    if (check === "pool") {
+      const stats = await getWalletPoolStats();
+      return NextResponse.json({
+        stats,
+        env: {
+          hasWalletEncryptionKey: !!process.env.WALLET_ENCRYPTION_KEY,
+          hasMasterWallet: !!process.env.HYPEREVM_MASTER_WALLET,
+          hasPMWalletKey: !!process.env.PM_WALLET_KEY,
+          encryptionKeyLength: process.env.WALLET_ENCRYPTION_KEY?.length || 0,
+          nodeEnv: process.env.NODE_ENV,
+        }
+      });
+    }
 
     if (!sessionId) {
       return NextResponse.json({ error: "Session ID required" }, { status: 400 });
