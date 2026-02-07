@@ -42,15 +42,24 @@ interface CryptoOption {
   discount?: string;
 }
 
-// SIMPLIFIED: Only USDH accepted
 const ALL_CRYPTO_OPTIONS: CryptoOption[] = [
+  // USDH - Primary with 10% discount
   {
     code: "usdh",
     name: "USDH",
     icon: "🏦",
     network: "HyperEVM",
-    discount: "10%",
+    discount: "-10%",
   },
+  // USDT options
+  { code: "usdt", name: "USDT", icon: "💵", network: "TRC20" },
+  { code: "usdterc20", name: "USDT", icon: "💵", network: "ERC20" },
+  { code: "usdtbsc", name: "USDT", icon: "💵", network: "BSC" },
+  { code: "usdtsol", name: "USDT", icon: "💵", network: "Solana" },
+  // USDC options  
+  { code: "usdc", name: "USDC", icon: "💰", network: "Base" },
+  { code: "usdccsol", name: "USDC", icon: "💰", network: "Solana" },
+  { code: "usdcarb", name: "USDC", icon: "💰", network: "Arbitrum" },
 ];
 
 export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: PaymentModalProps) {
