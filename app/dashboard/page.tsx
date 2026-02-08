@@ -246,7 +246,7 @@ export default function DashboardPage() {
               transition={{ delay: 0.2 }}
             >
               <Link href="/">
-                <div className="group relative overflow-hidden bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-2xl p-8 text-white cursor-pointer">
+                <div className="group relative overflow-hidden bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-2xl p-8 text-white cursor-pointer shadow-lg shadow-[var(--accent)]/20 hover:shadow-xl hover:shadow-[var(--accent)]/30 transition-all">
                   <div className="relative z-10 flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-2xl mb-1">Create New Agent</h3>
@@ -518,11 +518,11 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
   };
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6">
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 hover:border-[var(--accent)]/20 transition-colors">
       <div className={`w-14 h-14 rounded-xl ${colorClasses[color]} flex items-center justify-center mb-4`}>
         <Icon className="w-7 h-7" />
       </div>
-      <p className="text-4xl font-bold">{value}</p>
+      <p className="text-4xl font-bold text-[var(--foreground)]">{value}</p>
       <p className="text-lg text-[var(--muted)]">{label}</p>
     </div>
   );

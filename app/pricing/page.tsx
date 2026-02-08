@@ -274,7 +274,7 @@ export default function PricingPage() {
                   <badge.icon className="w-5 h-5 text-[var(--accent)]" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium">{badge.label}</div>
+                  <div className="text-sm font-medium text-[var(--foreground)]">{badge.label}</div>
                   <div className="text-xs text-[var(--muted)]">{badge.desc}</div>
                 </div>
               </motion.div>
@@ -304,10 +304,10 @@ export default function PricingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 text-center"
+                className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6 text-center hover:border-[var(--accent)]/30 transition-colors"
               >
                 <div className="text-3xl font-bold text-[var(--accent)] mb-2">{stat.value}</div>
-                <div className="text-sm font-medium mb-1">{stat.label}</div>
+                <div className="text-sm font-medium text-[var(--foreground)] mb-1">{stat.label}</div>
                 <div className="text-xs text-[var(--muted)]">vs {stat.vs}</div>
               </motion.div>
             ))}
@@ -437,7 +437,7 @@ export default function PricingPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-8 py-4 bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-xl font-semibold text-lg inline-flex items-center gap-3 text-white"
+                className="px-8 py-4 bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-xl font-semibold text-lg inline-flex items-center gap-3 text-white shadow-lg shadow-[var(--accent)]/25 hover:shadow-xl hover:shadow-[var(--accent)]/30 transition-all"
               >
                 <Sparkles className="w-5 h-5" />
                 Start Building Now

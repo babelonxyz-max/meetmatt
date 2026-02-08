@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] flex flex-col items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -32,8 +32,8 @@ export default function NotFound() {
           </h1>
         </div>
 
-        <h2 className="text-2xl font-semibold mb-2">Page not found</h2>
-        <p className="text-zinc-400 mb-8">
+        <h2 className="text-2xl font-semibold mb-2 text-[var(--foreground)]">Page not found</h2>
+        <p className="text-[var(--muted)] mb-8">
           The page you're looking for doesn't exist or has been moved.
         </p>
 
@@ -55,7 +55,7 @@ export default function NotFound() {
         </div>
 
         {/* Decorative elements */}
-        <div className="mt-12 flex items-center justify-center gap-2 text-zinc-600">
+        <div className="mt-12 flex items-center justify-center gap-2 text-[var(--muted)]">
           <Sparkles className="w-4 h-4" />
           <span className="text-sm">Meet Matt</span>
         </div>

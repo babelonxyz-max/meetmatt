@@ -287,7 +287,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                     ))}
                   </div>
 
-                  <Button onClick={createNewPayment} className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-12">
+                  <Button onClick={createNewPayment} className="w-full bg-[#0ea5e9] hover:bg-[#0284c7] text-white h-12 shadow-lg shadow-[#0ea5e9]/25 transition-all">
                     PROCEED TO PAYMENT
                   </Button>
                 </div>
@@ -302,7 +302,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
               {status === "waiting" && payment && (
                 <div className="space-y-4">
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg animate-pulse">
                     <p className="text-xs text-amber-400 font-mono text-center">AWAITING PAYMENT</p>
                   </div>
 

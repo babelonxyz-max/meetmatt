@@ -17,7 +17,7 @@ export function Footer() {
       
       {/* Floating footer bar */}
       <div className="mx-4">
-        <div className="max-w-7xl mx-auto bg-[var(--card)]/80 backdrop-blur-xl border border-[var(--border)] rounded-2xl px-6 py-2.5 shadow-2xl shadow-black/50">
+        <div className="max-w-7xl mx-auto bg-[var(--card)]/80 backdrop-blur-xl border border-[var(--border)] rounded-2xl px-6 py-2.5 shadow-2xl shadow-[var(--foreground)]/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm text-[var(--muted)]">© 2026 Meet Matt</span>

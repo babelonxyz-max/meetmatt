@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePrivy } from "@privy-io/react-auth";
+import Link from "next/link";
 import { StepName } from "./components/wizard/StepName";
 import { StepPersonality } from "./components/wizard/StepPersonality";
 import { StepDemo } from "./components/wizard/StepDemo";
@@ -116,26 +117,26 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
+    <div className="min-h-screen bg-[var(--background)]">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-gray-950/80 backdrop-blur-md border-b border-gray-800">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600" />
-            <span className="font-bold text-xl">Matt</span>
-          </div>
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[#6366f1] shadow-md shadow-[var(--accent)]/20" />
+            <span className="font-bold text-xl text-[var(--foreground)]">Matt</span>
+          </Link>
           <div className="flex items-center gap-4">
-            <a href="/pricing" className="text-sm text-gray-400 hover:text-white">Pricing</a>
-            <a href="/dashboard" className="text-sm text-gray-400 hover:text-white">Dashboard</a>
+            <Link href="/pricing" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Pricing</Link>
+            <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Dashboard</Link>
           </div>
         </div>
       </header>
 
       {/* Progress Bar */}
       <div className="fixed top-16 left-0 right-0 z-40">
-        <div className="h-1 bg-gray-800">
+        <div className="h-1 bg-[var(--border)]">
           <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+            className="h-full bg-gradient-to-r from-[var(--accent)] to-[#6366f1]"
             initial={{ width: "0%" }}
             animate={{ width: `${["name", "personality", "demo", "payment", "deploy"].indexOf(step) * 25}%` }}
             transition={{ duration: 0.3 }}

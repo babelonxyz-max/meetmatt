@@ -209,6 +209,30 @@
   transform: translateY(-1px);
 }
 
+/* Smooth page transitions */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Focus visible styles for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Improved scrollbar for webkit browsers */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
 /* Card hover effect */
 .card-hover {
   transition: all 0.3s ease;
@@ -216,7 +240,13 @@
 
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 40px var(--foreground)/5;
+}
+
+/* Enhanced selection */
+::selection {
+  background: var(--accent-dim);
+  color: white;
 }
 
 /* Input focus ring */
