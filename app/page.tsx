@@ -23,6 +23,8 @@ export default function Home() {
   const [step, setStep] = useState<Step>("welcome");
   const [agentName, setAgentName] = useState("");
   const [agentType, setAgentType] = useState("");
+  const [pendingAgentType, setPendingAgentType] = useState<string | null>(null);
+  const [pendingAgentDescription, setPendingAgentDescription] = useState<string | null>(null);
   const [expectations, setExpectations] = useState<string[]>([]);
   const [channel, setChannel] = useState("telegram");
   const [telegramContact, setTelegramContact] = useState("");
@@ -52,13 +54,38 @@ export default function Home() {
     setAgentType(type);
     setConfig(prev => ({ ...prev, scope: description }));
     
-    // Check auth before expectations
+    // Check auth before expectations - save selection first
     if (!authenticated) {
+      // Save pending selection to restore after login
+      localStorage.setItem("pendingAgentType", type);
+      localStorage.setItem("pendingAgentDescription", description);
+      localStorage.setItem("pendingStep", "expectations");
       login();
       return;
     }
     setStep("expectations");
   };
+
+  // Restore pending selection after login
+  useEffect(() => {
+    if (authenticated) {
+      const pending = localStorage.getItem("pendingAgentType");
+      const pendingDesc = localStorage.getItem("pendingAgentDescription");
+      const pendingStep = localStorage.getItem("pendingStep");
+      
+      if (pending && pendingDesc) {
+        setAgentType(pending);
+        setConfig(prev => ({ ...prev, scope: pendingDesc }));
+        localStorage.removeItem("pendingAgentType");
+        localStorage.removeItem("pendingAgentDescription");
+        
+        if (pendingStep) {
+          setStep(pendingStep as Step);
+          localStorage.removeItem("pendingStep");
+        }
+      }
+    }
+  }, [authenticated]);
 
   const handleExpectationsSubmit = (selected: string[]) => {
     setExpectations(selected);
