@@ -59,11 +59,11 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
       className="max-w-lg mx-auto px-4 sm:px-0"
     >
       <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold mb-2 text-white">Meet {agentName}</h2>
-        <p className="text-zinc-400">Try a quick chat - {remaining} messages left</p>
+        <h2 className="text-3xl font-bold mb-2 text-[var(--foreground)]">Meet {agentName}</h2>
+        <p className="text-[var(--muted)]">Try a quick chat - {remaining} messages left</p>
       </div>
 
-      <div className="bg-zinc-900/80 rounded-2xl border border-zinc-800 overflow-hidden">
+      <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] overflow-hidden">
         {/* Chat Messages */}
         <div className="h-64 p-4 overflow-y-auto space-y-3">
           {messages.map((m, i) => (
@@ -79,7 +79,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
               <div className={`max-w-[80%] p-3 rounded-xl text-sm ${
                 m.role === "user" 
                   ? "bg-blue-500 text-white rounded-br-none" 
-                  : "bg-zinc-800 text-white rounded-bl-none"
+                  : "bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)] rounded-bl-none"
               }`}>
                 {m.text}
               </div>
@@ -88,20 +88,20 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
         </div>
 
         {/* Input */}
-        <div className="p-3 border-t border-zinc-800 flex gap-2">
+        <div className="p-3 border-t border-[var(--border)] flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={remaining > 0 ? "Type a message..." : "Upgrade to continue"}
             disabled={remaining <= 0}
-            className="flex-1 px-4 py-2 bg-zinc-950 rounded-lg text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-[var(--background)] rounded-lg text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || remaining <= 0}
-            className="p-2 bg-blue-500 hover:bg-blue-400 disabled:bg-zinc-800 text-white rounded-lg transition-all shadow-md shadow-blue-500/20 disabled:shadow-none"
+            className="p-2 bg-blue-500 hover:bg-blue-400 disabled:bg-[var(--card)] text-white rounded-lg transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -114,10 +114,10 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
           animate={{ opacity: 1 }}
           className="mt-6 text-center"
         >
-          <p className="text-zinc-400 mb-4">Ready to deploy {agentName}?</p>
+          <p className="text-[var(--muted)] mb-4">Ready to deploy {agentName}?</p>
           <button
             onClick={onContinue}
-            className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30"
+            className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/25"
           >
             Continue to Deploy →
           </button>

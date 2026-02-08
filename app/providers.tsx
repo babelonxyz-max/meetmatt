@@ -2,11 +2,14 @@
 
 import { ReactNode } from "react";
 import PrivyProvider from "@/components/PrivyProvider";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <PrivyProvider>
-      {children}
-    </PrivyProvider>
+    <ThemeProvider>
+      <PrivyProvider>
+        {children}
+      </PrivyProvider>
+    </ThemeProvider>
   );
 }

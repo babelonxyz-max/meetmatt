@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, User, ChevronDown, LogOut } from "lucide-react";
+import { Sparkles, User, ChevronDown, LogOut, Sun, Moon } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useRef, useEffect } from "react";
+import { useTheme } from "./ThemeProvider";
 
 export function Navbar() {
   const { authenticated, login, logout, user } = usePrivy();
+  const { theme, toggleTheme } = useTheme();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -52,6 +54,13 @@ export function Navbar() {
       </Link>
       
       <nav className="flex items-center gap-6">
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors"
+          aria-label="Toggle theme"
+        >
+          {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
         <Link href="/pricing" className="text-lg text-white hover:text-blue-400 transition-colors">
           Pricing
         </Link>

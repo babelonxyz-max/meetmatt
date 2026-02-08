@@ -19,16 +19,16 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
       className="max-w-md mx-auto px-4 sm:px-0"
     >
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-2 text-white">Ready to deploy {agentName}?</h2>
-        <p className="text-zinc-400">Review and confirm</p>
+        <h2 className="text-3xl font-bold mb-2 text-[var(--foreground)]">Ready to deploy {agentName}?</h2>
+        <p className="text-[var(--muted)]">Review and confirm</p>
       </div>
 
       {/* Pricing Card */}
       <div className="bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-6 mb-6">
         <div className="text-center">
-          <span className="text-4xl font-bold text-white">$150</span>
-          <span className="text-zinc-400"> first month</span>
-          <p className="text-sm text-zinc-400 mt-2">Includes setup • $99/month after</p>
+          <span className="text-4xl font-bold text-[var(--foreground)]">$150</span>
+          <span className="text-[var(--muted)]"> first month</span>
+          <p className="text-sm text-[var(--muted)] mt-2">Includes setup • $99/month after</p>
         </div>
         <ul className="mt-4 space-y-2 text-sm">
           {[
@@ -39,22 +39,22 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
             "Devin-powered deployment",
           ].map((feature) => (
             <li key={feature} className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-400" />
-              <span className="text-white">{feature}</span>
+              <Check className="w-4 h-4 text-green-500" />
+              <span className="text-[var(--foreground)]">{feature}</span>
             </li>
           ))}
         </ul>
       </div>
 
       {/* Terms */}
-      <label className="flex items-start gap-3 p-4 bg-zinc-900/80 rounded-xl cursor-pointer mb-4 border border-zinc-800">
+      <label className="flex items-start gap-3 p-4 bg-[var(--card)] rounded-xl cursor-pointer mb-4 border border-[var(--border)]">
         <input 
           type="checkbox" 
           checked={accepted}
           onChange={(e) => setAccepted(e.target.checked)}
-          className="mt-1 w-4 h-4 rounded border-zinc-600 bg-zinc-800"
+          className="mt-1 w-4 h-4 rounded border-[var(--border)] bg-[var(--background)] text-blue-500 focus:ring-blue-500"
         />
-        <span className="text-sm text-zinc-400">
+        <span className="text-sm text-[var(--muted)]">
           I understand this creates a Telegram bot via Devin AI. 
           Setup takes 2-5 minutes.
         </span>
@@ -70,7 +70,7 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
         Proceed to Payment
       </button>
 
-      <p className="text-center text-sm text-zinc-500 mt-6">
+      <p className="text-center text-sm text-[var(--muted)] mt-6">
         You&apos;ll complete payment on the next step
       </p>
     </motion.div>
