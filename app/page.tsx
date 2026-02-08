@@ -4,47 +4,81 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
-import { StepName } from "./components/wizard/StepName";
-import { StepPersonality } from "./components/wizard/StepPersonality";
-import { StepDemo } from "./components/wizard/StepDemo";
+import { StepWelcome } from "./components/wizard/StepWelcome";
+import { StepAgentName } from "./components/wizard/StepAgentName";
+import { StepAgentType } from "./components/wizard/StepAgentType";
+import { StepExpectations } from "./components/wizard/StepExpectations";
+import { StepChannel } from "./components/wizard/StepChannel";
+import { StepTelegramContact } from "./components/wizard/StepTelegramContact";
 import { StepPayment } from "./components/wizard/StepPayment";
 import { StepDeploy } from "./components/wizard/StepDeploy";
 import { PaymentModal } from "./components/PaymentModal";
 import { AIOrb } from "./components/AIOrb";
 
-type Step = "name" | "personality" | "demo" | "payment" | "deploy";
+type Step = "welcome" | "agent-name" | "agent-type" | "expectations" | "channel" | "telegram-contact" | "payment" | "deploy";
 type DeployStatus = "deploying" | "completed" | "failed";
 
 export default function Home() {
   const { login, authenticated, user } = usePrivy();
-  const [step, setStep] = useState<Step>("name");
+  const [step, setStep] = useState<Step>("welcome");
   const [agentName, setAgentName] = useState("");
-  const [personality, setPersonality] = useState("");
+  const [agentType, setAgentType] = useState("");
+  const [expectations, setExpectations] = useState<string[]>([]);
+  const [channel, setChannel] = useState("telegram");
+  const [telegramContact, setTelegramContact] = useState("");
   const [deployStatus, setDeployStatus] = useState<DeployStatus>("deploying");
   const [deployProgress, setDeployProgress] = useState(0);
   const [telegramLink, setTelegramLink] = useState("");
   const [authCode, setAuthCode] = useState("");
   const [agentId, setAgentId] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [config, setConfig] = useState({ agentName: "", useCase: "", scope: "", contactMethod: "telegram" });
+  const [config, setConfig] = useState({ 
+    agentName: "", 
+    useCase: "", 
+    scope: "", 
+    contactMethod: "telegram",
+    telegramContact: ""
+  });
 
-  const handleNameSubmit = (name: string) => {
+  const handleStart = () => setStep("agent-name");
+
+  const handleAgentNameSubmit = (name: string) => {
     setAgentName(name);
     setConfig(prev => ({ ...prev, agentName: name }));
-    setStep("personality");
+    setStep("agent-type");
   };
 
-  const handlePersonalitySelect = (p: string) => {
-    setPersonality(p);
-    setConfig(prev => ({ ...prev, scope: p, useCase: "assistant" }));
-    setStep("demo");
-  };
-
-  const handleDemoComplete = () => {
+  const handleAgentTypeSelect = (type: string, description: string) => {
+    setAgentType(type);
+    setConfig(prev => ({ ...prev, scope: description }));
+    
+    // Check auth before expectations
     if (!authenticated) {
       login();
       return;
     }
+    setStep("expectations");
+  };
+
+  const handleExpectationsSubmit = (selected: string[]) => {
+    setExpectations(selected);
+    setConfig(prev => ({ ...prev, useCase: selected.join(", ") }));
+    setStep("channel");
+  };
+
+  const handleChannelSelect = (selectedChannel: string) => {
+    setChannel(selectedChannel);
+    setConfig(prev => ({ ...prev, contactMethod: selectedChannel }));
+    if (selectedChannel === "telegram") {
+      setStep("telegram-contact");
+    } else {
+      setStep("payment");
+    }
+  };
+
+  const handleTelegramContactSubmit = (contact: string) => {
+    setTelegramContact(contact);
+    setConfig(prev => ({ ...prev, telegramContact: contact }));
     setStep("payment");
   };
 
@@ -57,13 +91,15 @@ export default function Home() {
     setStep("deploy");
     
     try {
-      // Create agent via API
       const response = await fetch("/api/agents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agentName,
-          personality,
+          agentType,
+          expectations,
+          channel,
+          telegramContact,
           userId: user?.id,
         }),
       });
@@ -74,8 +110,6 @@ export default function Home() {
 
       const data = await response.json();
       setAgentId(data.id);
-      
-      // Start polling for status
       pollAgentStatus(data.id);
       
     } catch (error) {
@@ -92,7 +126,6 @@ export default function Home() {
         
         const agent = await response.json();
         
-        // Update progress based on status
         if (agent.status === "pending") {
           setDeployProgress(10);
         } else if (agent.status === "deploying") {
@@ -112,12 +145,24 @@ export default function Home() {
       }
     }, 3000);
 
-    // Cleanup after 5 minutes
     setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
   }, []);
 
+  const getProgressWidth = () => {
+    const steps: Step[] = ["welcome", "agent-name", "agent-type", "expectations", "channel", "telegram-contact", "payment", "deploy"];
+    const index = steps.indexOf(step);
+    return `${(index / (steps.length - 1)) * 100}%`;
+  };
+
+  const getOrbState = () => {
+    if (step === "deploy") return "deploying";
+    if (step === "expectations") return "processing";
+    if (step === "welcome") return "idle";
+    return "idle";
+  };
+
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-[var(--background)] bg-glow relative">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -138,43 +183,63 @@ export default function Home() {
           <motion.div
             className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
             initial={{ width: "0%" }}
-            animate={{ width: `${["name", "personality", "demo", "payment", "deploy"].indexOf(step) * 25}%` }}
+            animate={{ width: getProgressWidth() }}
             transition={{ duration: 0.3 }}
           />
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="pt-32 pb-20 px-4">
+      <main className="pt-28 pb-20 px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
-          {/* AI Orb (visual flair) */}
-          <div className="flex justify-center mb-8">
-            <div className="w-36 h-36 sm:w-44 sm:h-44">
-              <AIOrb wizardState={step === "deploy" ? "deploying" : step === "demo" ? "processing" : "idle"} />
+          {/* AI Orb */}
+          <div className="flex justify-center mb-6">
+            <div className="w-32 h-32 sm:w-40 sm:h-40">
+              <AIOrb 
+                wizardState={getOrbState()} 
+                showGreeting={step === "welcome"}
+              />
             </div>
           </div>
 
           {/* Step Content */}
           <AnimatePresence mode="wait">
-            {step === "name" && (
-              <motion.div key="name" exit={{ opacity: 0, x: -20 }}>
-                <StepName onSubmit={handleNameSubmit} />
+            {step === "welcome" && (
+              <motion.div key="welcome" exit={{ opacity: 0, x: -20 }}>
+                <StepWelcome onStart={handleStart} />
               </motion.div>
             )}
 
-            {step === "personality" && (
-              <motion.div key="personality" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <StepPersonality onSelect={handlePersonalitySelect} />
+            {step === "agent-name" && (
+              <motion.div key="agent-name" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepAgentName onSubmit={handleAgentNameSubmit} />
               </motion.div>
             )}
 
-            {step === "demo" && (
-              <motion.div key="demo" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <StepDemo 
-                  agentName={agentName} 
-                  personality={personality} 
-                  onContinue={handleDemoComplete} 
+            {step === "agent-type" && (
+              <motion.div key="agent-type" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepAgentType onSelect={handleAgentTypeSelect} />
+              </motion.div>
+            )}
+
+            {step === "expectations" && (
+              <motion.div key="expectations" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepExpectations 
+                  agentName={agentName}
+                  onSubmit={handleExpectationsSubmit} 
                 />
+              </motion.div>
+            )}
+
+            {step === "channel" && (
+              <motion.div key="channel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepChannel onSelect={handleChannelSelect} />
+              </motion.div>
+            )}
+
+            {step === "telegram-contact" && (
+              <motion.div key="telegram-contact" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <StepTelegramContact onSubmit={handleTelegramContactSubmit} />
               </motion.div>
             )}
 

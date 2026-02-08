@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Check, Wallet } from "lucide-react";
+import { Check, Wallet, Shield } from "lucide-react";
 
 interface StepPaymentProps {
   agentName: string;
@@ -16,34 +16,58 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-md mx-auto px-4 sm:px-0"
+      className="max-w-lg mx-auto px-4 sm:px-0"
     >
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-2 text-[var(--foreground)]">Ready to deploy {agentName}?</h2>
-        <p className="text-[var(--muted)]">Review and confirm</p>
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/25">
+          <Wallet className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-3xl font-bold mb-2 text-[var(--foreground)]">
+          Ready to deploy {agentName}?
+        </h2>
+        <p className="text-[var(--muted)]">
+          One-time setup fee + first month included
+        </p>
       </div>
 
       {/* Pricing Card */}
-      <div className="bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-6 mb-6">
-        <div className="text-center">
-          <span className="text-4xl font-bold text-[var(--foreground)]">$150</span>
-          <span className="text-[var(--muted)]"> first month</span>
-          <p className="text-sm text-[var(--muted)] mt-2">Includes setup • $99/month after</p>
+      <div className="bg-gradient-to-br from-blue-500/10 to-purple-600/10 border border-[var(--border)] rounded-2xl p-6 mb-6">
+        <div className="text-center mb-4">
+          <span className="text-5xl font-bold text-[var(--foreground)]">$150</span>
+          <p className="text-[var(--muted)] mt-1">Setup + First Month</p>
         </div>
-        <ul className="mt-4 space-y-2 text-sm">
-          {[
-            "Unlimited messages",
-            "Telegram integration", 
-            "Custom personality",
-            "24/7 availability",
-            "Devin-powered deployment",
-          ].map((feature) => (
-            <li key={feature} className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-500" />
-              <span className="text-[var(--foreground)]">{feature}</span>
-            </li>
-          ))}
-        </ul>
+        
+        <div className="border-t border-[var(--border)] pt-4">
+          <p className="text-sm text-[var(--muted)] mb-3">What&apos;s included:</p>
+          <ul className="space-y-2">
+            {[
+              "AI Agent deployment via Devin",
+              "Telegram bot setup & configuration",
+              "Custom personality & capabilities",
+              "1 month of unlimited usage",
+              "Dashboard access for management",
+            ].map((feature) => (
+              <li key={feature} className="flex items-center gap-2 text-sm text-[var(--foreground)]">
+                <Check className="w-4 h-4 text-green-500" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-4 p-3 bg-[var(--background)] rounded-xl">
+          <p className="text-xs text-[var(--muted)] text-center">
+            After first month: $99/month • Cancel anytime
+          </p>
+        </div>
+      </div>
+
+      {/* Security Note */}
+      <div className="flex items-center gap-3 p-4 bg-[var(--card)] rounded-xl border border-[var(--border)] mb-4">
+        <Shield className="w-5 h-5 text-green-500 flex-shrink-0" />
+        <p className="text-sm text-[var(--muted)]">
+          Secure payment powered by cryptocurrency. Your agent will be deployed within 2-5 minutes after payment.
+        </p>
       </div>
 
       {/* Terms */}
@@ -52,11 +76,10 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
           type="checkbox" 
           checked={accepted}
           onChange={(e) => setAccepted(e.target.checked)}
-          className="mt-1 w-4 h-4 rounded border-[var(--border)] bg-[var(--background)] text-blue-500 focus:ring-blue-500"
+          className="mt-0.5 w-4 h-4 rounded border-[var(--border)] bg-[var(--background)] text-blue-500 focus:ring-blue-500"
         />
         <span className="text-sm text-[var(--muted)]">
-          I understand this creates a Telegram bot via Devin AI. 
-          Setup takes 2-5 minutes.
+          I understand this creates a Telegram bot via Devin AI and agree to the terms of service.
         </span>
       </label>
 
@@ -70,8 +93,8 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
         Proceed to Payment
       </button>
 
-      <p className="text-center text-sm text-[var(--muted)] mt-6">
-        You&apos;ll complete payment on the next step
+      <p className="text-center text-xs text-[var(--muted)] mt-4">
+        🔒 Secure crypto payment. No credit card required.
       </p>
     </motion.div>
   );

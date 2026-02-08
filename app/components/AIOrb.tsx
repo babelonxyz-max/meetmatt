@@ -60,7 +60,7 @@ export const AIOrb = memo(function AIOrb({
   useEffect(() => {
     if (showGreeting && !greetingShown) {
       setGreetingShown(true);
-      setBubbleText("Hi! I'm MATT 👋");
+      setBubbleText("Hey, I'm Matt! Let's create your personal AI assistant! 👋");
       setShowBubble(true);
     }
   }, [showGreeting, greetingShown]);
@@ -170,7 +170,7 @@ export const AIOrb = memo(function AIOrb({
 
       {/* Main Orb Container - Pure 2D, NO 3D transforms */}
       <motion.div
-        className="relative w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 cursor-pointer"
+        className="relative w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 cursor-pointer"
         animate={reaction ? {
           x: reaction === "giggle" ? [0, -8, 8, -8, 8, 0] : 0,
           y: reaction === "bounce" ? [0, -40, 0, -20, 0] : reaction === "backflip" ? [0, -30, 0] : 0,
@@ -213,7 +213,7 @@ export const AIOrb = memo(function AIOrb({
 
         {/* Main orb body - Liquid morphing with border-radius */}
         <motion.div
-          className="absolute inset-4 rounded-full overflow-hidden"
+          className="absolute inset-3 rounded-full overflow-hidden"
           animate={{
             borderRadius: ["50%", "45% 55% 50% 50% / 50% 45% 55% 50%", "50% 50% 45% 55% / 55% 50% 50% 45%", "55% 45% 50% 50% / 50% 55% 45% 50%", "50%"],
             scale: state === "thinking" ? [1, 1.08, 1] : state === "listening" ? [1, 1.04, 1] : isHovered ? [1, 1.03, 1] : [1, 1.01, 1],
@@ -262,7 +262,7 @@ export const AIOrb = memo(function AIOrb({
         </motion.div>
 
         {/* Inner ring */}
-        <div className="absolute inset-4 rounded-full border-2 pointer-events-none" style={{ borderColor: `rgba(${colors.primary},0.4)`, boxShadow: `inset 0 0 25px rgba(${colors.primary},0.3), 0 0 35px rgba(${colors.primary},0.3)` }} />
+        <div className="absolute inset-3 rounded-full border-2 pointer-events-none" style={{ borderColor: `rgba(${colors.primary},0.4)`, boxShadow: `inset 0 0 25px rgba(${colors.primary},0.3), 0 0 35px rgba(${colors.primary},0.3)` }} />
 
         {/* Status glow */}
         <motion.div

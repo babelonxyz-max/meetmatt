@@ -69,6 +69,39 @@
   }
 }
 
+/* Soft glowing background effects */
+.bg-glow {
+  position: relative;
+}
+
+.bg-glow::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(14, 165, 233, 0.1) 0%, transparent 70%);
+  background-attachment: fixed;
+  pointer-events: none;
+  z-index: 0;
+  animation: bg-glow-pulse 8s ease-in-out infinite;
+}
+
+@keyframes bg-glow-pulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
 /* Animated gradient background */
 .animated-gradient-bg {
   background: 
@@ -110,6 +143,38 @@
   }
   50% {
     background-position: 100% 0%, 0% 0%, 100% 50%, 0% 50%, 100% 100%;
+  }
+}
+
+/* Shining effect for background */
+.bg-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-shine::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 60%
+  );
+  animation: shine 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes shine {
+  0%, 100% {
+    transform: translateX(-100%) rotate(0deg);
+  }
+  50% {
+    transform: translateX(100%) rotate(0deg);
   }
 }
 
