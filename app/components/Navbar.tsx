@@ -43,23 +43,23 @@ export function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-[var(--background)] z-[100] border-b border-[var(--border)]">
+    <header className="fixed top-0 left-0 right-0 h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-black/90 backdrop-blur-md z-[100] border-b border-zinc-800">
       <Link href="/" className="flex items-center gap-3">
         <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
-          <Sparkles className="w-7 h-7 text-[var(--accent)]" />
+          <Sparkles className="w-7 h-7 text-blue-500" />
         </motion.div>
-        <span className="font-bold text-2xl tracking-tight">Matt</span>
+        <span className="font-bold text-2xl tracking-tight text-white">Matt</span>
       </Link>
       
       <nav className="flex items-center gap-6">
-        <Link href="/pricing" className="text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors">
+        <Link href="/pricing" className="text-lg text-white hover:text-blue-400 transition-colors">
           Pricing
         </Link>
         {authenticated ? (
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors px-3 py-2 rounded-lg hover:bg-[var(--card)]"
+              className="flex items-center gap-2 text-lg text-white hover:text-blue-400 transition-colors px-3 py-2 rounded-lg hover:bg-zinc-800/50"
             >
               <User className="w-5 h-5" />
               <span className="hidden sm:inline max-w-[150px] truncate">
@@ -75,16 +75,16 @@ export function Navbar() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 w-48 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl overflow-hidden"
+                  className="absolute right-0 top-full mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden"
                 >
                   <Link
                     href="/dashboard"
                     onClick={() => setShowDropdown(false)}
-                    className="flex items-center gap-3 px-4 py-3 text-[var(--foreground)] hover:bg-[var(--card)]/80 transition-colors"
+                    className="flex items-center gap-3 px-4 py-3 text-white hover:bg-zinc-800 transition-colors"
                   >
                     <span>Dashboard</span>
                   </Link>
-                  <div className="border-t border-[var(--border)]" />
+                  <div className="border-t border-zinc-800" />
                   <button
                     onClick={() => {
                       logout();
@@ -102,7 +102,7 @@ export function Navbar() {
         ) : (
           <button 
             onClick={login} 
-            className="flex items-center gap-2 text-lg text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
+            className="flex items-center gap-2 text-lg text-white hover:text-blue-400 transition-colors"
           >
             <User className="w-5 h-5" />
             <span className="hidden sm:inline">Log in</span>

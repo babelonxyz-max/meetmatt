@@ -215,53 +215,53 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm safe-area-padding"
+          className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm safe-area-padding"
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-gradient-to-r from-[#0ea5e9]/10 to-transparent">
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800 bg-gradient-to-r from-blue-500/10 to-transparent">
               <div className="flex items-center gap-3">
                 <Wallet className="w-5 h-5 text-[#0ea5e9]" />
                 <div>
-                  <h3 className="font-semibold">Payment</h3>
-                  <p className="text-xs text-[var(--muted)] font-mono">{config.agentName}</p>
+                  <h3 className="font-semibold text-white">Payment</h3>
+                  <p className="text-xs text-zinc-400 font-mono">{config.agentName}</p>
                 </div>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-[var(--card-hover)] rounded-lg transition-colors">
-                <X className="w-4 h-4 text-[var(--muted)]" />
+              <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                <X className="w-4 h-4 text-zinc-400" />
               </button>
             </div>
 
             <div className="p-4 space-y-4">
-              <div className="text-center py-4 bg-gradient-to-b from-[var(--card)] to-transparent rounded-xl border border-[var(--border)]">
+              <div className="text-center py-4 bg-gradient-to-b from-zinc-800/50 to-transparent rounded-xl border border-zinc-800">
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-4xl font-bold text-[#0ea5e9]">${displayPrice}</span>
                   {isUSDH && (
                     <span className="text-sm text-green-400 bg-green-400/10 px-2 py-1 rounded-full">-10%</span>
                   )}
                 </div>
-                <p className="text-xs text-[var(--muted)] mt-1">
+                <p className="text-xs text-zinc-400 mt-1">
                   First month
                   {isUSDH && <span className="text-green-400 ml-1">(Save $15 with USDH)</span>}
                 </p>
               </div>
 
-              <div className="bg-[var(--card)] rounded-xl p-3 border border-[var(--border)] text-sm space-y-1">
+              <div className="bg-zinc-800/50 rounded-xl p-3 border border-zinc-800 text-sm space-y-1">
                 <div className="flex items-center gap-2">
                   <MessageCircle className="w-4 h-4 text-[#0ea5e9]" />
-                  <span className="text-[var(--muted)]">Contact:</span>
-                  <span className="capitalize">{config.contactMethod}</span>
+                  <span className="text-zinc-400">Contact:</span>
+                  <span className="capitalize text-white">{config.contactMethod}</span>
                 </div>
               </div>
 
               {status === "selecting" && (
                 <div className="space-y-3">
-                  <label className="text-xs font-mono text-[var(--muted)]">SELECT CRYPTOCURRENCY</label>
+                  <label className="text-xs font-mono text-zinc-500">SELECT CRYPTOCURRENCY</label>
                   <div className="grid grid-cols-2 gap-2">
                     {ALL_CRYPTO_OPTIONS.map((crypto) => (
                       <motion.button
@@ -271,15 +271,15 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                         whileTap={{ scale: 0.98 }}
                         className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
                           selectedCurrency === crypto.code
-                            ? "bg-[#0ea5e9]/20 border-[#0ea5e9] text-[#0ea5e9]"
-                            : "bg-[var(--card)] border-[var(--border)] hover:border-[#0ea5e9]/50"
+                            ? "bg-blue-500/20 border-blue-500 text-blue-400"
+                            : "bg-zinc-800/50 border-zinc-700 hover:border-blue-500/50"
                         }`}
                       >
                         <span className="text-lg">{crypto.icon}</span>
                         <div className="text-left flex-1">
-                          <p className="text-xs font-semibold">{crypto.name}</p>
+                          <p className="text-xs font-semibold text-white">{crypto.name}</p>
                           {crypto.network && (
-                            <p className="text-[10px] text-[var(--muted)]">{crypto.network}</p>
+                            <p className="text-[10px] text-zinc-400">{crypto.network}</p>
                           )}
                         </div>
                         {crypto.discount && <Zap className="w-3 h-3 text-green-400" />}
@@ -296,7 +296,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
               {status === "creating" && (
                 <div className="flex flex-col items-center gap-4 py-8">
                   <Loader2 className="w-8 h-8 text-[#0ea5e9] animate-spin" />
-                  <p className="text-sm text-[var(--muted)] font-mono">GENERATING ADDRESS...</p>
+                  <p className="text-sm text-zinc-400 font-mono">GENERATING ADDRESS...</p>
                 </div>
               )}
 
@@ -317,29 +317,29 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                     <img 
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payment.address)}`}
                       alt="Payment QR Code"
-                      className="rounded-lg border border-[var(--border)]"
+                      className="rounded-lg border border-zinc-800"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-mono text-[var(--muted)]">SEND {selectedCrypto?.name.toUpperCase()} TO:</label>
+                    <label className="text-xs font-mono text-zinc-500">SEND {selectedCrypto?.name.toUpperCase()} TO:</label>
                     <div className="flex gap-2">
                       <textarea 
                         value={payment.address} 
                         readOnly 
                         rows={3}
-                        className="flex-1 bg-[var(--card)] border border-[var(--border)] text-xs font-mono p-3 rounded-lg resize-none break-all"
+                        className="flex-1 bg-zinc-800/50 border border-zinc-700 text-xs font-mono p-3 rounded-lg resize-none break-all text-white"
                       />
-                      <Button onClick={copyAddress} size="sm" className="h-auto w-12 p-0 bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)]">
-                        {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                      <Button onClick={copyAddress} size="sm" className="h-auto w-12 p-0 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700">
+                        {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-white" />}
                       </Button>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+                  <div className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-800">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-[var(--muted)]">Amount:</span>
-                      <span className="font-mono">{payment.amount} {selectedCrypto?.code.toUpperCase()}</span>
+                      <span className="text-zinc-400">Amount:</span>
+                      <span className="font-mono text-white">{payment.amount} {selectedCrypto?.code.toUpperCase()}</span>
                     </div>
                     {payment.discount && (
                       <div className="flex justify-between text-xs">
@@ -349,7 +349,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                     )}
                   </div>
 
-                  <p className="text-xs text-[var(--muted)] text-center">
+                  <p className="text-xs text-zinc-400 text-center">
                     {selectedCurrency === "usdh" 
                       ? "Send USDH to the address above. Payment will be confirmed manually."
                       : "Funds will be automatically transferred after confirmation."}

@@ -31,27 +31,27 @@ export function StepDeploy({ agentName, status, progress, telegramLink, authCode
           <Check className="w-10 h-10 text-green-400" />
         </div>
         <h2 className="text-3xl font-bold mb-2">{agentName} is ready!</h2>
-        <p className="text-[var(--muted)] mb-6">Your AI assistant has been deployed</p>
+        <p className="text-zinc-400 mb-6">Your AI assistant has been deployed</p>
 
-        <div className="bg-[var(--card)] rounded-xl p-6 mb-6 border border-[var(--border)]">
-          <p className="text-sm text-[var(--muted)] mb-2">Bot Username</p>
-          <p className="text-xl font-mono text-[var(--foreground)]">@{telegramLink.split("/").pop()}</p>
+        <div className="bg-zinc-900/80 rounded-xl p-6 mb-6 border border-zinc-800">
+          <p className="text-sm text-zinc-400 mb-2">Bot Username</p>
+          <p className="text-xl font-mono text-white">@{telegramLink.split("/").pop()}</p>
         </div>
 
         <a
           href={telegramLink}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full py-4 bg-[var(--accent)] hover:opacity-90 text-white rounded-xl font-semibold transition-colors mb-4"
+          className="block w-full py-4 bg-blue-500 hover:bg-blue-400 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-blue-500/25 mb-4"
         >
           Open in Telegram
         </a>
 
         {authCode && (
-          <div className="p-4 bg-[var(--card)] rounded-xl border border-[var(--border)]">
-            <p className="text-sm text-[var(--muted)] mb-1">Your auth code</p>
-            <p className="text-2xl font-mono font-bold text-[var(--foreground)]">{authCode}</p>
-            <p className="text-xs text-[var(--muted)] mt-1">Send this to the bot to activate</p>
+          <div className="p-4 bg-zinc-900/80 rounded-xl border border-zinc-800">
+            <p className="text-sm text-zinc-400 mb-1">Your auth code</p>
+            <p className="text-2xl font-mono font-bold text-white">{authCode}</p>
+            <p className="text-xs text-zinc-500 mt-1">Send this to the bot to activate</p>
           </div>
         )}
       </motion.div>
@@ -87,8 +87,8 @@ export function StepDeploy({ agentName, status, progress, telegramLink, authCode
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold mb-2">Deploying {agentName}...</h2>
-      <p className="text-[var(--muted)] mb-8">This usually takes about 2 minutes</p>
+      <h2 className="text-2xl font-bold mb-2 text-white">Deploying {agentName}...</h2>
+      <p className="text-zinc-400 mb-8">This usually takes about 2 minutes</p>
 
       <div className="space-y-3">
         {steps.map((step, index) => {
@@ -100,15 +100,15 @@ export function StepDeploy({ agentName, status, progress, telegramLink, authCode
             <div
               key={step.label}
               className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                isActive ? "bg-[var(--accent)]/20" : isComplete ? "bg-green-500/10" : "bg-[var(--card)]"
+                isActive ? "bg-blue-500/20" : isComplete ? "bg-green-500/10" : "bg-zinc-900/80"
               }`}
             >
               <div className={`p-2 rounded-lg ${
-                isActive ? "bg-[var(--accent)]" : isComplete ? "bg-green-500" : "bg-[var(--border)]"
+                isActive ? "bg-blue-500" : isComplete ? "bg-green-500" : "bg-zinc-800"
               }`}>
                 {isComplete ? <Check className="w-4 h-4 text-white" /> : <Icon className="w-4 h-4 text-white" />}
               </div>
-              <span className={`${isActive ? "text-[var(--foreground)]" : isComplete ? "text-[var(--foreground)]/80" : "text-[var(--muted)]"}`}>
+              <span className={`${isActive ? "text-white" : isComplete ? "text-zinc-300" : "text-zinc-500"}`}>
                 {step.label}
               </span>
             </div>

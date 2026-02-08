@@ -45,8 +45,8 @@ export function StepPersonality({ onSelect }: StepPersonalityProps) {
       className="max-w-2xl mx-auto px-4 sm:px-0"
     >
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-2 text-[var(--foreground)]">What&apos;s your style?</h2>
-        <p className="text-[var(--muted)]">Choose how your assistant will interact with you</p>
+        <h2 className="text-3xl font-bold mb-2 text-white">What&apos;s your style?</h2>
+        <p className="text-zinc-400">Choose how your assistant will interact with you</p>
       </div>
 
       <div className="grid gap-4">
@@ -65,9 +65,9 @@ export function StepPersonality({ onSelect }: StepPersonalityProps) {
                   <Icon className={`w-6 h-6 ${p.iconColor}`} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-1 text-[var(--foreground)]">{p.name}</h3>
-                  <p className="text-[var(--muted)] text-sm mb-2">{p.description}</p>
-                  <p className="text-[var(--muted)]/70 text-sm italic">&ldquo;{p.sample}&rdquo;</p>
+                  <h3 className="text-xl font-semibold mb-1 text-white">{p.name}</h3>
+                  <p className="text-zinc-400 text-sm mb-2">{p.description}</p>
+                  <p className="text-zinc-500 text-sm italic">&ldquo;{p.sample}&rdquo;</p>
                 </div>
               </div>
             </motion.button>

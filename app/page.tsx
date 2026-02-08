@@ -117,26 +117,26 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 to-black">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-zinc-800">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[#6366f1] shadow-md shadow-[var(--accent)]/20" />
-            <span className="font-bold text-xl text-[var(--foreground)]">Matt</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-md shadow-blue-500/20" />
+            <span className="font-bold text-xl text-white">Matt</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/pricing" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Pricing</Link>
-            <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Dashboard</Link>
+            <Link href="/pricing" className="text-sm text-zinc-400 hover:text-white transition-colors">Pricing</Link>
+            <Link href="/dashboard" className="text-sm text-zinc-400 hover:text-white transition-colors">Dashboard</Link>
           </div>
         </div>
       </header>
 
       {/* Progress Bar */}
       <div className="fixed top-16 left-0 right-0 z-40">
-        <div className="h-1 bg-[var(--border)]">
+        <div className="h-1 bg-zinc-800">
           <motion.div
-            className="h-full bg-gradient-to-r from-[var(--accent)] to-[#6366f1]"
+            className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
             initial={{ width: "0%" }}
             animate={{ width: `${["name", "personality", "demo", "payment", "deploy"].indexOf(step) * 25}%` }}
             transition={{ duration: 0.3 }}

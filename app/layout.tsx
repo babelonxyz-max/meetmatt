@@ -57,7 +57,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: 'window.__PRIVY_APP_ID__=' + JSON.stringify(privyAppId) + ';' }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)] overflow-x-hidden selection:bg-[var(--accent)]/30 selection:text-[var(--foreground)]`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950 overflow-x-hidden selection:bg-blue-500/30 selection:text-white`}>
         <Providers>
           <Navbar />
           <main className="min-h-screen pb-24">

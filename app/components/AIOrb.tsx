@@ -214,11 +214,12 @@ export const AIOrb = memo(function AIOrb({
     accent: "245, 158, 11", // Orange
   };
 
+  // Fixed to blue/cyan color scheme for consistent branding
   const normalColorSchemes = [
-    { primary: "14,165,233", secondary: "6,182,212", accent: "99,102,241" },
-    { primary: "249,115,22", secondary: "251,146,60", accent: "234,88,12" },
-    { primary: "168,85,247", secondary: "192,132,252", accent: "147,51,234" },
-    { primary: "34,197,94", secondary: "74,222,128", accent: "22,163,74" },
+    { primary: "14,165,233", secondary: "6,182,212", accent: "99,102,241" }, // Sky blue / Cyan
+    { primary: "59,130,246", secondary: "96,165,250", accent: "139,92,246" }, // Blue / Indigo
+    { primary: "6,182,212", secondary: "34,211,238", accent: "59,130,246" },  // Cyan / Light blue
+    { primary: "99,102,241", secondary: "129,140,248", accent: "14,165,233" }, // Indigo / Sky
   ];
   
   const colors = isSuperSaiyan ? superSaiyanColors : normalColorSchemes[colorPhase];
