@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Shield, Lock, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,17 @@ export default function ControlLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if already logged in
+    fetch("/api/control/check")
+      .then((res) => {
+        if (res.ok) {
+          router.push("/control/dashboard");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

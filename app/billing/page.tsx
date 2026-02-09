@@ -575,9 +575,9 @@ export default function BillingPage() {
                       >
                         <div className="font-semibold">{option.label}</div>
                         <div className={`text-sm ${extensionMonths === option.months ? "text-white/80" : "text-[var(--muted)]"}`}>
-                          {formatPrice(option.finalPrice)}
+                          {formatPrice(option.price)}
                         </div>
-                        {option.discountPercent > 0 && (
+                        {option.discountPercent > 0 ? (
                           <div className={`absolute -top-2 -right-2 px-2 py-0.5 text-xs font-bold rounded-full ${
                             extensionMonths === option.months 
                               ? "bg-white text-[var(--accent)]" 
@@ -585,7 +585,7 @@ export default function BillingPage() {
                           }`}>
                             -{option.discountPercent}%
                           </div>
-                        )}
+                        ) : null}
                       </button>
                     ))}
                   </div>
@@ -598,18 +598,18 @@ export default function BillingPage() {
                       <div className="p-4 bg-[var(--background)] rounded-xl space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-[var(--muted)]">Original price</span>
-                          <span className="line-through">{formatPrice(pricing.basePrice)}</span>
+                          <span className="line-through">{formatPrice(pricing.price)}</span>
                         </div>
-                        {pricing.savings > 0 && (
+                        {pricing.savings > 0 ? (
                           <div className="flex justify-between text-sm text-green-500">
-                            <span>Volume discount</span>
+                            <span>Annual discount</span>
                             <span>-{formatPrice(pricing.savings)}</span>
                           </div>
-                        )}
+                        ) : null}
                         <div className="h-px bg-[var(--border)] my-2" />
                         <div className="flex justify-between items-center">
                           <span className="font-medium">Total to pay</span>
-                          <span className="text-2xl font-bold text-[var(--accent)]">{formatPrice(pricing.finalPrice)}</span>
+                          <span className="text-2xl font-bold text-[var(--accent)]">{formatPrice(pricing.price)}</span>
                         </div>
                         <div className="text-xs text-[var(--muted)] text-right">
                           ~{formatPrice(pricing.pricePerMonth)}/month

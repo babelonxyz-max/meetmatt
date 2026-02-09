@@ -15,6 +15,7 @@ export interface PricingOption {
   price: number;
   pricePerMonth: number;
   savings: number;
+  discountPercent: number;
   isPopular?: boolean;
 }
 
@@ -59,12 +60,14 @@ export function calculatePricing(tierId: string, months: number): PricingOption 
   // Annual pricing (12 months)
   if (months === 12) {
     const savings = (tier.monthlyPrice * 12) - tier.annualPrice;
+    const discountPercent = Math.round((savings / (tier.monthlyPrice * 12)) * 100);
     return {
       months: 12,
       label: "Annual (Best Value)",
       price: tier.annualPrice,
       pricePerMonth: Math.round(tier.annualPrice / 12),
       savings,
+      discountPercent,
       isPopular: true,
     };
   }
@@ -75,10 +78,11 @@ export function calculatePricing(tierId: string, months: number): PricingOption 
   
   return {
     months: clampedMonths,
-    label: clampedMonths === 1 ? "Monthly" : `${clampedMonths} Months`,
+    label: clampedMonths === 1 ? "1 Month" : `${clampedMonths} Months`,
     price,
     pricePerMonth: tier.monthlyPrice,
     savings: 0,
+    discountPercent: 0,
   };
 }
 
@@ -91,10 +95,27 @@ export function getPricingOptions(tierId: string): PricingOption[] {
   return [
     {
       months: 1,
-      label: "Monthly",
+      label: "1 Month",
       price: tier.monthlyPrice,
       pricePerMonth: tier.monthlyPrice,
       savings: 0,
+      discountPercent: 0,
+    },
+    {
+      months: 3,
+      label: "3 Months",
+      price: tier.monthlyPrice * 3,
+      pricePerMonth: tier.monthlyPrice,
+      savings: 0,
+      discountPercent: 0,
+    },
+    {
+      months: 6,
+      label: "6 Months",
+      price: tier.monthlyPrice * 6,
+      pricePerMonth: tier.monthlyPrice,
+      savings: 0,
+      discountPercent: 0,
     },
     {
       months: 12,
@@ -102,6 +123,7 @@ export function getPricingOptions(tierId: string): PricingOption[] {
       price: tier.annualPrice,
       pricePerMonth: Math.round(tier.annualPrice / 12),
       savings: (tier.monthlyPrice * 12) - tier.annualPrice,
+      discountPercent: Math.round((((tier.monthlyPrice * 12) - tier.annualPrice) / (tier.monthlyPrice * 12)) * 100),
       isPopular: true,
     },
   ];

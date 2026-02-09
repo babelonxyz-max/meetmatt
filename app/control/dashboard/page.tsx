@@ -60,8 +60,21 @@ export default function ControlDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchStats();
+    checkAuth();
   }, []);
+
+  async function checkAuth() {
+    try {
+      const response = await fetch("/api/control/check");
+      if (!response.ok) {
+        router.push("/control/login");
+        return;
+      }
+      fetchStats();
+    } catch {
+      router.push("/control/login");
+    }
+  }
 
   async function fetchStats() {
     try {

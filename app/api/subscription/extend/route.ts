@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       agent: agent.name,
       tier: agent.tier,
       months,
-      price: pricing.finalPrice,
+      price: pricing.price,
       hasApiKey: !!NOWPAYMENTS_API_KEY,
     });
     
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           userId,
           tier: agent.tier,
           currency: currency.toUpperCase(),
-          amount: pricing.finalPrice,
+          amount: pricing.price,
           address: "0xMockAddressForTesting",
           status: "pending",
           expiresAt: new Date(Date.now() + 60 * 60 * 1000),
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         payment: {
           id: mockPayment.id,
           address: mockPayment.address,
-          amount: pricing.finalPrice,
+          amount: pricing.price,
           currency: currency.toUpperCase(),
           status: "pending",
           months,
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
         "x-api-key": NOWPAYMENTS_API_KEY,
       },
       body: JSON.stringify({
-        price_amount: pricing.finalPrice,
+        price_amount: pricing.price,
         price_currency: "usd",
         pay_currency: currency.toLowerCase(),
         order_id: orderId,
