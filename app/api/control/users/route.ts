@@ -14,23 +14,60 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get users with their agents
-    const users = await prisma.user.findMany({
-      include: {
-        agents: {
-          select: {
-            id: true,
-            name: true,
-            status: true,
-            subscriptionStatus: true,
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get("search");
+    const isBanned = searchParams.get("isBanned");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+
+    const where: any = {};
+    
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: "insensitive" } },
+        { name: { contains: search, mode: "insensitive" } },
+        { walletAddress: { contains: search, mode: "insensitive" } },
+      ];
+    }
+    
+    if (isBanned !== null && isBanned !== undefined) {
+      where.isBanned = isBanned === "true";
+    }
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        include: {
+          agents: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              subscriptionStatus: true,
+            },
+          },
+          _count: {
+            select: {
+              agents: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    });
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
+    ]);
 
-    return NextResponse.json({ users });
+    return NextResponse.json({
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error("[Control Users] Error:", error);
     return NextResponse.json(

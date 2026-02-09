@@ -1,365 +1,279 @@
-# MeetMatt V2 - Project State Document
-
-> **Last Updated:** 2026-02-07  
-> **Current Branch:** `ralph-improvements`  
-> **Status:** Build Successful ✅
-
----
-
-## 📋 Quick Summary
-
-MeetMatt V2 is an AI agent deployment platform. Users create a bot via a 5-step wizard, pay with crypto, and get a deployed AI agent powered by Devin.
-
-**Philosophy:** "See First, Pay Last" - Demo before payment to reduce user anxiety.
+# MeetMatt Project State
+**Last Updated:** 2026-02-09
+**Branch:** main
+**Deployment:** https://meetmatt.xyz
 
 ---
 
-## 🏗️ Architecture
+## ✅ What's Working
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Next.js 16    │────▶│   PostgreSQL    │────▶│   Devin API     │
-│   (Frontend)    │     │   (Neon/Prisma) │     │   (Bot Creation)│
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-         │                                               │
-         ▼                                               ▼
-┌─────────────────┐                          ┌─────────────────┐
-│   Privy Auth    │                          │  NowPayments    │
-│   (Web3 Auth)   │                          │  (Crypto)       │
-└─────────────────┘                          └─────────────────┘
-```
+### Core Features
+- [x] Landing page with AI Orb (spherical, blue-purple-green gradient, white eyes)
+- [x] 8-step wizard flow (Welcome → Name → Type → Expectations → Channel → Telegram → Payment → Deploy)
+- [x] Privy authentication (Web3 wallet)
+- [x] Dashboard showing user's agents
+- [x] Theme toggle (dark/light mode)
+- [x] Database schema with User-Agent relations
 
-**Stack:**
-- **Framework:** Next.js 16.1.6 + Turbopack + TypeScript
-- **Database:** PostgreSQL (Neon) + Prisma ORM
-- **Auth:** Privy (Web3 wallet auth)
-- **Payments:** NowPayments (crypto only - Stripe removed)
-- **AI:** Devin API for bot creation/deployment
-- **Deployment:** Vercel
+### Payments - FIXED ✅
+- [x] NowPayments integration (API keys configured)
+- [x] Pricing: $150/month or $1000/year (44% discount)
+- [x] Extension options: 1, 3, 6, 12 months
+- [x] Unified pricing system in `lib/pricing.ts`
+- [x] IPN callback URL properly configured
+- [x] **Payment webhook now extends subscription period** - FIXED
+- [x] **Extension payments properly handled** - FIXED
+- [x] **Invoice records created on payment confirmation** - FIXED
+
+### Admin Panel (CONTROL) - MAJOR UPDATE ✅
+- [x] Login page at `/control/login`
+- [x] Dashboard at `/control/dashboard`
+- [x] Credentials: Latamapac / latamapac
+- [x] **Full User Management**:
+  - View all users with pagination
+  - Search users by email, wallet, name
+  - Ban/unban users
+  - Delete users with confirmation
+  - View user details (agents, payments, activity)
+  - Add admin notes to users
+- [x] **Full Agent Management**:
+  - View all agents with pagination
+  - Edit agent details (name, purpose, tier, status)
+  - Delete agents
+  - Trigger redeployment
+  - View agent owner info
+- [x] **Payment Management**:
+  - View all payments
+  - Process refunds
+  - Filter by status
+- [x] **Website Content Management (CMS)**:
+  - Edit website text content
+  - Add/remove content sections
+  - Manage hero text, CTAs, descriptions
+- [x] **System Settings**:
+  - Toggle feature flags (signup, maintenance, devin)
+  - Update pricing
+  - Edit website metadata
+- [x] Comprehensive stats dashboard with KPIs
 
 ---
 
-## 🌿 Branch Status
+## 🟡 Known Issues / In Progress
 
-| Branch | Status | Description |
-|--------|--------|-------------|
-| `main` | Stable | Production-ready V2 (without Ralph improvements) |
-| `ralph-improvements` | ✅ Ready | Main + security/validation/error handling improvements |
+### Devin Integration
+- **Status:** Currently using template deployment (fallback mode)
+- **Issue:** Need to verify DEVIN_API_KEY is set in Vercel
+- **Next Steps:**
+  - Test real Devin API calls
+  - Add deployment progress tracking
+  - Add retry mechanism for failed deployments
 
-**Commits ahead of main:** 4 (the Ralph loops)
-
-### To Merge:
-```bash
-git checkout main
-git merge ralph-improvements
-git push origin main
-```
+### Email System
+- **Status:** Not implemented
+- **Needed for:** Payment confirmations, deployment notifications
+- **Recommendation:** Resend or SendGrid integration
 
 ---
 
-## 📁 Project Structure
+## 📁 Key Files Created/Modified
 
+### Payment Fixes
 ```
-meetmatt/
-├── app/                          # Next.js App Router
-│   ├── api/                      # API Routes
-│   │   ├── agents/route.ts       # CRUD agents (V2 flow)
-│   │   ├── payments/route.ts     # Create payment intents
-│   │   ├── webhooks/
-│   │   │   ├── payment/route.ts  # NowPayments IPN handler
-│   │   │   └── devin/route.ts    # Devin webhook handler
-│   │   ├── health/route.ts       # Health check endpoint
-│   │   └── trigger-deploy/route.ts # Devin deployment trigger
-│   ├── v2/                       # V2 Wizard UI
-│   │   ├── page.tsx              # Main wizard page
-│   │   └── layout.tsx            # Wizard layout
-│   ├── layout.tsx                # Root layout
-│   └── page.tsx                  # Landing page
-├── components/                   # React Components
-│   ├── v2-wizard.tsx             # 5-step wizard component
-│   ├── v2-summary-modal.tsx      # Agent preview modal
-│   └── ...
-├── lib/                          # Utilities
-│   ├── prisma.ts                 # Prisma client singleton
-│   ├── errors.ts                 # Custom error classes ⭐ NEW
-│   ├── api-middleware.ts         # Middleware utilities ⭐ NEW
-│   └── sanitize.ts               # Input sanitization ⭐ NEW
-├── prisma/
-│   └── schema.prisma             # Database schema
-├── public/                       # Static assets
-├── PROJECT_STATE.md              # This file
-└── package.json
+app/api/webhooks/payment/route.ts    # Fixed subscription extension logic
+prisma/schema.prisma                  # Added Invoice, ActivityLog, AdminNote, WebsiteContent, SystemSetting models
 ```
 
----
-
-## 🛡️ Ralph Improvements (Completed)
-
-### Loop 1: API Validation
-- ✅ Zod schemas for request validation
-- ✅ Rate limiting (10 req/min per IP)
-- ✅ Request ID tracking for debugging
-- ✅ Structured error responses
-
-### Loop 2: Webhook Security
-- ✅ HMAC signature verification for NowPayments
-- ✅ Idempotency check (prevents duplicate payments)
-- ✅ Retry logic with exponential backoff
-- ✅ Comprehensive webhook logging
-
-### Loop 3: Error Handling
-- ✅ Custom `AppError` class with metadata
-- ✅ `tryCatch` wrapper for async functions
-- ✅ Centralized error codes (VALIDATION_ERROR, RATE_LIMITED, etc.)
-- ✅ Health check endpoint (`/api/health`)
-
-### Loop 4: Input Sanitization
-- ✅ `sanitizeHtml()` - Removes dangerous tags
-- ✅ `sanitizeSlug()` - URL-safe slugs
-- ✅ Rate limiting utilities
-- ✅ XSS prevention
-
----
-
-## 🔐 Environment Variables
-
-### Required for Production:
-```bash
-# Database
-DATABASE_URL="postgresql://..."
-POSTGRES_PRISMA_URL="postgresql://..."  # For Neon
-
-# Auth (Privy)
-NEXT_PUBLIC_PRIVY_APP_ID="cl..."
-PRIVY_APP_SECRET="..."
-
-# AI (Devin)
-DEVIN_API_KEY="..."           # ⚠️ Currently placeholder
-DEVIN_WEBHOOK_SECRET="..."    # For webhook verification
-
-# Payments (NowPayments)
-NOWPAYMENTS_API_KEY="..."
-NOWPAYMENTS_IPN_SECRET="..."  # For webhook signature verification
-
-# App
-NEXT_PUBLIC_APP_URL="https://meetmatt.app"
+### Backoffice (New)
+```
+app/control/dashboard/page.tsx        # Full admin dashboard with all features
+app/api/control/users/[id]/route.ts   # Get, update, delete user
+app/api/control/users/[id]/ban/route.ts    # Ban/unban user
+app/api/control/users/[id]/note/route.ts   # Add admin note
+app/api/control/agents/[id]/route.ts  # Get, update, delete agent
+app/api/control/agents/[id]/redeploy/route.ts  # Trigger redeploy
+app/api/control/agents/route.ts       # List agents with pagination
+app/api/control/payments/route.ts     # List payments
+app/api/control/payments/[id]/refund/route.ts  # Process refund
+app/api/control/content/route.ts      # Website CMS API
+app/api/control/settings/route.ts     # System settings API
+app/api/control/stats/route.ts        # Enhanced stats API
 ```
 
-### Checklist:
-- [ ] `DEVIN_API_KEY` - Need real key from Devin dashboard
-- [ ] `NOWPAYMENTS_IPN_SECRET` - Verify in NowPayments settings
-- [ ] `PRIVY_APP_SECRET` - Ensure it's set in Vercel
-
----
-
-## 🎯 Key Files Reference
-
-### API Routes
-
-| Route | Purpose | Key Features |
-|-------|---------|--------------|
-| `POST /api/agents` | Create agent | Validation, user upsert, Devin trigger |
-| `POST /api/payments` | Create payment | NowPayments integration |
-| `POST /api/webhooks/payment` | Payment IPN | HMAC verification, idempotency |
-| `POST /api/webhooks/devin` | Devin updates | Session tracking, status updates |
-| `GET /api/health` | Health check | DB + env validation |
-
-### Utilities
-
-| File | Purpose |
-|------|---------|
-| `lib/errors.ts` | `AppError` class, error codes, `tryCatch` wrapper |
-| `lib/sanitize.ts` | Input sanitization, rate limiting |
-| `lib/api-middleware.ts` | Middleware composition utilities |
-| `lib/prisma.ts` | Database client singleton |
-
----
-
-## 🧪 Testing Checklist
-
-### Before Production:
-- [ ] **Payment Flow:** End-to-end crypto payment test
-- [ ] **Devin Integration:** Real API key + session creation test
-- [ ] **Webhook Security:** Verify IPN signature verification works
-- [ ] **Rate Limiting:** Confirm 10 req/min limit works
-- [ ] **Error Handling:** Trigger errors, verify responses
-- [ ] **Health Check:** `/api/health` returns healthy
-
-### ODONATUM (Special User):
-- **Privy ID:** `cmlbr0nx403wzl40d6s7p3du6`
-- **Telegram:** 143314281
-- **Status:** Already paid, handled separately
-- **Action:** Ensure deployment works for this user
-
----
-
-## 🚨 Known Issues
-
-| Issue | Severity | Status | Notes |
-|-------|----------|--------|-------|
-| Devin API Key | 🔴 High | Pending | Placeholder in env, need real key |
-| Vercel Deploy Limit | 🟡 Medium | Watch | Hit 100/day limit earlier |
-| IPN Testing | 🟡 Medium | Pending | Needs production test |
-| | | | |
-
----
-
-## 🚀 Deployment Status
-
-### Current:
-- **Branch:** `ralph-improvements`
-- **Build:** ✅ Success (20 API routes, 7 components)
-- **Preview URL:** (Check Vercel dashboard)
-
-### To Deploy to Production:
-```bash
-# 1. Merge to main
-git checkout main
-git merge ralph-improvements
-
-# 2. Push (triggers Vercel deploy)
-git push origin main
-
-# 3. Monitor Vercel dashboard for build status
+### Database Models (New)
 ```
-
-### Vercel Limits:
-- **Current:** Watch for 100 deployments/day limit
-- **Workaround:** Use `vercel --prod` only when ready
-
----
-
-## 📝 Database Schema (Prisma)
-
-### Key Models:
-```prisma
-model User {
-  id          String   @id @default(uuid())
-  privyId     String   @unique
-  email       String?
-  createdAt   DateTime @default(now())
-  agents      Agent[]
-  payments    Payment[]
-}
-
-model Agent {
-  id               String   @id @default(uuid())
-  sessionId        String   @unique
-  slug             String   @unique
-  name             String
-  purpose          String
-  status           String   // pending, deploying, active, failed
-  activationStatus String   // activating, active, inactive
-  userId           String
-  user             User     @relation(fields: [userId], references: [id])
-  payments         Payment[]
-}
-
-model Payment {
-  id           String   @id @default(uuid())
-  agentId      String
-  agent        Agent    @relation(fields: [agentId], references: [id])
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-  amount       Float
-  currency     String
-  status       String   // pending, confirmed, failed
-  confirmedAt  DateTime?
-  nowpaymentsId String?
-}
-
-model PaymentWebhookLog {
-  id         String   @id @default(uuid())
-  paymentId  String   @unique
-  status     String   // processed, failed
-  payload    Json
-  createdAt  DateTime @default(now())
-}
+Invoice            # Payment invoices
+ActivityLog        # Audit trail for all actions
+AdminNote          # Admin notes on users
+SystemSetting      # Key-value settings store
+WebsiteContent     # CMS content storage
 ```
 
 ---
 
-## 🎨 V2 Wizard Flow
+## 🔐 Environment Variables (Vercel)
 
-```
-Step 1: Name Your Agent
-    ↓
-Step 2: Choose Personality
-    ↓
-Step 3: DEMO (See bot in action) ← "See First"
-    ↓
-Step 4: Payment (Crypto)
-    ↓
-Step 5: Deploy ← "Pay Last"
-```
+### Configured ✅
+- `DATABASE_URL` - Neon PostgreSQL
+- `DEVIN_API_KEY` - Devin API (Personal API Key)
+- `NOWPAYMENTS_API_KEY` - `6ZG9VZZ-5QRM6JV-P6TSWXA-XTQRB9C`
+- `NEXT_PUBLIC_NOWPAYMENTS_PUBLIC_KEY` - `5f3679ca-b5e0-46ea-b29b-e35b43504fad`
+- `NEXT_PUBLIC_PRIVY_APP_ID` - Privy app ID
+- `PRIVY_APP_SECRET` - Privy secret
+- `ADMIN_AUTH_TOKEN` - For admin endpoints
+- `NEXT_PUBLIC_APP_URL` - `https://meetmatt.xyz`
 
-**User sees a working demo BEFORE paying** - this is the core V2 improvement.
+### Still Needed
+- [ ] `NOWPAYMENTS_IPN_SECRET` (for webhook signature verification)
+- [ ] `DEVIN_WEBHOOK_SECRET` (for Devin webhook verification)
+- [ ] `RESEND_API_KEY` or `SENDGRID_API_KEY` (for email notifications)
 
 ---
 
-## 🔧 Common Commands
+## 🗄️ Database State
+
+### New Tables Created
+| Table | Purpose |
+|-------|---------|
+| `invoices` | Payment invoice records |
+| `activity_logs` | Audit trail |
+| `admin_notes` | Admin notes on users |
+| `system_settings` | Feature flags & config |
+| `website_content` | CMS content |
+
+### Updated Tables
+| Table | Changes |
+|-------|---------|
+| `users` | Added `isBanned`, `banReason` |
+
+---
+
+## 🎯 TODO Items
+
+### Critical
+1. [x] **Fix payment webhook** - Update `currentPeriodEnd` when payment confirmed ✅
+2. [x] **Fix extension payment handling** - Handle `extend_` order IDs ✅
+3. [x] **Add Invoice records** - Create Invoice model ✅
+4. [ ] **Test real Devin API** - Currently using template deployment
+
+### High Priority
+5. [ ] **Test payment flow** - Verify subscription extension works end-to-end
+6. [ ] **Add email notifications** - Resend/SendGrid for payments/deployments
+7. [ ] **Add deployment progress tracking** - Show Devin session status to users
+
+### Medium Priority
+8. [x] **BACKOFFICE MODULE** - Full temp implementation complete ✅
+9. [ ] **Add webhook retry** - Queue failed webhooks for retry
+10. [ ] **Export functionality** - CSV exports for users/payments
+
+### Low Priority
+11. [ ] Add more pricing tiers (Pro plan)
+12. [ ] Add referral/affiliate system
+13. [ ] Add analytics charts (recharts)
+14. [ ] Improve error handling and logging
+
+---
+
+## 🐛 Recent Bugs Fixed
+
+1. ✅ **AI Orb overlap** - Moved down with mt-8
+2. ✅ **Orb not round** - Fixed aspect ratio
+3. ✅ **"Meet Matt" logo** - Fixed from "Matt"
+4. ✅ **ODONATUM user linkage** - Fixed Privy ID format mismatch
+5. ✅ **Billing page empty** - Fixed API endpoint
+6. ✅ **CONTROL 404** - Added root redirect
+7. ✅ **Payment webhook not extending subscriptions** - Fixed critical bug
+8. ✅ **Extension payments not working** - Added handler for `extend_` order IDs
+9. ✅ **No invoice system** - Added Invoice model and creation
+
+---
+
+## 🚀 Deployment Commands
 
 ```bash
-# Development
-npm run dev              # Start dev server (Turbopack)
+# Build locally
+cd meetmatt && npm run build
 
-# Database
-npx prisma generate      # Generate Prisma client
-npx prisma db push       # Push schema changes
-npx prisma studio        # Open Prisma Studio
+# Deploy to production
+cd meetmatt && npx vercel --prod
 
-# Build
-npm run build            # Production build
+# Check deployment status
+cd meetmatt && npx vercel ls
 
-# Git
-git status               # Check current branch
-git log --oneline -10    # Recent commits
+# View logs
+cd meetmatt && npx vercel logs meetmatt.xyz
+
+# Database commands
+cd meetmatt && npx prisma db push          # Push schema changes
+cd meetmatt && npx prisma studio           # Open Prisma Studio
 ```
 
 ---
 
-## 📞 Contact & Context
+## 🔗 Important URLs
 
-### Project Constraints:
-- ✅ **NO visual changes** - Backend/logic only
-- ✅ **NO main branch pushes** - Use `ralph-improvements`
-- ✅ **Crypto only** - Stripe removed, NowPayments only
-- ✅ **ODONATUM handled separately** - Special user already paid
-
-### Next Steps (Choose One):
-1. **Merge to main** - Deploy Ralph improvements to production
-2. **More Ralph loops** - Continue security/performance improvements
-3. **Test production** - End-to-end payment + deployment test
-4. **Fix Devin key** - Get real API key and test integration
+| URL | Purpose |
+|-----|---------|
+| https://meetmatt.xyz | Main site |
+| https://meetmatt.xyz/control | Admin panel (redirects to login) |
+| https://meetmatt.xyz/control/login | Admin login |
+| https://meetmatt.xyz/control/dashboard | Admin dashboard |
+| https://meetmatt.xyz/dashboard | User dashboard |
+| https://meetmatt.xyz/billing | Billing & subscriptions |
 
 ---
 
-## 🗂️ Related Files
+## 📋 Admin Panel Guide
 
-- `README.md` - General project readme
-- `prisma/schema.prisma` - Database schema
-- `.env.local` - Environment variables (not committed)
-- `package.json` - Dependencies and scripts
+### Access
+- URL: https://meetmatt.xyz/control/login
+- Username: `Latamapac`
+- Password: `latamapac`
+
+### Features
+
+**Dashboard**: Overview stats, user/agent/payment counts, tier distribution
+
+**Users**:
+- View all users with search
+- Click eye icon to see details
+- Ban/unban with ban button
+- Delete with trash button
+- Add notes in detail view
+
+**Agents**:
+- View all agents
+- Edit agent properties
+- Redeploy failed agents
+- Delete agents
+
+**Payments**:
+- View all payments
+- Process refunds for confirmed payments
+
+**Website Content**:
+- Edit any text on the website
+- Add new sections/keys
+- Manage hero text, CTAs, descriptions
+
+**Settings**:
+- Toggle feature flags (signup, maintenance mode)
+- Update pricing
+- Edit website metadata
 
 ---
 
-## 🤖 For Next AI Session
+## 📞 Notes for Next Session
 
-When continuing this project:
-
-1. **Read this file first** (`PROJECT_STATE.md`)
-2. **Check current branch:** `git branch`
-3. **Check environment:** `cat .env.local | grep -v "^#" | grep -v "^$"`
-4. **Check build:** `npm run build`
-5. **Check health:** `curl /api/health` (if running)
-
-### Quick Start Commands:
-```bash
-cd /Users/mark/meetmatt
-git status                    # Check branch
-npm run dev                   # Start dev
-```
+1. **Test payment flow** - Create a test agent and go through full payment + extension flow
+2. **Verify DEVIN_API_KEY** - Check Vercel env vars and test real Devin deployment
+3. **Add email notifications** - Integrate Resend for payment/deploy notifications
+4. **Test backoffice** - Verify all admin functions work in production
+5. **Monitor webhooks** - Check NowPayments IPN is reaching our endpoint
 
 ---
 
-*Document maintained by AI. Last session: Ralph improvements (Loops 1-4).*
+## 💾 Backup Info
+
+- **Database:** Neon PostgreSQL (auto-backed up)
+- **Git:** Commits pushed to main
+- **Vercel:** Auto-deploys on push to main

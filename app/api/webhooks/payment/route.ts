@@ -53,6 +53,47 @@ function verifySignature(payload: string, signature: string): boolean {
 }
 
 /**
+ * Parse order ID to determine payment type
+ */
+function parseOrderId(orderId: string): {
+  type: "initial" | "extension";
+  agentId: string;
+  months?: number;
+} {
+  // Extension format: extend_{agentId}_{months}m_{timestamp}
+  if (orderId.startsWith("extend_")) {
+    const parts = orderId.split("_");
+    // parts[0] = "extend", parts[1] = agentId, parts[2] = "3m", parts[3] = timestamp
+    if (parts.length >= 3) {
+      const monthsMatch = parts[2].match(/(\d+)m/);
+      const months = monthsMatch ? parseInt(monthsMatch[1]) : 1;
+      return { type: "extension", agentId: parts[1], months };
+    }
+  }
+  
+  // Initial payment format: matt_{agentId}_{timestamp}
+  if (orderId.startsWith("matt_")) {
+    const parts = orderId.split("_");
+    if (parts.length >= 2) {
+      return { type: "initial", agentId: parts[1] };
+    }
+  }
+  
+  return { type: "initial", agentId: "" };
+}
+
+/**
+ * Generate invoice number
+ */
+function generateInvoiceNumber(): string {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `INV-${year}${month}-${random}`;
+}
+
+/**
  * NowPayments webhook handler
  * Receives payment status updates
  */
@@ -151,9 +192,25 @@ export async function POST(req: NextRequest) {
       newStatus 
     });
 
-    // If payment confirmed, trigger deployment
+    // If payment confirmed, process based on type
     if (newStatus === "confirmed" && payment.userId) {
-      await triggerDeployment(payment.userId, payment.id, requestId);
+      const orderInfo = parseOrderId(data.order_id);
+      
+      // Create invoice record
+      await createInvoice(payment.id, data.order_id, requestId);
+      
+      if (orderInfo.type === "extension") {
+        // Handle subscription extension
+        await handleSubscriptionExtension(
+          orderInfo.agentId, 
+          payment.id, 
+          orderInfo.months || 1, 
+          requestId
+        );
+      } else {
+        // Handle initial deployment
+        await triggerDeployment(payment.userId, payment.id, requestId);
+      }
     }
 
     return NextResponse.json({ 
@@ -169,6 +226,92 @@ export async function POST(req: NextRequest) {
       { error: "Internal server error", requestId },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Create invoice record for confirmed payment
+ */
+async function createInvoice(paymentId: string, orderId: string, requestId: string) {
+  try {
+    const invoiceNumber = generateInvoiceNumber();
+    
+    // Check if invoice already exists
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: { paymentId },
+    });
+    
+    if (existingInvoice) {
+      console.log(`[Payment Webhook] Invoice already exists [${requestId}]:`, existingInvoice.id);
+      return;
+    }
+    
+    await prisma.invoice.create({
+      data: {
+        paymentId,
+        invoiceNumber,
+        status: "paid",
+      },
+    });
+    
+    console.log(`[Payment Webhook] Invoice created [${requestId}]:`, invoiceNumber);
+  } catch (error) {
+    console.error(`[Payment Webhook] Failed to create invoice [${requestId}]:`, error);
+    // Don't throw - invoice creation shouldn't break payment flow
+  }
+}
+
+/**
+ * Handle subscription extension payment
+ */
+async function handleSubscriptionExtension(
+  agentId: string, 
+  paymentId: string, 
+  months: number,
+  requestId: string
+) {
+  try {
+    const agent = await prisma.agent.findUnique({
+      where: { id: agentId },
+    });
+
+    if (!agent) {
+      console.error(`[Payment Webhook] Agent not found for extension [${requestId}]:`, agentId);
+      return;
+    }
+
+    // Calculate new period end
+    const currentEnd = agent.currentPeriodEnd ? new Date(agent.currentPeriodEnd) : new Date();
+    const newPeriodEnd = new Date(currentEnd);
+    newPeriodEnd.setMonth(newPeriodEnd.getMonth() + months);
+
+    // Update agent subscription
+    await prisma.agent.update({
+      where: { id: agentId },
+      data: {
+        subscriptionStatus: "active",
+        currentPeriodEnd: newPeriodEnd,
+        lastPaymentId: paymentId,
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    console.log(`[Payment Webhook] Subscription extended [${requestId}]:`, {
+      agentId,
+      months,
+      newPeriodEnd: newPeriodEnd.toISOString(),
+    });
+
+    // Log activity
+    await logActivity("subscription_extended", "agent", agentId, null, {
+      months,
+      paymentId,
+      newPeriodEnd: newPeriodEnd.toISOString(),
+    });
+
+  } catch (error) {
+    console.error(`[Payment Webhook] Extension failed [${requestId}]:`, error);
+    throw error;
   }
 }
 
@@ -194,13 +337,27 @@ async function triggerDeployment(userId: string, paymentId: string, requestId: s
 
     console.log(`[Payment Webhook] Triggering deployment [${requestId}]:`, agent.id);
     
-    // Update agent status
+    // Calculate subscription period
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setMonth(periodEnd.getMonth() + 1); // Default 1 month for initial payment
+
+    // Update agent status and subscription
     await prisma.agent.update({
       where: { id: agent.id },
       data: {
         activationStatus: "activating",
         lastPaymentId: paymentId,
+        subscriptionStatus: "active",
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
       },
+    });
+
+    // Log activity
+    await logActivity("deployment_triggered", "agent", agent.id, null, {
+      paymentId,
+      userId,
     });
 
     // Trigger Devin deployment with retry logic
@@ -234,6 +391,12 @@ async function triggerDeployment(userId: string, paymentId: string, requestId: s
               activationStatus: "failed",
             },
           });
+          
+          // Log failure
+          await logActivity("deployment_failed", "agent", agent.id, null, {
+            paymentId,
+            error: String(err),
+          });
         } else {
           // Wait before retry
           await new Promise(r => setTimeout(r, 1000));
@@ -242,5 +405,31 @@ async function triggerDeployment(userId: string, paymentId: string, requestId: s
     }
   } catch (error) {
     console.error(`[Payment Webhook] triggerDeployment error [${requestId}]:`, error);
+  }
+}
+
+/**
+ * Log activity for audit trail
+ */
+async function logActivity(
+  action: string,
+  entityType: string,
+  entityId: string,
+  actorId: string | null,
+  metadata?: any
+) {
+  try {
+    await prisma.activityLog.create({
+      data: {
+        action,
+        entityType,
+        entityId,
+        actorId,
+        metadata: metadata ? JSON.stringify(metadata) : null,
+      },
+    });
+  } catch (error) {
+    console.error("[Activity Log] Failed to log:", error);
+    // Don't throw - logging shouldn't break main flow
   }
 }

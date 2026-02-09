@@ -98,14 +98,89 @@ model User {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   lastLoginAt      DateTime? @map("last_login_at")
+  isBanned         Boolean   @default(false) @map("is_banned")
+  banReason        String?   @map("ban_reason")
 
   // Relations
   agents Agent[]
+  adminNotes AdminNote[]
 
   @@index([email])
   @@index([walletAddress])
   @@index([stripeCustomerId])
+  @@index([isBanned])
   @@map("users")
+}
+
+// Invoice records for payments
+model Invoice {
+  id            String    @id @default(cuid())
+  paymentId     String    @unique @map("payment_id")
+  invoiceNumber String    @unique @map("invoice_number")
+  status        String    @default("draft") // draft, sent, paid
+  pdfUrl        String?   @map("pdf_url")
+  sentAt        DateTime? @map("sent_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("invoices")
+}
+
+// Activity log for audit trail
+model ActivityLog {
+  id          String   @id @default(cuid())
+  action      String   // user_created, payment_confirmed, agent_deployed, etc.
+  entityType  String   @map("entity_type") // user, agent, payment
+  entityId    String   @map("entity_id")
+  actorId     String?  @map("actor_id") // admin who performed action
+  metadata    String?  // JSON string
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// Admin notes for users
+model AdminNote {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  content   String
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("admin_notes")
+}
+
+// System settings (key-value store for CMS)
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?  @map("updated_by")
+  
+  @@map("system_settings")
+}
+
+// Website content for CMS
+model WebsiteContent {
+  id        String   @id @default(cuid())
+  section   String   // hero, features, pricing, footer, etc.
+  key       String   // title, description, cta_text, etc.
+  value     String   // The actual content
+  type      String   @default("text") // text, markdown, html
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
+  
+  @@unique([section, key])
+  @@index([section])
+  @@map("website_content")
 }
 
 
