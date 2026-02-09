@@ -24,6 +24,8 @@
 - [x] **Payment webhook now extends subscription period** - FIXED
 - [x] **Extension payments properly handled** - FIXED
 - [x] **Invoice records created on payment confirmation** - FIXED
+- [x] **USDT/USDC currency estimate endpoint** - NEW
+- [x] **Proper currency formatting** (usdttrc20, etc.)
 
 ### Admin Panel (CONTROL) - MAJOR UPDATE ✅
 - [x] Login page at `/control/login`
@@ -47,7 +49,10 @@
   - Process refunds
   - Filter by status
 - [x] **Website Content Management (CMS)**:
-  - Edit website text content
+  - **100+ content items** organized by section
+  - Seed default content with one click
+  - Collapsible sections
+  - Edit any text on the website
   - Add/remove content sections
   - Manage hero text, CTAs, descriptions
 - [x] **System Settings**:
@@ -80,6 +85,9 @@
 ### Payment Fixes
 ```
 app/api/webhooks/payment/route.ts    # Fixed subscription extension logic
+app/api/payment/create/route.ts      # Added currency validation & estimate check
+app/api/subscription/extend/route.ts # Added extension handling
+app/api/payment/estimate/route.ts    # NEW: Get USD to crypto estimates
 prisma/schema.prisma                  # Added Invoice, ActivityLog, AdminNote, WebsiteContent, SystemSetting models
 ```
 
@@ -95,8 +103,10 @@ app/api/control/agents/route.ts       # List agents with pagination
 app/api/control/payments/route.ts     # List payments
 app/api/control/payments/[id]/refund/route.ts  # Process refund
 app/api/control/content/route.ts      # Website CMS API
+app/api/control/content/seed/route.ts # Seed default content
 app/api/control/settings/route.ts     # System settings API
 app/api/control/stats/route.ts        # Enhanced stats API
+lib/cms-content.ts                    # 100+ website content items
 ```
 
 ### Database Models (New)
@@ -105,7 +115,7 @@ Invoice            # Payment invoices
 ActivityLog        # Audit trail for all actions
 AdminNote          # Admin notes on users
 SystemSetting      # Key-value settings store
-WebsiteContent     # CMS content storage
+WebsiteContent     # CMS content (100+ items seeded)
 ```
 
 ---
@@ -138,12 +148,31 @@ WebsiteContent     # CMS content storage
 | `activity_logs` | Audit trail |
 | `admin_notes` | Admin notes on users |
 | `system_settings` | Feature flags & config |
-| `website_content` | CMS content |
+| `website_content` | CMS content (100+ items) |
 
 ### Updated Tables
 | Table | Changes |
 |-------|---------|
 | `users` | Added `isBanned`, `banReason` |
+
+### CMS Content Sections
+| Section | Items | Description |
+|---------|-------|-------------|
+| `global` | 4 | Site title, description, brand |
+| `hero` | 5 | Homepage headlines, CTAs |
+| `wizard` | 9 | Wizard step titles |
+| `pricing` | 15 | Pricing page content |
+| `pricing_features` | 4 | Feature list |
+| `trust_badges` | 8 | Trust badges |
+| `metrics` | 12 | Performance stats |
+| `comparison` | 5 | Matt vs Agency table |
+| `roi` | 6 | ROI highlights |
+| `use_cases` | 16 | Use case descriptions |
+| `cta` | 5 | Call-to-action sections |
+| `dashboard` | 4 | Dashboard text |
+| `billing` | 7 | Billing page text |
+| `payment_modal` | 5 | Payment UI text |
+| `footer` | 4 | Footer links |
 
 ---
 
@@ -153,23 +182,25 @@ WebsiteContent     # CMS content storage
 1. [x] **Fix payment webhook** - Update `currentPeriodEnd` when payment confirmed ✅
 2. [x] **Fix extension payment handling** - Handle `extend_` order IDs ✅
 3. [x] **Add Invoice records** - Create Invoice model ✅
-4. [ ] **Test real Devin API** - Currently using template deployment
+4. [x] **Fix USDT estimate** - Added estimate endpoint & currency formatting ✅
+5. [ ] **Test real Devin API** - Currently using template deployment
 
 ### High Priority
-5. [ ] **Test payment flow** - Verify subscription extension works end-to-end
-6. [ ] **Add email notifications** - Resend/SendGrid for payments/deployments
-7. [ ] **Add deployment progress tracking** - Show Devin session status to users
+6. [ ] **Test payment flow** - Verify subscription extension works end-to-end
+7. [ ] **Add email notifications** - Resend/SendGrid for payments/deployments
+8. [ ] **Add deployment progress tracking** - Show Devin session status to users
 
 ### Medium Priority
-8. [x] **BACKOFFICE MODULE** - Full temp implementation complete ✅
-9. [ ] **Add webhook retry** - Queue failed webhooks for retry
-10. [ ] **Export functionality** - CSV exports for users/payments
+9. [x] **BACKOFFICE MODULE** - Full temp implementation complete ✅
+10. [x] **Website CMS** - 100+ content items manageable ✅
+11. [ ] **Add webhook retry** - Queue failed webhooks for retry
+12. [ ] **Export functionality** - CSV exports for users/payments
 
 ### Low Priority
-11. [ ] Add more pricing tiers (Pro plan)
-12. [ ] Add referral/affiliate system
-13. [ ] Add analytics charts (recharts)
-14. [ ] Improve error handling and logging
+13. [ ] Add more pricing tiers (Pro plan)
+14. [ ] Add referral/affiliate system
+15. [ ] Add analytics charts (recharts)
+16. [ ] Improve error handling and logging
 
 ---
 
@@ -184,6 +215,7 @@ WebsiteContent     # CMS content storage
 7. ✅ **Payment webhook not extending subscriptions** - Fixed critical bug
 8. ✅ **Extension payments not working** - Added handler for `extend_` order IDs
 9. ✅ **No invoice system** - Added Invoice model and creation
+10. ✅ **USDT estimate error** - Added estimate endpoint and currency formatting
 
 ---
 
@@ -220,6 +252,12 @@ cd meetmatt && npx prisma studio           # Open Prisma Studio
 | https://meetmatt.xyz/dashboard | User dashboard |
 | https://meetmatt.xyz/billing | Billing & subscriptions |
 
+### API Endpoints
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/payment/estimate?amount=150&currency=usdt` | Get USD to crypto estimate |
+| `POST /api/control/content/seed` | Seed default CMS content |
+
 ---
 
 ## 📋 Admin Panel Guide
@@ -251,9 +289,10 @@ cd meetmatt && npx prisma studio           # Open Prisma Studio
 - Process refunds for confirmed payments
 
 **Website Content**:
+- **Seed Content button** - One-click to add all 100+ default items
+- Collapsible sections for each page area
 - Edit any text on the website
-- Add new sections/keys
-- Manage hero text, CTAs, descriptions
+- Organized by: global, hero, pricing, wizard, metrics, use_cases, etc.
 
 **Settings**:
 - Toggle feature flags (signup, maintenance mode)
@@ -264,11 +303,23 @@ cd meetmatt && npx prisma studio           # Open Prisma Studio
 
 ## 📞 Notes for Next Session
 
-1. **Test payment flow** - Create a test agent and go through full payment + extension flow
-2. **Verify DEVIN_API_KEY** - Check Vercel env vars and test real Devin deployment
-3. **Add email notifications** - Integrate Resend for payment/deploy notifications
-4. **Test backoffice** - Verify all admin functions work in production
-5. **Monitor webhooks** - Check NowPayments IPN is reaching our endpoint
+### Immediate Actions
+1. **Seed CMS Content** - Go to `/control/dashboard` → Website Content → Click "Seed Content"
+2. **Test payment flow** - Create test agent, verify payment + extension works
+3. **Test currency estimate** - Try USDT payment to verify estimate endpoint works
+
+### Short Term
+4. **Verify DEVIN_API_KEY** - Check Vercel env vars and test real Devin deployment
+5. **Add email notifications** - Integrate Resend for payment/deploy notifications
+6. **Test backoffice** - Verify all admin functions work in production
+7. **Monitor webhooks** - Check NowPayments IPN is reaching our endpoint
+
+### Future Enhancements (PRD-BACKOFFICE.md)
+- Advanced analytics with charts
+- Bulk user actions
+- Email templates management
+- Devin deployment monitoring dashboard
+- Referral/affiliate system
 
 ---
 
@@ -277,3 +328,4 @@ cd meetmatt && npx prisma studio           # Open Prisma Studio
 - **Database:** Neon PostgreSQL (auto-backed up)
 - **Git:** Commits pushed to main
 - **Vercel:** Auto-deploys on push to main
+- **Last Deployment:** https://meetmatt-8bweiq496-marks-projects-95f7cc92.vercel.app
