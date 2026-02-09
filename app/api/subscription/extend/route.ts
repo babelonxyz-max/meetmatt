@@ -5,6 +5,23 @@ import { calculatePricing, getIpnCallbackUrl } from "@/lib/pricing";
 const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
+// Map common currency codes to NowPayments format
+const CURRENCY_MAP: Record<string, string> = {
+  "usdt": "usdt",
+  "usdc": "usdc",
+  "btc": "btc",
+  "eth": "eth",
+  "bnb": "bnb",
+  "busd": "busd",
+  "dai": "dai",
+  "trx": "trx",
+};
+
+function formatCurrency(currency: string): string {
+  const lower = currency.toLowerCase();
+  return CURRENCY_MAP[lower] || lower;
+}
+
 // POST /api/subscription/extend - Create payment for subscription extension
 export async function POST(req: NextRequest) {
   try {
@@ -76,7 +93,26 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    // Call NowPayments API
+    // Format currency for NowPayments
+    const payCurrency = formatCurrency(currency);
+    
+    // First get an estimate
+    const estimateResponse = await fetch(
+      `${NOWPAYMENTS_API_URL}/estimate?amount=${pricing.price}&currency_from=usd&currency_to=${payCurrency}`,
+      {
+        headers: {
+          "x-api-key": NOWPAYMENTS_API_KEY,
+        },
+      }
+    );
+    
+    if (!estimateResponse.ok) {
+      const errorText = await estimateResponse.text();
+      console.error("[Subscription/Extend] Estimate error:", errorText);
+      throw new Error(`Cannot get estimate for ${currency}. Please try another currency.`);
+    }
+
+    // Call NowPayments API to create payment
     const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
       method: "POST",
       headers: {
@@ -86,7 +122,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         price_amount: pricing.price,
         price_currency: "usd",
-        pay_currency: currency.toLowerCase(),
+        pay_currency: payCurrency,
         order_id: orderId,
         order_description: `Extend ${agent.name} subscription by ${months} month(s)`,
         ipn_callback_url: getIpnCallbackUrl(),

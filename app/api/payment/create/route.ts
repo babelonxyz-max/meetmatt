@@ -5,6 +5,23 @@ import { getIpnCallbackUrl } from "@/lib/pricing";
 const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
+// Map common currency codes to NowPayments format
+const CURRENCY_MAP: Record<string, string> = {
+  "usdt": "usdttrc20",  // Use TRC20 for lower fees
+  "usdc": "usdc",
+  "btc": "btc",
+  "eth": "eth",
+  "bnb": "bnb",
+  "busd": "busd",
+  "dai": "dai",
+  "trx": "trx",
+};
+
+function formatCurrency(currency: string): string {
+  const lower = currency.toLowerCase();
+  return CURRENCY_MAP[lower] || lower;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -28,6 +45,25 @@ export async function POST(req: NextRequest) {
 
     const orderId = `matt_${agentId}_${Date.now()}`;
     
+    // Format currency for NowPayments
+    const payCurrency = formatCurrency(currency);
+    
+    // First get an estimate to validate currency is supported
+    const estimateResponse = await fetch(
+      `${NOWPAYMENTS_API_URL}/estimate?amount=150&currency_from=usd&currency_to=${payCurrency}`,
+      {
+        headers: {
+          "x-api-key": NOWPAYMENTS_API_KEY,
+        },
+      }
+    );
+    
+    if (!estimateResponse.ok) {
+      const errorText = await estimateResponse.text();
+      console.error("[Payment/Create] Estimate error:", errorText);
+      throw new Error(`Currency ${currency} is not supported. Please try USDT, USDC, BTC, or ETH.`);
+    }
+    
     const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
       method: "POST",
       headers: {
@@ -37,7 +73,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         price_amount: 150,
         price_currency: "usd",
-        pay_currency: currency,
+        pay_currency: payCurrency,
         order_id: orderId,
         order_description: `Deploy AI agent: ${agent.name}`,
         ipn_callback_url: getIpnCallbackUrl(),

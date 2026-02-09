@@ -1208,6 +1208,25 @@ function PaymentsTab() {
 }
 
 // Content Tab (CMS)
+// Section descriptions for better organization
+const sectionDescriptions: Record<string, string> = {
+  global: "Global site settings and meta information",
+  hero: "Homepage hero section headlines and CTAs",
+  wizard: "Agent creation wizard step titles and descriptions",
+  pricing: "Pricing page headlines, prices, and labels",
+  pricing_features: "Pricing page feature list",
+  trust_badges: "Trust badges shown on pricing page",
+  metrics: "Performance metrics section",
+  comparison: "Matt vs Agency comparison table",
+  roi: "ROI highlight statistics",
+  use_cases: "Use cases section with hours saved",
+  cta: "Call-to-action section at bottom of pages",
+  dashboard: "Dashboard page text",
+  billing: "Billing page section titles",
+  payment_modal: "Payment modal text and labels",
+  footer: "Footer links and copyright",
+};
+
 function ContentTab() {
   const [contents, setContents] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1215,9 +1234,13 @@ function ContentTab() {
   const [newSection, setNewSection] = useState("");
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
+  const [seedInfo, setSeedInfo] = useState<{existingContentCount: number; totalSeedItems: number; canSeed: boolean} | null>(null);
+  const [seeding, setSeeding] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchContents();
+    fetchSeedInfo();
   }, []);
 
   async function fetchContents() {
@@ -1231,6 +1254,39 @@ function ContentTab() {
       console.error("Failed to load content:", error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchSeedInfo() {
+    try {
+      const response = await fetch("/api/control/content/seed");
+      if (response.ok) {
+        const data = await response.json();
+        setSeedInfo(data);
+      }
+    } catch (error) {
+      console.error("Failed to load seed info:", error);
+    }
+  }
+
+  async function seedContent() {
+    if (!confirm("This will add all default website content. Continue?")) return;
+    setSeeding(true);
+    try {
+      const response = await fetch("/api/control/content/seed", {
+        method: "POST",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Seeded ${data.results.created} content items!`);
+        fetchContents();
+        fetchSeedInfo();
+      }
+    } catch (error) {
+      console.error("Failed to seed content:", error);
+      alert("Failed to seed content");
+    } finally {
+      setSeeding(false);
     }
   }
 
@@ -1271,6 +1327,10 @@ function ContentTab() {
     setNewValue("");
   }
 
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   // Group by section
   const grouped = contents.reduce((acc, item) => {
     if (!acc[item.section]) acc[item.section] = [];
@@ -1278,8 +1338,31 @@ function ContentTab() {
     return acc;
   }, {} as Record<string, ContentItem[]>);
 
+  // Sort sections alphabetically
+  const sortedSections = Object.keys(grouped).sort();
+
   return (
     <div className="space-y-6">
+      {/* Seed Button */}
+      {seedInfo?.canSeed && (
+        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-between">
+          <div>
+            <h3 className="font-medium text-blue-400">Seed Website Content</h3>
+            <p className="text-sm text-zinc-400">
+              {seedInfo.existingContentCount} items in database • {seedInfo.totalSeedItems} default items available
+            </p>
+          </div>
+          <button
+            onClick={seedContent}
+            disabled={seeding}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+          >
+            {seeding ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Seed Content
+          </button>
+        </div>
+      )}
+
       {/* Add New */}
       <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
         <h3 className="font-medium mb-4">Add New Content</h3>
@@ -1319,62 +1402,89 @@ function ContentTab() {
       {/* Content Sections */}
       {loading ? (
         <div className="text-center py-12 text-zinc-500">Loading...</div>
+      ) : sortedSections.length === 0 ? (
+        <div className="text-center py-12 text-zinc-500">
+          <p>No content items yet.</p>
+          <p className="text-sm mt-2">Click "Seed Content" above to add default website content.</p>
+        </div>
       ) : (
-        Object.entries(grouped).map(([section, items]) => (
-          <div key={section} className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 bg-zinc-950 border-b border-zinc-800">
-              <h3 className="font-semibold capitalize">{section}</h3>
-            </div>
-            <div className="divide-y divide-zinc-800">
-              {items.map((item) => (
-                <div key={`${item.section}.${item.key}`} className="p-4 flex items-center gap-4">
-                  <div className="w-32">
-                    <p className="text-sm font-medium">{item.key}</p>
-                    <p className="text-xs text-zinc-500">{item.type}</p>
-                  </div>
-                  {editingItem?.id === item.id ? (
-                    <div className="flex-1 flex gap-2">
-                      <input
-                        type="text"
-                        defaultValue={item.value}
-                        className="flex-1 px-4 py-2 bg-zinc-950 border border-zinc-800 rounded-lg"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            saveContent(item.section, item.key, (e.target as HTMLInputElement).value);
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => setEditingItem(null)}
-                        className="px-3 py-2 bg-zinc-800 rounded-lg"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="flex-1 text-zinc-400 truncate">{item.value}</p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setEditingItem(item)}
-                          className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteContent(item.section, item.key)}
-                          className="p-2 hover:bg-zinc-800 rounded-lg text-red-400"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </>
+        sortedSections.map((section) => {
+          const items = grouped[section];
+          const isExpanded = expandedSections[section] !== false; // Default expanded
+          
+          return (
+            <div key={section} className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden">
+              <button
+                onClick={() => toggleSection(section)}
+                className="w-full px-6 py-4 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between hover:bg-zinc-900 transition-colors"
+              >
+                <div className="text-left">
+                  <h3 className="font-semibold capitalize">{section}</h3>
+                  {sectionDescriptions[section] && (
+                    <p className="text-xs text-zinc-500 mt-1">{sectionDescriptions[section]}</p>
                   )}
                 </div>
-              ))}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-500">{items.length} items</span>
+                  <ChevronRight className={`w-5 h-5 text-zinc-500 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                </div>
+              </button>
+              
+              {isExpanded && (
+                <div className="divide-y divide-zinc-800">
+                  {items.map((item) => (
+                    <div key={`${item.section}.${item.key}`} className="p-4 flex items-center gap-4">
+                      <div className="w-32 flex-shrink-0">
+                        <p className="text-sm font-medium truncate">{item.key}</p>
+                        <p className="text-xs text-zinc-500">{item.type}</p>
+                      </div>
+                      {editingItem?.id === item.id ? (
+                        <div className="flex-1 flex gap-2">
+                          <input
+                            type="text"
+                            defaultValue={item.value}
+                            className="flex-1 px-4 py-2 bg-zinc-950 border border-zinc-800 rounded-lg"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                saveContent(item.section, item.key, (e.target as HTMLInputElement).value);
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => setEditingItem(null)}
+                            className="px-3 py-2 bg-zinc-800 rounded-lg"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="flex-1 text-zinc-400 truncate" title={item.value}>{item.value}</p>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => setEditingItem(item)}
+                              className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => deleteContent(item.section, item.key)}
+                              className="p-2 hover:bg-zinc-800 rounded-lg text-red-400"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
