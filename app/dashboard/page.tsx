@@ -324,10 +324,16 @@ export default function DashboardPage() {
                                 <ArrowRight className="w-6 h-6" />
                               </a>
                             )}
-                            {agent.subscriptionStatus === "expired" && (
+                            {agent.subscriptionStatus === "expired" ? (
                               <Link href="/billing">
                                 <button className="px-4 py-2 bg-[var(--accent)] text-white text-base font-medium rounded-xl hover:opacity-90">
                                   Renew
+                                </button>
+                              </Link>
+                            ) : agent.subscriptionStatus === "active" && (
+                              <Link href="/billing">
+                                <button className="px-4 py-2 bg-[var(--accent)]/10 text-[var(--accent)] text-base font-medium rounded-xl hover:bg-[var(--accent)]/20">
+                                  Extend
                                 </button>
                               </Link>
                             )}
@@ -450,11 +456,18 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <Link href="/billing">
-                <button className="w-full mt-6 px-6 py-4 bg-[var(--accent)] text-white text-lg font-medium rounded-xl hover:opacity-90 transition-opacity">
-                  Manage Billing
-                </button>
-              </Link>
+              <div className="flex gap-3 mt-6">
+                <Link href="/billing" className="flex-1">
+                  <button className="w-full px-4 py-3 bg-[var(--accent)] text-white text-base font-medium rounded-xl hover:opacity-90 transition-opacity">
+                    Manage
+                  </button>
+                </Link>
+                <Link href="/billing" className="flex-1">
+                  <button className="w-full px-4 py-3 bg-[var(--accent)]/10 text-[var(--accent)] text-base font-medium rounded-xl hover:bg-[var(--accent)]/20 transition-colors">
+                    + Months
+                  </button>
+                </Link>
+              </div>
             </motion.div>
 
             {/* Recent Activity - BIGGER */}

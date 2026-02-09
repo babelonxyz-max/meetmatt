@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getIpnCallbackUrl } from "@/lib/pricing";
 
 const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
         pay_currency: currency,
         order_id: orderId,
         order_description: `Deploy AI agent: ${agent.name}`,
-        ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/payment`,
+        ipn_callback_url: getIpnCallbackUrl(),
       }),
     });
 

@@ -50,7 +50,7 @@ export function Navbar() {
         <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
           <Sparkles className="w-7 h-7 text-blue-500" />
         </motion.div>
-        <span className="font-bold text-2xl tracking-tight text-white">Matt</span>
+        <span className="font-bold text-2xl tracking-tight text-white">Meet Matt</span>
       </Link>
       
       <nav className="flex items-center gap-6">

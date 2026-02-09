@@ -220,7 +220,7 @@ export default function Home() {
       <main className="pt-28 pb-20 px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
           {/* AI Orb */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mt-8 mb-6">
             <div className="w-32 h-32 sm:w-40 sm:h-40">
               <AIOrb 
                 wizardState={getOrbState()} 
