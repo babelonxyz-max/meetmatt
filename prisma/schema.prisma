@@ -104,6 +104,7 @@ model User {
   // Relations
   agents Agent[]
   adminNotes AdminNote[]
+  fleets Fleet[]
 
   @@index([email])
   @@index([walletAddress])
@@ -181,6 +182,151 @@ model WebsiteContent {
   @@unique([section, key])
   @@index([section])
   @@map("website_content")
+}
+
+// ============================================
+// FLEET MODE - Scalable Agent Deployment
+// ============================================
+
+// Fleet - A group of agents deployed together
+model Fleet {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  
+  // Identification
+  name        String
+  description String?
+  slug        String    @unique
+  
+  // Status: draft, provisioning, deploying, running, scaling, error, paused, terminated
+  status      String    @default("draft")
+  statusMessage String? @map("status_message")
+  
+  // Configuration (JSON)
+  config      String    // FleetConfig serialized
+  
+  // Progress tracking (JSON)
+  progress    String    // FleetProgress serialized
+  
+  // Runtime info (JSON)
+  runtimeInfo String?   @map("runtime_info")
+  
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  
+  // Relations
+  agents      FleetAgent[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([slug])
+  @@map("fleets")
+}
+
+// FleetAgent - Individual agent instance within a fleet
+model FleetAgent {
+  id              String    @id @default(cuid())
+  fleetId         String    @map("fleet_id")
+  userId          String    @map("user_id")
+  
+  // Agent identity
+  name            String
+  instanceNumber  Int       @map("instance_number")
+  
+  // Status: pending, provisioning, starting, running, error, stopped, updating
+  status          String    @default("pending")
+  statusMessage   String?   @map("status_message")
+  
+  // Configuration (JSON)
+  config          String    // AgentTemplate serialized
+  
+  // Runtime info (JSON)
+  runtime         String?   // Runtime details (endpoint, sessionId, etc.)
+  
+  // Health check (JSON)
+  health          String?   // Health check results
+  
+  // Timestamps
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  startedAt       DateTime? @map("started_at")
+  lastActiveAt    DateTime? @map("last_active_at")
+  
+  // Relations
+  fleet           Fleet     @relation(fields: [fleetId], references: [id], onDelete: Cascade)
+  
+  @@index([fleetId])
+  @@index([userId])
+  @@index([status])
+  @@index([instanceNumber])
+  @@map("fleet_agents")
+}
+
+// Fleet Events - Audit log for fleet operations
+model FleetEvent {
+  id          String   @id @default(cuid())
+  fleetId     String   @map("fleet_id")
+  agentId     String?  @map("agent_id")
+  
+  // Event type
+  type        String   // fleet.created, agent.deployed, etc.
+  
+  // Event data (JSON)
+  data        String?
+  
+  // Timestamp
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@index([fleetId])
+  @@index([agentId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("fleet_events")
+}
+
+// InfrastructureServer - Cloud VPS instances running OpenClaw
+model InfrastructureServer {
+  id                  String    @id @default(cuid())
+  fleetId             String    @map("fleet_id")
+  
+  // Provider info
+  provider            String    // contabo, aws, gcp, etc.
+  providerInstanceId  String    @map("provider_instance_id")
+  
+  // Server details
+  name                String
+  status              String    // provisioning, installing, ready, active, full, error, terminated
+  
+  // Network
+  publicIp            String?   @map("public_ip")
+  privateIp           String?   @map("private_ip")
+  hostname            String
+  
+  // Configuration (JSON)
+  specs               String    // ServerSpecs
+  region              String
+  openclawConfig      String    @map("openclaw_config")
+  
+  // Capacity tracking (JSON)
+  capacity            String    // { maxAgents, currentAgents, availableSlots }
+  
+  // Costs (JSON)
+  cost                String    // { hourlyRate, currency }
+  
+  // Timestamps
+  createdAt           DateTime  @default(now()) @map("created_at")
+  readyAt             DateTime? @map("ready_at")
+  lastActiveAt        DateTime? @map("last_active_at")
+  terminatedAt        DateTime? @map("terminated_at")
+  
+  @@index([fleetId])
+  @@index([provider])
+  @@index([status])
+  @@index([region])
+  @@map("infrastructure_servers")
 }
 
 

@@ -109,3 +109,34 @@ export interface AgentDeploymentJob {
   userId: string;
   config: DeployAgentRequest;
 }
+
+// ============================================
+// FLEET MODE EXPORTS
+// Re-export fleet types for convenience
+// ============================================
+
+export type {
+  Fleet,
+  FleetAgent,
+  FleetConfig,
+  FleetStatus,
+  FleetAgentStatus,
+  RuntimeProvider,
+  AgentTemplate,
+  OpenClawRuntimeConfig,
+  OpenClawInstance,
+  DevinRuntimeConfig,
+  FleetDeploymentJob,
+  CreateFleetRequest,
+  FleetDeploymentResponse,
+  FleetListResponse,
+  FleetDetailResponse,
+  FleetMetrics,
+  HealthCheckResult,
+  IRuntimeProvider,
+  DeploymentResult,
+  FleetEvent,
+  FleetEventType,
+} from "@/lib/fleet/types";
+
+export { FLEET_CONSTANTS } from "@/lib/fleet/types";

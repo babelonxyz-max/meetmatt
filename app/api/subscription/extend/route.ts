@@ -7,7 +7,7 @@ const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
 // Map common currency codes to NowPayments format
 const CURRENCY_MAP: Record<string, string> = {
-  "usdt": "usdt",
+  "usdt": "usdttrc20",  // Use TRC20 for lower fees
   "usdc": "usdc",
   "btc": "btc",
   "eth": "eth",

@@ -178,10 +178,12 @@ export function AIOrb({ onClick, className = "", wizardState = "idle", showGreet
         transition={{ duration: 0.2 }}
       >
         <span className="text-sm font-medium text-zinc-900 dark:text-white">
-          {reaction === "happy" ? "✨ Hello!" : 
-           reaction === "surprised" ? "😮 Oh!" : 
-           reaction === "thinking" ? "🤔 Hmm..." : 
-           "Hi! I'm Matt!"}
+          {reaction === "happy" ? "✨ Let's build something!" : 
+           reaction === "surprised" ? "😮 Oh! Interesting!" : 
+           reaction === "thinking" ? "🤔 Processing..." : 
+           wizardState === "deploying" ? "🚀 Deploying your agent..." :
+           wizardState === "processing" ? "💭 Thinking..." :
+           "Hi! I'm Matt! 👋"}
         </span>
         <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-zinc-900 border-r border-b border-zinc-200 dark:border-zinc-700 rotate-45" />
       </motion.div>

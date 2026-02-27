@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Heart } from "lucide-react";
+import { Heart, Rocket } from "lucide-react";
 
 export function Footer() {
   return (
@@ -27,6 +27,13 @@ export function Footer() {
               <span className="text-sm text-[var(--muted)] flex items-center gap-1.5">
                 Made with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> @ VIBEST
               </span>
+              <Link 
+                href="/fleet" 
+                className="text-sm text-amber-500 hover:text-amber-400 transition-colors flex items-center gap-1"
+              >
+                <Rocket className="w-3.5 h-3.5" />
+                Fleet
+              </Link>
               <Link 
                 href="/privacy" 
                 className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"

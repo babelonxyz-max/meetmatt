@@ -16,7 +16,8 @@ import {
   MessageCircle,
   Copy,
   ExternalLink,
-  Settings
+  Settings,
+  Rocket
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -191,7 +192,7 @@ export default function DashboardPage() {
   const { agents, payments, stats } = data;
 
   return (
-    <div className="py-8 pt-20 sm:pt-24 pb-20">
+    <div className="py-8 pb-20">
       <div className="max-w-7xl mx-auto px-6 sm:px-8">
         {/* Welcome - BIGGER */}
         <motion.div 
@@ -254,6 +255,31 @@ export default function DashboardPage() {
                     </div>
                     <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Plus className="w-8 h-8" />
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                </div>
+              </Link>
+            </motion.div>
+
+            {/* Fleet Mode CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <Link href="/fleet">
+                <div className="group relative overflow-hidden bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-6 text-white cursor-pointer shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 transition-all">
+                  <div className="relative z-10 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs font-medium">New</span>
+                        <h3 className="font-semibold text-xl">Fleet Mode</h3>
+                      </div>
+                      <p className="text-white/80 text-base">Deploy 1000s of agents at once</p>
+                    </div>
+                    <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Rocket className="w-7 h-7" />
                     </div>
                   </div>
                   <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />

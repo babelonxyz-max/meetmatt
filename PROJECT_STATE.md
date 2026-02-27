@@ -14,8 +14,9 @@
 - [x] Dashboard showing user's agents
 - [x] Theme toggle (dark/light mode)
 - [x] Database schema with User-Agent relations
+- [x] **Fixed duplicate headers** - Removed duplicate header from main page
 
-### Payments - FIXED ✅
+### Payments - MAJOR UPDATES ✅
 - [x] NowPayments integration (API keys configured)
 - [x] Pricing: $150/month or $1000/year (44% discount)
 - [x] Extension options: 1, 3, 6, 12 months
@@ -26,6 +27,9 @@
 - [x] **Invoice records created on payment confirmation** - FIXED
 - [x] **USDT/USDC currency estimate endpoint** - NEW
 - [x] **Proper currency formatting** (usdttrc20, etc.)
+- [x] **Unified PaymentModal component** - Supports both create & extend modes
+- [x] **CMS-managed cryptocurrency list** - Toggle currencies via admin API
+- [x] **Payment back button** - Can change currency after selecting
 
 ### Admin Panel (CONTROL) - MAJOR UPDATE ✅
 - [x] Login page at `/control/login`
@@ -55,6 +59,10 @@
   - Edit any text on the website
   - Add/remove content sections
   - Manage hero text, CTAs, descriptions
+- [x] **Cryptocurrency Management**:
+  - API endpoint to manage enabled currencies
+  - Toggle individual currencies on/off
+  - Supports USDH, USDT (TRC20/ERC20/BSC/Sol), USDC (Base/Sol/Arbitrum)
 - [x] **System Settings**:
   - Toggle feature flags (signup, maintenance, devin)
   - Update pricing
@@ -82,11 +90,19 @@
 
 ## 📁 Key Files Created/Modified
 
+### Payment System (Recent Updates)
+```
+app/components/PaymentModal.tsx       # UNIFIED: Supports create & extend modes
+app/api/control/crypto/route.ts       # NEW: CMS-managed cryptocurrency options
+app/api/subscription/extend/route.ts  # FIXED: Currency mapping usdt → usdttrc20
+app/billing/page.tsx                  # UPDATED: Uses unified PaymentModal
+app/page.tsx                          # FIXED: Removed duplicate header
+```
+
 ### Payment Fixes
 ```
 app/api/webhooks/payment/route.ts    # Fixed subscription extension logic
 app/api/payment/create/route.ts      # Added currency validation & estimate check
-app/api/subscription/extend/route.ts # Added extension handling
 app/api/payment/estimate/route.ts    # NEW: Get USD to crypto estimates
 prisma/schema.prisma                  # Added Invoice, ActivityLog, AdminNote, WebsiteContent, SystemSetting models
 ```
@@ -105,6 +121,7 @@ app/api/control/payments/[id]/refund/route.ts  # Process refund
 app/api/control/content/route.ts      # Website CMS API
 app/api/control/content/seed/route.ts # Seed default content
 app/api/control/settings/route.ts     # System settings API
+app/api/control/crypto/route.ts       # Cryptocurrency management API
 app/api/control/stats/route.ts        # Enhanced stats API
 lib/cms-content.ts                    # 100+ website content items
 ```
@@ -112,7 +129,7 @@ lib/cms-content.ts                    # 100+ website content items
 ### Database Models (New)
 ```
 Invoice            # Payment invoices
-ActivityLog        # Audit trail for all actions
+ActivityLog        # Audit trail
 AdminNote          # Admin notes on users
 SystemSetting      # Key-value settings store
 WebsiteContent     # CMS content (100+ items seeded)
@@ -183,24 +200,27 @@ WebsiteContent     # CMS content (100+ items seeded)
 2. [x] **Fix extension payment handling** - Handle `extend_` order IDs ✅
 3. [x] **Add Invoice records** - Create Invoice model ✅
 4. [x] **Fix USDT estimate** - Added estimate endpoint & currency formatting ✅
-5. [ ] **Test real Devin API** - Currently using template deployment
+5. [x] **Fix duplicate headers** - Removed duplicate from main page ✅
+6. [x] **Unified PaymentModal** - Both create & extend use same component ✅
+7. [x] **CMS-managed currencies** - API to toggle payment options ✅
+8. [ ] **Test real Devin API** - Currently using template deployment
 
 ### High Priority
-6. [ ] **Test payment flow** - Verify subscription extension works end-to-end
-7. [ ] **Add email notifications** - Resend/SendGrid for payments/deployments
-8. [ ] **Add deployment progress tracking** - Show Devin session status to users
+9. [ ] **Test payment flow** - Verify subscription extension works end-to-end
+10. [ ] **Add email notifications** - Resend/SendGrid for payments/deployments
+11. [ ] **Add deployment progress tracking** - Show Devin session status to users
 
 ### Medium Priority
-9. [x] **BACKOFFICE MODULE** - Full temp implementation complete ✅
-10. [x] **Website CMS** - 100+ content items manageable ✅
-11. [ ] **Add webhook retry** - Queue failed webhooks for retry
-12. [ ] **Export functionality** - CSV exports for users/payments
+12. [x] **BACKOFFICE MODULE** - Full temp implementation complete ✅
+13. [x] **Website CMS** - 100+ content items manageable ✅
+14. [ ] **Add webhook retry** - Queue failed webhooks for retry
+15. [ ] **Export functionality** - CSV exports for users/payments
 
 ### Low Priority
-13. [ ] Add more pricing tiers (Pro plan)
-14. [ ] Add referral/affiliate system
-15. [ ] Add analytics charts (recharts)
-16. [ ] Improve error handling and logging
+16. [ ] Add more pricing tiers (Pro plan)
+17. [ ] Add referral/affiliate system
+18. [ ] Add analytics charts (recharts)
+19. [ ] Improve error handling and logging
 
 ---
 
@@ -216,6 +236,10 @@ WebsiteContent     # CMS content (100+ items seeded)
 8. ✅ **Extension payments not working** - Added handler for `extend_` order IDs
 9. ✅ **No invoice system** - Added Invoice model and creation
 10. ✅ **USDT estimate error** - Added estimate endpoint and currency formatting
+11. ✅ **Duplicate headers** - Removed duplicate header from main page
+12. ✅ **Payment modal inconsistency** - Unified create & extend flows
+13. ✅ **No currency management** - Added CMS API for crypto options
+14. ✅ **No payment back button** - Added "Change Currency" option
 
 ---
 
@@ -256,6 +280,8 @@ cd meetmatt && npx prisma studio           # Open Prisma Studio
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /api/payment/estimate?amount=150&currency=usdt` | Get USD to crypto estimate |
+| `GET /api/control/crypto` | Get enabled cryptocurrencies |
+| `POST /api/control/crypto` | Update crypto options (admin) |
 | `POST /api/control/content/seed` | Seed default CMS content |
 
 ---
@@ -306,13 +332,14 @@ cd meetmatt && npx prisma studio           # Open Prisma Studio
 ### Immediate Actions
 1. **Seed CMS Content** - Go to `/control/dashboard` → Website Content → Click "Seed Content"
 2. **Test payment flow** - Create test agent, verify payment + extension works
-3. **Test currency estimate** - Try USDT payment to verify estimate endpoint works
+3. **Test currency selection** - Verify back button works in payment modal
+4. **Test crypto management** - Try toggling currencies via API
 
 ### Short Term
-4. **Verify DEVIN_API_KEY** - Check Vercel env vars and test real Devin deployment
-5. **Add email notifications** - Integrate Resend for payment/deploy notifications
-6. **Test backoffice** - Verify all admin functions work in production
-7. **Monitor webhooks** - Check NowPayments IPN is reaching our endpoint
+5. **Verify DEVIN_API_KEY** - Check Vercel env vars and test real Devin deployment
+6. **Add email notifications** - Integrate Resend for payment/deploy notifications
+7. **Test backoffice** - Verify all admin functions work in production
+8. **Monitor webhooks** - Check NowPayments IPN is reaching our endpoint
 
 ### Future Enhancements (PRD-BACKOFFICE.md)
 - Advanced analytics with charts
@@ -328,4 +355,4 @@ cd meetmatt && npx prisma studio           # Open Prisma Studio
 - **Database:** Neon PostgreSQL (auto-backed up)
 - **Git:** Commits pushed to main
 - **Vercel:** Auto-deploys on push to main
-- **Last Deployment:** https://meetmatt-8bweiq496-marks-projects-95f7cc92.vercel.app
+- **Last Deployment:** https://meetmatt.xyz

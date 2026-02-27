@@ -154,7 +154,7 @@ export default function ControlDashboard() {
   ];
 
   return (
-    <div className="min-h-screen flex bg-zinc-950">
+    <div className="h-full flex bg-zinc-950">
       {/* Sidebar */}
       <aside className="w-64 bg-zinc-950 border-r border-zinc-800 flex flex-col">
         <div className="p-6 border-b border-zinc-800">

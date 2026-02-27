@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePrivy } from "@privy-io/react-auth";
-import Link from "next/link";
 import { StepWelcome } from "./components/wizard/StepWelcome";
 import { StepAgentName } from "./components/wizard/StepAgentName";
 import { StepAgentType } from "./components/wizard/StepAgentType";
@@ -189,23 +188,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] bg-glow relative">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-md" />
-            <span className="font-bold text-xl text-[var(--foreground)]">Matt</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/pricing" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Pricing</Link>
-            <Link href="/dashboard" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">Dashboard</Link>
-          </div>
-        </div>
-      </header>
-
+    <div className="h-full bg-[var(--background)] bg-glow flex flex-col">
       {/* Progress Bar */}
-      <div className="fixed top-16 left-0 right-0 z-40">
+      <div className="flex-shrink-0">
         <div className="h-1 bg-[var(--border)]">
           <motion.div
             className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
@@ -217,11 +202,11 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <main className="pt-28 pb-20 px-4 relative z-10">
-        <div className="max-w-4xl mx-auto">
+      <div className="flex-1 px-4 overflow-hidden">
+        <div className="max-w-4xl mx-auto py-4">
           {/* AI Orb */}
-          <div className="flex justify-center mt-8 mb-6">
-            <div className="w-32 h-32 sm:w-40 sm:h-40">
+          <div className="flex justify-center mb-6 pt-14">
+            <div className="w-28 h-28 sm:w-32 sm:h-32">
               <AIOrb 
                 wizardState={getOrbState()} 
                 showGreeting={step === "welcome"}
@@ -292,7 +277,7 @@ export default function Home() {
             )}
           </AnimatePresence>
         </div>
-      </main>
+      </div>
 
       {/* Payment Modal */}
       <PaymentModal

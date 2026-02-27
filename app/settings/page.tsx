@@ -78,8 +78,8 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+    <div className="min-h-[calc(100vh-64px)] sm:min-h-[calc(100vh-80px)] bg-[var(--background)] text-[var(--foreground)]">
+      <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

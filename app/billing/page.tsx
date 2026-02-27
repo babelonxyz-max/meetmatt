@@ -11,16 +11,13 @@ import {
   Trash2,
   ArrowLeft,
   Check,
-  Loader2,
-  Wallet,
-  AlertCircle,
-  Copy,
   Sparkles,
   TrendingDown,
-  Clock,
-  Calendar
+  Calendar,
+  Wallet
 } from "lucide-react";
 import { calculatePricing, getPricingOptions, formatPrice, PricingOption } from "@/lib/pricing";
+import { PaymentModal } from "@/app/components/PaymentModal";
 
 interface Agent {
   id: string;
@@ -49,11 +46,6 @@ export default function BillingPage() {
   // Payment modal states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [extensionMonths, setExtensionMonths] = useState(1);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentData, setPaymentData] = useState<any>(null);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [pricingOptions, setPricingOptions] = useState<PricingOption[]>([]);
 
   useEffect(() => {
@@ -92,57 +84,17 @@ export default function BillingPage() {
 
   const openExtendModal = (agent: Agent) => {
     setSelectedAgent(agent);
-    setExtensionMonths(1);
-    setPaymentData(null);
-    setPaymentError(null);
     // Load pricing options for this agent's tier
     const options = getPricingOptions(agent.tier);
     setPricingOptions(options);
     setShowPaymentModal(true);
   };
 
-  const handleExtendSubscription = async () => {
-    if (!selectedAgent || !data?.user) return;
-    
-    setPaymentLoading(true);
-    setPaymentError(null);
-    
-    try {
-      const response = await fetch("/api/subscription/extend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agentId: selectedAgent.id,
-          userId: data.user.id,
-          months: extensionMonths,
-          currency: "usdt",
-        }),
-      });
-
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || "Payment creation failed");
-      }
-      
-      setPaymentData(result.payment);
-    } catch (error: any) {
-      console.error("Payment error:", error);
-      setPaymentError(error.message || "Failed to create payment");
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const getCurrentPricing = () => {
-    if (!selectedAgent) return null;
-    return calculatePricing(selectedAgent.tier, extensionMonths);
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    setSelectedAgent(null);
+    // Refresh dashboard data
+    fetchDashboard();
   };
 
   if (!ready || loading) {
@@ -165,8 +117,8 @@ export default function BillingPage() {
   const expiredAgents = data?.agents.filter(a => a.subscriptionStatus === "expired") || [];
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+    <div className="min-h-[calc(100vh-64px)] sm:min-h-[calc(100vh-80px)] bg-[var(--background)] text-[var(--foreground)]">
+      <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -532,173 +484,18 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && selectedAgent && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
-          >
-            {!paymentData ? (
-              <>
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold">Extend Subscription</h3>
-                  <button
-                    onClick={() => setShowPaymentModal(false)}
-                    className="p-2 hover:bg-[var(--card)] rounded-lg"
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="mb-6">
-                  <p className="text-[var(--muted)] mb-4">
-                    Extending: <span className="text-[var(--foreground)] font-medium">{selectedAgent.name}</span>
-                  </p>
-                  
-                  {/* Pricing Options */}
-                  <label className="block text-sm font-medium mb-3">Select Duration</label>
-                  <div className="grid grid-cols-2 gap-2 mb-4">
-                    {pricingOptions.map((option) => (
-                      <button
-                        key={option.months}
-                        onClick={() => setExtensionMonths(option.months)}
-                        className={`relative p-3 rounded-xl text-left transition-all ${
-                          extensionMonths === option.months
-                            ? "bg-[var(--accent)] text-white border-2 border-[var(--accent)]"
-                            : "bg-[var(--background)] border-2 border-[var(--border)] hover:border-[var(--accent)]/50"
-                        }`}
-                      >
-                        <div className="font-semibold">{option.label}</div>
-                        <div className={`text-sm ${extensionMonths === option.months ? "text-white/80" : "text-[var(--muted)]"}`}>
-                          {formatPrice(option.price)}
-                        </div>
-                        {option.discountPercent > 0 ? (
-                          <div className={`absolute -top-2 -right-2 px-2 py-0.5 text-xs font-bold rounded-full ${
-                            extensionMonths === option.months 
-                              ? "bg-white text-[var(--accent)]" 
-                              : "bg-green-500 text-white"
-                          }`}>
-                            -{option.discountPercent}%
-                          </div>
-                        ) : null}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {/* Price Breakdown */}
-                  {(() => {
-                    const pricing = getCurrentPricing();
-                    if (!pricing) return null;
-                    return (
-                      <div className="p-4 bg-[var(--background)] rounded-xl space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-[var(--muted)]">Original price</span>
-                          <span className="line-through">{formatPrice(pricing.price)}</span>
-                        </div>
-                        {pricing.savings > 0 ? (
-                          <div className="flex justify-between text-sm text-green-500">
-                            <span>Annual discount</span>
-                            <span>-{formatPrice(pricing.savings)}</span>
-                          </div>
-                        ) : null}
-                        <div className="h-px bg-[var(--border)] my-2" />
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Total to pay</span>
-                          <span className="text-2xl font-bold text-[var(--accent)]">{formatPrice(pricing.price)}</span>
-                        </div>
-                        <div className="text-xs text-[var(--muted)] text-right">
-                          ~{formatPrice(pricing.pricePerMonth)}/month
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {paymentError && (
-                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm">
-                    {paymentError}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleExtendSubscription}
-                  disabled={paymentLoading}
-                  className="w-full py-4 bg-[var(--accent)] text-white font-semibold rounded-xl hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {paymentLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Creating Payment...
-                    </>
-                  ) : (
-                    <>Proceed to Payment</>
-                  )}
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-[var(--accent)]/10 rounded-full flex items-center justify-center">
-                    <Wallet className="w-8 h-8 text-[var(--accent)]" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-1">Payment Created</h3>
-                  <p className="text-[var(--muted)]">Send the exact amount to the address below</p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="p-4 bg-[var(--background)] rounded-xl">
-                    <p className="text-sm text-[var(--muted)] mb-1">Amount</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold">{paymentData.amount} {paymentData.currency}</span>
-                      <button
-                        onClick={() => copyToClipboard(paymentData.amount.toString())}
-                        className="p-2 hover:bg-[var(--card)] rounded-lg"
-                      >
-                        {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-[var(--background)] rounded-xl">
-                    <p className="text-sm text-[var(--muted)] mb-1">Payment Address</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm font-mono break-all">{paymentData.address}</code>
-                      <button
-                        onClick={() => copyToClipboard(paymentData.address)}
-                        className="p-2 hover:bg-[var(--card)] rounded-lg"
-                      >
-                        {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                    <p className="text-sm text-amber-500 flex items-start gap-2">
-                      <Clock className="w-5 h-5 flex-shrink-0" />
-                      Payment will be confirmed automatically once received. This may take a few minutes.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setShowPaymentModal(false);
-                    setPaymentData(null);
-                  }}
-                  className="w-full mt-6 py-3 border border-[var(--border)] rounded-xl hover:bg-[var(--card)] transition-colors"
-                >
-                  Close
-                </button>
-              </>
-            )}
-          </motion.div>
-        </div>
-      )}
+      {/* Payment Modal - Using shared component */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        config={{ agentName: selectedAgent?.name || "" }}
+        sessionId={`extend_${selectedAgent?.id}_${Date.now()}`}
+        onSuccess={handlePaymentSuccess}
+        mode="extend"
+        agentId={selectedAgent?.id}
+        userId={data?.user.id}
+        pricingOptions={pricingOptions}
+      />
     </div>
   );
 }

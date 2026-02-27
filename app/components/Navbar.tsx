@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, User, ChevronDown, LogOut, Sun, Moon } from "lucide-react";
+import { Sparkles, User, ChevronDown, LogOut, Sun, Moon, Rocket } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useRef, useEffect } from "react";
 import { useTheme } from "./ThemeProvider";
@@ -45,7 +45,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-black/90 backdrop-blur-md z-[100] border-b border-zinc-800">
+    <header className="fixed top-0 left-0 right-0 h-16 sm:h-20 flex items-center justify-between px-6 sm:px-8 bg-black/90 backdrop-blur-md z-[100] border-b border-zinc-800 shrink-0">
       <Link href="/" className="flex items-center gap-3">
         <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
           <Sparkles className="w-7 h-7 text-blue-500" />
@@ -63,6 +63,10 @@ export function Navbar() {
         </button>
         <Link href="/pricing" className="text-lg text-white hover:text-blue-400 transition-colors">
           Pricing
+        </Link>
+        <Link href="/fleet" className="flex items-center gap-2 text-lg text-white hover:text-blue-400 transition-colors">
+          <Rocket className="w-4 h-4" />
+          <span className="hidden sm:inline">Fleet</span>
         </Link>
         {authenticated ? (
           <div className="relative" ref={dropdownRef}>
@@ -92,6 +96,14 @@ export function Navbar() {
                     className="flex items-center gap-3 px-4 py-3 text-white hover:bg-zinc-800 transition-colors"
                   >
                     <span>Dashboard</span>
+                  </Link>
+                  <Link
+                    href="/fleet"
+                    onClick={() => setShowDropdown(false)}
+                    className="flex items-center gap-3 px-4 py-3 text-white hover:bg-zinc-800 transition-colors"
+                  >
+                    <Rocket className="w-4 h-4 text-[var(--accent)]" />
+                    <span>Fleet Mode</span>
                   </Link>
                   <div className="border-t border-zinc-800" />
                   <button

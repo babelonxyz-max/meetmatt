@@ -51,7 +51,7 @@ export default function PricingPage() {
   const annualPrice = 1000;
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] overflow-x-hidden pt-16 sm:pt-20">
+    <main className="min-h-[calc(100vh-64px)] sm:min-h-[calc(100vh-80px)] bg-[var(--background)] text-[var(--foreground)] overflow-x-hidden">
       {/* Hero Pricing Section */}
       <section className="py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">

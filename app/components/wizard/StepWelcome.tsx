@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Rocket } from "lucide-react";
+import Link from "next/link";
 
 interface StepWelcomeProps {
   onStart: () => void;
@@ -41,13 +42,43 @@ export function StepWelcome({ onStart }: StepWelcomeProps) {
               "Available 24/7 on your preferred platform",
               "Deploys in minutes, not months",
             ].map((item, i) => (
-              <li key={i} className="flex items-start gap-3 text-[var(--muted)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+              <motion.li 
+                key={i} 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 + i * 0.1 }}
+                className="flex items-start gap-3 text-[var(--muted)]"
+              >
+                <motion.span 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.6 + i * 0.1, type: "spring" }}
+                  className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" 
+                />
                 {item}
-              </li>
+              </motion.li>
             ))}
           </ul>
         </div>
+      </motion.div>
+
+      {/* Fleet Mode CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55 }}
+        className="mb-6"
+      >
+        <Link href="/fleet">
+          <div className="group inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 hover:border-amber-500/40 rounded-xl transition-all cursor-pointer">
+            <Rocket className="w-5 h-5 text-amber-500" />
+            <div className="text-left">
+              <div className="text-sm font-medium text-amber-500">New: Fleet Mode</div>
+              <div className="text-xs text-[var(--muted)]">Deploy 1000s of agents at once</div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-amber-500 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
       </motion.div>
 
       <motion.button

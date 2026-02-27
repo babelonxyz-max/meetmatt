@@ -59,11 +59,13 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)] text-[var(--foreground)] overflow-x-hidden selection:bg-blue-500/30 selection:text-white`}>
         <Providers>
-          <Navbar />
-          <main className="min-h-screen pb-24">
-            {children}
-          </main>
-          <Footer />
+          <div className="flex flex-col h-screen overflow-hidden">
+            <Navbar />
+            <main className="flex-1 pt-16 sm:pt-20 overflow-y-auto">
+              {children}
+            </main>
+            <Footer />
+          </div>
         </Providers>
       </body>
     </html>

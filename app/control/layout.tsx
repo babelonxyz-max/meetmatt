@@ -12,7 +12,7 @@ export default function ControlLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white">
+    <div className="h-[calc(100vh-64px)] sm:h-[calc(100vh-80px)] bg-[#0a0a0b] text-white overflow-hidden">
       {children}
     </div>
   );

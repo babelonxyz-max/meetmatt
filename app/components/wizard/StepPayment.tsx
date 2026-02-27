@@ -57,7 +57,7 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
 
         <div className="mt-4 p-3 bg-[var(--background)] rounded-xl">
           <p className="text-xs text-[var(--muted)] text-center">
-            After first month: $99/month • Cancel anytime
+            After first month: $150/month • Cancel anytime
           </p>
         </div>
       </div>
