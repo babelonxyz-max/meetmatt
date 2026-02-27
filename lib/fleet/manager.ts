@@ -591,7 +591,7 @@ export class FleetManager extends EventEmitter {
         const result = await this.openclawProvider.deployAgent({
           ...agent,
           config: agentData.config,
-        } as FleetAgent);
+        } as unknown as FleetAgent);
         
         if (result.success) {
           // Update agent with runtime info
@@ -665,7 +665,7 @@ export class FleetManager extends EventEmitter {
         const health = await this.openclawProvider.checkHealth({
           ...agent,
           config: JSON.parse(agent.config as string),
-        } as FleetAgent);
+        } as unknown as FleetAgent);
         
         await prisma.fleetAgent.update({
           where: { id: agent.id },
