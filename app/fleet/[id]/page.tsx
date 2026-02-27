@@ -1,7 +1,7 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -89,7 +89,8 @@ const agentStatusConfig: Record<string, { color: string; label: string }> = {
   stopped: { color: "bg-gray-400", label: "Stopped" },
 };
 
-export default function FleetDetailPage({ params }: { params: { id: string } }) {
+export default function FleetDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const { authenticated, user } = usePrivy();
   const router = useRouter();
   const [fleet, setFleet] = useState<Fleet | null>(null);
@@ -109,13 +110,13 @@ export default function FleetDetailPage({ params }: { params: { id: string } }) 
     }, 3000);
     
     return () => clearInterval(interval);
-  }, [authenticated, params.id, fleet?.status]);
+  }, [authenticated, id, fleet?.status]);
 
   async function fetchFleetDetails() {
     if (!user) return;
     
     try {
-      const response = await fetch(`/api/fleet/${params.id}`, {
+      const response = await fetch(`/api/fleet/${id}`, {
         headers: {
           "x-user-id": user.id,
         },
@@ -152,7 +153,7 @@ export default function FleetDetailPage({ params }: { params: { id: string } }) 
     }
 
     try {
-      const response = await fetch(`/api/fleet/${params.id}/scale`, {
+      const response = await fetch(`/api/fleet/${id}/scale`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -23,10 +23,10 @@ const MOCK_AGENTS = Array.from({ length: 50 }, (_, i) => ({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const fleet = {
-    id: params.id,
+    id: (await params).id,
     name: "Demo Support Fleet",
     description: "Customer support agents",
     status: "running",
@@ -61,7 +61,7 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return NextResponse.json({
     success: true,

@@ -6,14 +6,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const body = await req.json();
   
   return NextResponse.json({
     success: true,
     data: {
-      fleetId: params.id,
+      fleetId: (await params).id,
       status: "scaling",
       message: `Scaling to ${body.targetCount} agents (DEMO MODE)`,
       progress: {

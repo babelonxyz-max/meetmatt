@@ -6,12 +6,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return NextResponse.json({
     success: true,
     data: {
-      fleetId: params.id,
+      fleetId: (await params).id,
       status: "running",
       message: "Fleet is running (DEMO MODE)",
       progress: {
