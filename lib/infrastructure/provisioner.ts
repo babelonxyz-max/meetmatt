@@ -6,7 +6,7 @@
  */
 
 import { Queue, Job, Worker } from "bullmq";
-import { Redis } from "ioredis";
+import type { Redis } from "ioredis";
 import { prisma } from "@/lib/prisma";
 import { fleetManager } from "@/lib/fleet/manager";
 import { ContaboClient } from "./providers/contabo";
@@ -45,7 +45,7 @@ export class InfrastructureProvisioner {
 
   private constructor() {
     this.provisioningQueue = new Queue(PROVISIONING_QUEUE, {
-      connection: redisConnection,
+      connection: redisConnection as any,
       defaultJobOptions: {
         attempts: 3,
         backoff: { type: "exponential", delay: 30000 },
@@ -55,7 +55,7 @@ export class InfrastructureProvisioner {
     });
 
     this.healthCheckQueue = new Queue(HEALTH_CHECK_QUEUE, {
-      connection: redisConnection,
+      connection: redisConnection as any,
       defaultJobOptions: {
         repeat: { every: 60000 }, // Every minute
       },
@@ -439,7 +439,7 @@ export class InfrastructureProvisioner {
         }
       },
       {
-        connection: redisConnection,
+        connection: redisConnection as any,
         concurrency: 3,
       }
     );
@@ -458,7 +458,7 @@ export class InfrastructureProvisioner {
         await this.checkServerHealth(serverId);
       },
       {
-        connection: redisConnection,
+        connection: redisConnection as any,
         concurrency: 5,
       }
     );
