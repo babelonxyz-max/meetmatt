@@ -12,7 +12,7 @@
  */
 
 import { Queue, Job, Worker } from "bullmq";
-import { Redis } from "ioredis";
+import type { Redis } from "ioredis";
 import { prisma } from "@/lib/prisma";
 import { 
   Fleet, 
@@ -63,7 +63,7 @@ export class FleetManager extends EventEmitter {
     
     // Initialize queues
     this.deploymentQueue = new Queue(FLEET_DEPLOYMENT_QUEUE, {
-      connection: redisConnection,
+      connection: redisConnection as any,
       defaultJobOptions: {
         attempts: FLEET_CONSTANTS.MAX_DEPLOYMENT_RETRIES,
         backoff: {
@@ -76,7 +76,7 @@ export class FleetManager extends EventEmitter {
     });
     
     this.healthCheckQueue = new Queue(FLEET_HEALTH_CHECK_QUEUE, {
-      connection: redisConnection,
+      connection: redisConnection as any,
       defaultJobOptions: {
         repeat: {
           every: FLEET_CONSTANTS.HEALTH_CHECK_INTERVAL_MS,
@@ -539,7 +539,7 @@ export class FleetManager extends EventEmitter {
         await this.processDeploymentBatch(data);
       },
       {
-        connection: redisConnection,
+        connection: redisConnection as any,
         concurrency: 5, // Process 5 batches concurrently
       }
     );
@@ -566,7 +566,7 @@ export class FleetManager extends EventEmitter {
         await this.runHealthChecks(fleetId);
       },
       {
-        connection: redisConnection,
+        connection: redisConnection as any,
         concurrency: 3,
       }
     );
