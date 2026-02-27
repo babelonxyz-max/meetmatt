@@ -487,8 +487,8 @@ export class FleetManager extends EventEmitter {
     await this.updateFleetStatus(fleetId, "terminated", "Fleet terminated by user");
     
     // Clean up queue jobs
-    await this.deploymentQueue.clean(0, "completed");
-    await this.deploymentQueue.clean(0, "failed");
+    await this.deploymentQueue.clean(0, 0, "completed");
+    await this.deploymentQueue.clean(0, 0, "failed");
     
     this.emit("fleet.terminated", { fleetId });
     
