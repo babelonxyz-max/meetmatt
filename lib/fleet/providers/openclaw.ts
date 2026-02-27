@@ -63,6 +63,13 @@ export class OpenClawProvider implements IRuntimeProvider {
   }
   
   /**
+   * Get current configuration
+   */
+  getConfig(): OpenClawRuntimeConfig {
+    return this.config;
+  }
+  
+  /**
    * Deploy a single agent to an OpenClaw instance
    */
   async deployAgent(agent: FleetAgent): Promise<DeploymentResult> {
