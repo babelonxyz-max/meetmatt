@@ -12,7 +12,7 @@
  */
 
 import { Queue, Job, Worker } from "bullmq";
-import type { Redis } from "ioredis";
+import { Redis } from "ioredis";
 import { prisma } from "@/lib/prisma";
 import { 
   Fleet, 
