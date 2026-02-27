@@ -21,8 +21,8 @@ export class ContaboClient {
 
   constructor(config: ContaboConfig) {
     this.config = {
-      apiUrl: config.apiUrl || "https://api.contabo.com",
       ...config,
+      apiUrl: config.apiUrl || "https://api.contabo.com",
     };
   }
 
