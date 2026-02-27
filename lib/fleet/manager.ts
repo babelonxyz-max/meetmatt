@@ -77,11 +77,6 @@ export class FleetManager extends EventEmitter {
     
     this.healthCheckQueue = new Queue(FLEET_HEALTH_CHECK_QUEUE, {
       connection: redisConnection as any,
-      defaultJobOptions: {
-        repeat: {
-          every: FLEET_CONSTANTS.HEALTH_CHECK_INTERVAL_MS,
-        },
-      },
     });
     
     // Initialize OpenClaw provider with default config
