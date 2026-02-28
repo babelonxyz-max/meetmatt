@@ -25,10 +25,11 @@ export async function POST(req: NextRequest) {
 
     const features = JSON.parse(agent.features[0] || '{}');
     const personality = features.personality || "professional";
+    const useCase = features.useCase === "fleet" ? "fleet" : "assistant";
 
     const devinSession = await createDevinSession({
       name: agent.name,
-      useCase: "assistant",
+      useCase,
       scope: personality,
       contactMethod: "telegram",
     });

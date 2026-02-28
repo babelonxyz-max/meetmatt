@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePrivy } from "@privy-io/react-auth";
 import { StepName } from "./components/wizard/StepName";
@@ -14,6 +14,13 @@ import { NexusOrb } from "./components/NexusOrb";
 type ActiveStep = "name" | "personality" | "demo" | "payment" | "deploy";
 type Step = "idle" | ActiveStep;
 type DeployStatus = "deploying" | "completed" | "failed";
+type DeploymentMode = "assistant" | "fleet";
+
+interface NarrativeMessage {
+  id: string;
+  role: "matt" | "you";
+  text: string;
+}
 
 const FLOW_STEPS: Array<{ id: ActiveStep; label: string; hint: string }> = [
   { id: "name", label: "Name", hint: "Give your assistant an identity" },
@@ -37,6 +44,10 @@ function formatPersonality(personality: string): string {
   return personality.charAt(0).toUpperCase() + personality.slice(1);
 }
 
+function createNarrativeId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default function Home() {
   const { login, authenticated, user } = usePrivy();
   const [step, setStep] = useState<Step>("idle");
@@ -49,10 +60,13 @@ export default function Home() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [config, setConfig] = useState({
     agentName: "",
-    useCase: "assistant",
+    useCase: "assistant" as DeploymentMode,
     scope: "",
     contactMethod: "telegram",
   });
+  const [narrativeMessages, setNarrativeMessages] = useState<NarrativeMessage[]>([]);
+  const narrativeStepRef = useRef<Step>("idle");
+  const narrativeTimersRef = useRef<number[]>([]);
 
   const handleWake = () => {
     if (step !== "idle") return;
@@ -94,6 +108,7 @@ export default function Home() {
         body: JSON.stringify({
           agentName,
           personality,
+          useCase: config.useCase,
           userId: user?.id,
         }),
       });
@@ -159,8 +174,47 @@ export default function Home() {
             ? `Use a ${formatPersonality(personality)} tone.`
             : null
           : step === "payment"
-            ? `Looks right. Let's deploy ${agentName || "it"}.`
+            ? config.useCase === "fleet"
+              ? `Looks right. Let's deploy the ${agentName || "assistant"} fleet.`
+              : `Looks right. Let's deploy ${agentName || "it"}.`
             : "Launch now.";
+
+  const pushNarrativeMessage = useCallback((role: NarrativeMessage["role"], text: string) => {
+    setNarrativeMessages((prev) => [...prev, { id: createNarrativeId(), role, text }].slice(-8));
+  }, []);
+
+  useEffect(() => {
+    narrativeTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    narrativeTimersRef.current = [];
+
+    if (!isWizardActive) {
+      setNarrativeMessages([]);
+      narrativeStepRef.current = "idle";
+      return;
+    }
+
+    if (narrativeStepRef.current === step) return;
+    narrativeStepRef.current = step;
+
+    const mattTimer = window.setTimeout(() => {
+      pushNarrativeMessage("matt", mattPrompt);
+    }, 120);
+    narrativeTimersRef.current.push(mattTimer);
+
+    if (userNarrative) {
+      const userTimer = window.setTimeout(() => {
+        pushNarrativeMessage("you", userNarrative);
+      }, 520);
+      narrativeTimersRef.current.push(userTimer);
+    }
+
+    return () => {
+      narrativeTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      narrativeTimersRef.current = [];
+    };
+  }, [isWizardActive, step, mattPrompt, userNarrative, pushNarrativeMessage]);
+
+  const visibleNarrativeMessages = narrativeMessages.slice(-5);
 
   return (
     <div data-home-shell="true" className="fixed inset-x-0 top-16 bottom-16 overflow-hidden bg-[#03050b] sm:top-20">
@@ -269,69 +323,81 @@ export default function Home() {
                 </div>
 
                 <div className="relative flex min-h-0 flex-1 flex-col px-2 py-2">
-                  <div className="space-y-3">
-                    <motion.div
-                      key={`matt-${step}`}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.22 }}
-                      className="max-w-[92%] rounded-2xl border border-cyan-300/40 bg-[linear-gradient(135deg,rgba(34,211,238,0.2),rgba(14,116,144,0.15))] px-4 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl"
-                    >
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-100/90">Matt</p>
-                      <p className="mt-1 text-sm leading-relaxed text-cyan-50/95">{mattPrompt}</p>
-                    </motion.div>
+                  <div className="relative h-52 overflow-hidden">
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-[rgba(8,8,20,0.95)] to-transparent" />
+                    <div className="flex h-full flex-col justify-end gap-2">
+                      <AnimatePresence initial={false}>
+                        {visibleNarrativeMessages.map((message, index) => {
+                          const age = (index + 1) / visibleNarrativeMessages.length;
+                          const bubbleOpacity = 0.32 + age * 0.68;
 
-                    {userNarrative ? (
-                      <motion.div
-                        key={`user-${step}`}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.22, delay: 0.06 }}
-                        className="ml-auto max-w-[92%] rounded-2xl border border-white/25 bg-[linear-gradient(135deg,rgba(168,85,247,0.16),rgba(59,130,246,0.12))] px-4 py-2.5 shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl"
-                      >
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-white/70">You</p>
-                        <p className="mt-1 text-sm leading-relaxed text-white/92">{userNarrative}</p>
-                      </motion.div>
-                    ) : null}
-
-                    <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-3 py-1.5 text-[11px] text-white/80 shadow-[0_0_20px_rgba(34,211,238,0.18)] backdrop-blur-md">
-                      <span>Matt is listening</span>
-                      <span className="inline-flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/90" />
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/75 [animation-delay:120ms]" />
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/60 [animation-delay:240ms]" />
-                      </span>
+                          return (
+                            <motion.div
+                              key={message.id}
+                              layout
+                              initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                              animate={{ opacity: bubbleOpacity, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -14 }}
+                              transition={{ duration: 0.24, ease: "easeOut" }}
+                              className={`max-w-[92%] rounded-2xl px-4 py-2.5 backdrop-blur-xl ${
+                                message.role === "matt"
+                                  ? "border border-cyan-300/40 bg-[linear-gradient(135deg,rgba(34,211,238,0.2),rgba(14,116,144,0.15))] text-cyan-50/95 shadow-[0_10px_30px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)]"
+                                  : "ml-auto border border-white/25 bg-[linear-gradient(135deg,rgba(168,85,247,0.16),rgba(59,130,246,0.12))] text-white/92 shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)]"
+                              }`}
+                            >
+                              <p className={`text-[10px] uppercase tracking-[0.16em] ${message.role === "matt" ? "text-cyan-100/90" : "text-white/70"}`}>
+                                {message.role === "matt" ? "Matt" : "You"}
+                              </p>
+                              <p className="mt-1 text-sm leading-relaxed">{message.text}</p>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
                     </div>
+                  </div>
+
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-3 py-1.5 text-[11px] text-white/80 shadow-[0_0_20px_rgba(34,211,238,0.18)] backdrop-blur-md">
+                    <span>Matt is listening</span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/90" />
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/75 [animation-delay:120ms]" />
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/60 [animation-delay:240ms]" />
+                    </span>
                   </div>
 
                   <div className="mt-1 min-h-0 flex-1 p-1">
                     <AnimatePresence mode="wait">
                       {step === "name" ? (
-                        <motion.div key="name" exit={{ opacity: 0, x: -20 }}>
+                        <motion.div key="name" className="h-full" exit={{ opacity: 0, x: -20 }}>
                           <StepName onSubmit={handleNameSubmit} />
                         </motion.div>
                       ) : null}
 
                       {step === "personality" ? (
-                        <motion.div key="personality" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                        <motion.div key="personality" className="h-full" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                           <StepPersonality onSelect={handlePersonalitySelect} />
                         </motion.div>
                       ) : null}
 
                       {step === "demo" ? (
-                        <motion.div key="demo" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                        <motion.div key="demo" className="h-full" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                           <StepDemo agentName={agentName} personality={personality} onContinue={handleDemoComplete} />
                         </motion.div>
                       ) : null}
 
                       {step === "payment" ? (
-                        <motion.div key="payment" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                          <StepPayment agentName={agentName} onContinue={handlePaymentContinue} />
+                        <motion.div key="payment" className="h-full" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                          <StepPayment
+                            agentName={agentName}
+                            deploymentMode={config.useCase}
+                            onDeploymentModeChange={(mode) => setConfig((prev) => ({ ...prev, useCase: mode }))}
+                            onContinue={handlePaymentContinue}
+                          />
                         </motion.div>
                       ) : null}
 
                       {step === "deploy" ? (
-                        <motion.div key="deploy" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                        <motion.div key="deploy" className="h-full" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                           <StepDeploy
                             agentName={agentName}
                             status={deployStatus}

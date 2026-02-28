@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { agentName, personality, userId: privyId } = body;
+    const { agentName, personality, useCase, userId: privyId } = body;
+    const normalizedUseCase = useCase === "fleet" ? "fleet" : "assistant";
 
     if (!agentName || !personality) {
       return NextResponse.json({ error: "agentName and personality required" }, { status: 400 });
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
         slug: uniqueSlug,
         name: agentName,
         purpose: personality,
-        features: [JSON.stringify({ personality, useCase: "assistant" })],
+        features: [JSON.stringify({ personality, useCase: normalizedUseCase })],
         tier: "matt",
         status: "pending",
         userId: dbUserId,
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
     deployAgent(agent.id, {
       name: agentName,
       personality,
+      useCase: normalizedUseCase,
     });
 
     return NextResponse.json(agent);
@@ -111,13 +113,14 @@ async function deployAgent(
   config: {
     name: string;
     personality: string;
+    useCase: "assistant" | "fleet";
   }
 ) {
   try {
     // Create Devin session with V2 prompt
     const devinSession = await createDevinSession({
       name: config.name,
-      useCase: "assistant",
+      useCase: config.useCase,
       scope: config.personality,
       contactMethod: "telegram",
     });
