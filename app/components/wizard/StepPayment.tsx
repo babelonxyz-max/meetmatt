@@ -16,19 +16,19 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-md mx-auto"
+      className="mx-auto max-w-md"
     >
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-2">Ready to deploy {agentName}?</h2>
-        <p className="text-gray-400">Review and confirm</p>
+        <h2 className="mb-2 text-3xl font-bold text-white">Ready to deploy {agentName}?</h2>
+        <p className="text-white/65">Review and confirm</p>
       </div>
 
       {/* Pricing Card */}
-      <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-6 mb-6">
+      <div className="mb-6 rounded-2xl border border-cyan-300/30 bg-gradient-to-br from-cyan-500/20 to-violet-500/20 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
         <div className="text-center">
           <span className="text-4xl font-bold">$150</span>
-          <span className="text-gray-400"> first month</span>
-          <p className="text-sm text-gray-400 mt-2">Includes setup • $99/month after</p>
+          <span className="text-white/65"> first month</span>
+          <p className="mt-2 text-sm text-white/65">Includes setup • $99/month after</p>
         </div>
         <ul className="mt-4 space-y-2 text-sm">
           {[
@@ -40,21 +40,21 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
           ].map((feature) => (
             <li key={feature} className="flex items-center gap-2">
               <Check className="w-4 h-4 text-green-400" />
-              <span className="text-gray-300">{feature}</span>
+              <span className="text-white/85">{feature}</span>
             </li>
           ))}
         </ul>
       </div>
 
       {/* Terms */}
-      <label className="flex items-start gap-3 p-4 bg-gray-900 rounded-xl cursor-pointer mb-4">
+      <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-xl border border-white/12 bg-white/[0.05] p-4 backdrop-blur-md">
         <input 
           type="checkbox" 
           checked={accepted}
           onChange={(e) => setAccepted(e.target.checked)}
-          className="mt-1 w-4 h-4 rounded border-gray-700"
+          className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent"
         />
-        <span className="text-sm text-gray-400">
+        <span className="text-sm text-white/70">
           I understand this creates a Telegram bot via Devin AI. 
           Setup takes 2-5 minutes.
         </span>
@@ -64,13 +64,13 @@ export function StepPayment({ agentName, onContinue }: StepPaymentProps) {
       <button
         onClick={onContinue}
         disabled={!accepted}
-        className="w-full p-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-gray-800 disabled:to-gray-800 disabled:text-gray-500 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-500 p-4 font-semibold text-white shadow-[0_10px_30px_rgba(59,130,246,0.45)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Wallet className="w-5 h-5" />
         Proceed to Payment
       </button>
 
-      <p className="text-center text-sm text-gray-500 mt-6">
+      <p className="mt-6 text-center text-sm text-white/50">
         You&apos;ll complete payment on the next step
       </p>
     </motion.div>

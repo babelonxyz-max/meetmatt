@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePrivy } from "@privy-io/react-auth";
 import { StepName } from "./components/wizard/StepName";
@@ -53,18 +53,6 @@ export default function Home() {
     scope: "",
     contactMethod: "telegram",
   });
-
-  useEffect(() => {
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousHtmlOverflow;
-    };
-  }, []);
 
   const handleWake = () => {
     if (step !== "idle") return;
@@ -175,7 +163,7 @@ export default function Home() {
             : "Launch now.";
 
   return (
-    <div className="relative h-[calc(100vh-8rem)] overflow-hidden bg-[#03050b] sm:h-[calc(100vh-9rem)]">
+    <div className="fixed inset-x-0 top-16 bottom-16 overflow-hidden bg-[#03050b] sm:top-20">
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 h-[30rem] w-[40rem] rounded-full bg-purple-900/20 blur-[120px] mix-blend-screen" />
         <div className="absolute bottom-1/4 right-1/4 h-[40rem] w-[50rem] rounded-full bg-blue-900/20 blur-[150px] mix-blend-screen" />
@@ -252,8 +240,12 @@ export default function Home() {
                 animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
                 exit={{ opacity: 0, x: 20, filter: "blur(8px)" }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
-                className="relative z-20 mt-4 flex h-[65vh] min-h-[500px] max-h-[700px] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0f1c]/75 shadow-2xl backdrop-blur-xl lg:mt-0"
+                className="relative z-20 mt-4 flex h-[65vh] min-h-[500px] max-h-[700px] w-full max-w-md flex-col overflow-hidden rounded-[28px] border border-cyan-200/20 bg-[linear-gradient(160deg,rgba(14,20,42,0.86),rgba(7,10,26,0.88)_45%,rgba(11,9,32,0.84))] shadow-[0_30px_120px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl lg:mt-0"
               >
+                <div className="pointer-events-none absolute inset-0">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(34,211,238,0.16),transparent_35%),radial-gradient(circle_at_78%_80%,rgba(168,85,247,0.16),transparent_38%)]" />
+                  <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:26px_26px]" />
+                </div>
                 <div className="border-b border-white/10 px-4 py-3">
                   <div className="flex items-end justify-between gap-3">
                     <div>
@@ -265,9 +257,9 @@ export default function Home() {
                       <p className="text-xs font-medium text-white">{safeStepIndex + 1}/{FLOW_STEPS.length}</p>
                     </div>
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10 shadow-inner">
                     <motion.div
-                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500"
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-blue-500 to-violet-400 shadow-[0_0_18px_rgba(34,211,238,0.6)]"
                       initial={{ width: "0%" }}
                       animate={{ width: `${progressPercent}%` }}
                       transition={{ duration: 0.35 }}
@@ -275,13 +267,13 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="mask-image-b flex-1 space-y-4 overflow-y-auto px-4 py-4 pb-28">
+                <div className="mask-image-b relative flex-1 space-y-4 overflow-y-auto px-4 py-4 pb-28">
                   <motion.div
                     key={`matt-${step}`}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.22 }}
-                    className="max-w-[90%] rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3"
+                    className="max-w-[90%] rounded-2xl border border-cyan-300/40 bg-[linear-gradient(135deg,rgba(34,211,238,0.2),rgba(14,116,144,0.15))] px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl"
                   >
                     <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-100/90">Matt</p>
                     <p className="mt-1 text-sm leading-relaxed text-cyan-50/95">{mattPrompt}</p>
@@ -293,14 +285,14 @@ export default function Home() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.22, delay: 0.06 }}
-                      className="ml-auto max-w-[90%] rounded-2xl border border-white/15 bg-white/[0.07] px-4 py-3"
+                      className="ml-auto max-w-[90%] rounded-2xl border border-white/25 bg-[linear-gradient(135deg,rgba(168,85,247,0.16),rgba(59,130,246,0.12))] px-4 py-3 shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl"
                     >
                       <p className="text-[10px] uppercase tracking-[0.16em] text-white/70">You</p>
                       <p className="mt-1 text-sm leading-relaxed text-white/92">{userNarrative}</p>
                     </motion.div>
                   ) : null}
 
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-[11px] text-white/75">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-3 py-1.5 text-[11px] text-white/80 shadow-[0_0_20px_rgba(34,211,238,0.18)] backdrop-blur-md">
                     <span>Matt is listening</span>
                     <span className="inline-flex items-center gap-1">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/90" />
@@ -309,7 +301,8 @@ export default function Home() {
                     </span>
                   </div>
 
-                  <AnimatePresence mode="wait">
+                  <div className="rounded-2xl border border-white/15 bg-[linear-gradient(170deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl">
+                    <AnimatePresence mode="wait">
                     {step === "name" ? (
                       <motion.div key="name" exit={{ opacity: 0, x: -20 }}>
                         <StepName onSubmit={handleNameSubmit} />
@@ -345,7 +338,8 @@ export default function Home() {
                         />
                       </motion.div>
                     ) : null}
-                  </AnimatePresence>
+                    </AnimatePresence>
+                  </div>
                 </div>
 
                 <div className="pointer-events-none absolute bottom-0 left-0 h-24 w-full bg-gradient-to-t from-[#05050a] via-[#05050a] to-transparent" />

@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Heart } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export function Footer() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+
   return (
     <motion.footer 
       initial={{ y: 100, opacity: 0 }}
@@ -17,25 +21,31 @@ export function Footer() {
       
       {/* Floating footer bar */}
       <div className="mx-4">
-        <div className="max-w-7xl mx-auto bg-[var(--card)]/80 backdrop-blur-xl border border-[var(--border)] rounded-2xl px-6 py-2.5 shadow-2xl shadow-black/50">
+        <div
+          className={`mx-auto max-w-7xl rounded-2xl px-6 py-2.5 shadow-2xl shadow-black/50 backdrop-blur-xl ${
+            isHome
+              ? "border border-white/15 bg-[#050a18]/82 text-white"
+              : "border border-[var(--border)] bg-[var(--card)]/80"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--muted)]">© 2026 Meet Matt</span>
+              <span className={`text-sm ${isHome ? "text-white/80" : "text-[var(--muted)]"}`}>© 2026 Meet Matt</span>
             </div>
             
             <div className="flex items-center gap-6">
-              <span className="text-sm text-[var(--muted)] flex items-center gap-1.5">
+              <span className={`flex items-center gap-1.5 text-sm ${isHome ? "text-white/75" : "text-[var(--muted)]"}`}>
                 Made with <Heart className="w-3.5 h-3.5 text-red-400 fill-red-400" /> @ VIBEST
               </span>
               <Link 
                 href="/privacy" 
-                className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                className={`text-sm transition-colors ${isHome ? "text-white/75 hover:text-cyan-200" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
               >
                 Privacy
               </Link>
               <Link 
                 href="/terms" 
-                className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                className={`text-sm transition-colors ${isHome ? "text-white/75 hover:text-cyan-200" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
               >
                 Terms
               </Link>
