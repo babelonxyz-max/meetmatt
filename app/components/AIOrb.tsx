@@ -13,11 +13,6 @@ export interface AIOrbProps {
 
 type ReactionType = "giggle" | "spin" | "bounce" | "wink" | "pulse" | "backflip" | null;
 
-// Easter egg states
-const EASTER_EGG_THRESHOLD = 25; // Mouse movements needed (increased)
-const EASTER_EGG_TIME_WINDOW = 1500; // Time window in ms (shorter)
-const MIN_MOVEMENT_DISTANCE = 50; // Minimum pixels to count as movement
-
 export const AIOrb = memo(function AIOrb({ 
   isListening = false, 
   isThinking = false,
@@ -35,14 +30,32 @@ export const AIOrb = memo(function AIOrb({
   
   // Easter egg tracking
   const mouseMoveCount = useRef(0);
-  const lastMouseMoveTime = useRef(0);
-  const isScratching = useRef(false);
   const [crazyEyes, setCrazyEyes] = useState(false);
+  const [crazyEyeOffset, setCrazyEyeOffset] = useState({ x: 0, y: 0 });
   const [angerLevel, setAngerLevel] = useState(0);
   const controls = useAnimation();
 
   // Track mouse position history for easter egg
   const mouseHistory = useRef<{x: number, y: number, time: number}[]>([]);
+
+  const triggerSuperSaiyan = useCallback(async () => {
+    setIsSuperSaiyan(true);
+    setCrazyEyes(false);
+    playOrbActivate();
+    
+    // Shake animation
+    await controls.start({
+      x: [0, -10, 10, -10, 10, 0],
+      transition: { duration: 0.5 }
+    });
+    
+    // Reset after Super Saiyan mode
+    setTimeout(() => {
+      setIsSuperSaiyan(false);
+      mouseMoveCount.current = 0;
+      setAngerLevel(0);
+    }, 5000);
+  }, [controls]);
   
   // Normal eye tracking
   useEffect(() => {
@@ -124,26 +137,7 @@ export const AIOrb = memo(function AIOrb({
 
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [isSuperSaiyan]);
-
-  const triggerSuperSaiyan = async () => {
-    setIsSuperSaiyan(true);
-    setCrazyEyes(false);
-    playOrbActivate();
-    
-    // Shake animation
-    await controls.start({
-      x: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.5 }
-    });
-    
-    // Reset after Super Saiyan mode
-    setTimeout(() => {
-      setIsSuperSaiyan(false);
-      mouseMoveCount.current = 0;
-      setAngerLevel(0);
-    }, 5000);
-  };
+  }, [isSuperSaiyan, triggerSuperSaiyan]);
 
   useEffect(() => {
     const timer = setTimeout(() => playOrbActivate(), 500);
@@ -178,17 +172,26 @@ export const AIOrb = memo(function AIOrb({
         scheduleBlink();
       }, nextBlink);
     };
-    let timer = scheduleBlink();
+    const timer = scheduleBlink();
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (wizardState === "initializing") {
-      setReaction("backflip");
-      playOrbActivate();
-    } else if (wizardState === "success") {
-      setReaction("pulse");
-    }
+    if (!crazyEyes) return;
+
+    const interval = window.setInterval(() => {
+      const t = performance.now() / 50;
+      setCrazyEyeOffset({
+        x: Math.sin(t) * 10,
+        y: Math.cos(t) * 10,
+      });
+    }, 16);
+
+    return () => window.clearInterval(interval);
+  }, [crazyEyes, eyeOffset]);
+
+  useEffect(() => {
+    if (wizardState === "initializing") playOrbActivate();
   }, [wizardState]);
 
   const handleClick = useCallback(() => {
@@ -206,6 +209,9 @@ export const AIOrb = memo(function AIOrb({
 
   const state = isThinking || wizardState === "deploying" ? "thinking" : isListening || wizardState === "processing" ? "listening" : "idle";
   const intensityMultiplier = { low: 0.6, medium: 1, high: 1.4 }[intensity];
+  const activeReaction: ReactionType =
+    reaction ??
+    (wizardState === "initializing" ? "backflip" : wizardState === "success" ? "pulse" : null);
 
   // Super Saiyan colors
   const superSaiyanColors = {
@@ -222,12 +228,6 @@ export const AIOrb = memo(function AIOrb({
   ];
   
   const colors = isSuperSaiyan ? superSaiyanColors : normalColorSchemes[colorPhase];
-  
-  // Crazy eyes animation
-  const crazyEyeOffset = crazyEyes ? {
-    x: Math.sin(Date.now() / 50) * 10,
-    y: Math.cos(Date.now() / 50) * 10,
-  } : eyeOffset;
 
   return (
     <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
@@ -276,15 +276,15 @@ export const AIOrb = memo(function AIOrb({
       {/* Main Orb Container */}
       <motion.div
         className="relative w-full h-full cursor-pointer"
-        animate={reaction ? {
-          x: reaction === "giggle" ? [0, -8, 8, -8, 8, 0] : 0,
-          y: reaction === "bounce" ? [0, -40, 0, -20, 0] : reaction === "backflip" ? [0, -30, 0] : 0,
-          rotate: reaction === "spin" ? [0, 360] : reaction === "backflip" ? [0, -180, -360] : 0,
-          scale: reaction === "pulse" ? [1, 1.3, 1, 1.15, 1] : reaction === "backflip" ? [1, 0.8, 1] : isSuperSaiyan ? [1, 1.1, 1] : 1,
+        animate={activeReaction ? {
+          x: activeReaction === "giggle" ? [0, -8, 8, -8, 8, 0] : 0,
+          y: activeReaction === "bounce" ? [0, -40, 0, -20, 0] : activeReaction === "backflip" ? [0, -30, 0] : 0,
+          rotate: activeReaction === "spin" ? [0, 360] : activeReaction === "backflip" ? [0, -180, -360] : 0,
+          scale: activeReaction === "pulse" ? [1, 1.3, 1, 1.15, 1] : activeReaction === "backflip" ? [1, 0.8, 1] : isSuperSaiyan ? [1, 1.1, 1] : 1,
         } : {
           y: [0, -5, 0],
         }}
-        transition={reaction ? { duration: reaction === "backflip" ? 1.2 : 0.8 } : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        transition={activeReaction ? { duration: activeReaction === "backflip" ? 1.2 : 0.8 } : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
         whileHover={{ scale: isSuperSaiyan ? 1.1 : 1.05 }}
         onHoverStart={handleHoverStart}
         onHoverEnd={() => setIsHovered(false)}
