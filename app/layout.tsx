@@ -53,14 +53,14 @@ export default function RootLayout({
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
   
   return (
-    <html lang="en" suppressHydrationWarning className="overflow-x-hidden">
+    <html lang="en" suppressHydrationWarning className="dark overflow-x-hidden">
       <head>
         <script dangerouslySetInnerHTML={{ __html: 'window.__PRIVY_APP_ID__=' + JSON.stringify(privyAppId) + ';' }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)] overflow-x-hidden`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased bg-[var(--background)] overflow-x-hidden`}>
         <Providers>
           <Navbar />
-          <main className="min-h-screen pb-16">
+          <main className="relative min-h-screen">
             {children}
           </main>
           <Footer />

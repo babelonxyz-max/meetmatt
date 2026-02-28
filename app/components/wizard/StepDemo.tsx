@@ -56,27 +56,27 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mx-auto max-w-lg"
+      className="mx-auto flex h-full max-w-lg flex-col gap-3"
     >
-      <div className="text-center mb-6">
-        <h2 className="mb-2 text-3xl font-bold text-white">Meet {agentName}</h2>
-        <p className="text-white/65">Try a quick chat - {remaining} messages left</p>
+      <div className="rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 backdrop-blur-md">
+        <p className="text-sm font-medium text-white">Live demo with {agentName}</p>
+        <p className="mt-1 text-xs text-white/60">{remaining} test messages left before deploy step.</p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/15 bg-white/[0.05] shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/15 bg-white/[0.05] shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
         {/* Chat Messages */}
-        <div className="h-64 space-y-3 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
           {messages.map((m, i) => (
             <div
               key={i}
               className={`flex items-start gap-2 ${m.role === "user" ? "flex-row-reverse" : ""}`}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              <div className={`flex h-7 w-7 items-center justify-center rounded-full ${
                 m.role === "user" ? "bg-blue-600" : "bg-purple-600"
               }`}>
-                {m.role === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                {m.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
               </div>
-              <div className={`max-w-[80%] p-3 rounded-xl text-sm ${
+              <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs ${
                 m.role === "user" 
                   ? "rounded-br-none bg-gradient-to-r from-cyan-500 to-blue-600 text-white" 
                   : "rounded-bl-none border border-white/10 bg-white/[0.06] text-white/90"
@@ -95,7 +95,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
             onChange={(e) => setInput(e.target.value)}
             placeholder={remaining > 0 ? "Type a message..." : "Upgrade to continue"}
             disabled={remaining <= 0}
-            className="flex-1 rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none disabled:opacity-50"
+            className="flex-1 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-xs text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none disabled:opacity-50"
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
           <button
@@ -112,14 +112,14 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mt-6 text-center"
+          className="text-center"
         >
-          <p className="mb-4 text-white/65">Ready to deploy {agentName}?</p>
+          <p className="mb-2 text-xs text-white/65">Ready to deploy {agentName}?</p>
           <button
             onClick={onContinue}
-            className="rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 px-8 py-4 font-semibold text-white shadow-[0_10px_30px_rgba(59,130,246,0.45)] transition-opacity hover:opacity-95"
+            className="rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(59,130,246,0.45)] transition-opacity hover:opacity-95"
           >
-            Continue to Deploy →
+            Continue to Deploy
           </button>
         </motion.div>
       )}

@@ -17,7 +17,13 @@ export function Footer() {
       className="fixed bottom-0 left-0 right-0 z-50 h-16"
     >
       {/* Gradient fade above footer */}
-      <div className="h-8 bg-gradient-to-t from-[var(--background)] to-transparent pointer-events-none" />
+      <div
+        className={`h-8 pointer-events-none ${
+          isHome
+            ? "bg-gradient-to-t from-[#03050b] to-transparent"
+            : "bg-gradient-to-t from-[var(--background)] to-transparent"
+        }`}
+      />
       
       {/* Floating footer bar */}
       <div className="mx-4">

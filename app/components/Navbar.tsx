@@ -6,6 +6,7 @@ import { Sparkles, User, ChevronDown, LogOut } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Navbar() {
   const { authenticated, login, logout, user } = usePrivy();
@@ -60,7 +61,8 @@ export function Navbar() {
         <span className={`text-2xl font-bold tracking-tight ${isHome ? "text-white" : ""}`}>Matt</span>
       </Link>
       
-      <nav className="flex items-center gap-6">
+      <nav className="flex items-center gap-3 sm:gap-5">
+        <ThemeToggle isHome={isHome} />
         <Link
           href="/pricing"
           className={`text-lg transition-colors ${isHome ? "text-white/85 hover:text-cyan-200" : "text-[var(--foreground)] hover:text-[var(--accent)]"}`}
