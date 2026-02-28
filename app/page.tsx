@@ -9,7 +9,7 @@ import { StepDemo } from "./components/wizard/StepDemo";
 import { StepPayment } from "./components/wizard/StepPayment";
 import { StepDeploy } from "./components/wizard/StepDeploy";
 import { PaymentModal } from "./components/PaymentModal";
-import { AIOrb } from "./components/AIOrb";
+import { NexusOrb } from "./components/NexusOrb";
 
 type Step = "name" | "personality" | "demo" | "payment" | "deploy";
 type DeployStatus = "deploying" | "completed" | "failed";
@@ -154,10 +154,8 @@ export default function Home() {
             ? `Looks right. Let's deploy ${agentName || "it"}.`
             : "Launch now.";
 
-  const orbState = step === "deploy" ? "deploying" : step === "demo" ? "processing" : "idle";
-
   return (
-    <div className="relative overflow-hidden bg-[#03050b] pb-8 pt-24 sm:pt-28">
+    <div className="relative overflow-hidden bg-[#03050b] pb-20 pt-24 sm:pt-28">
       <div className="pointer-events-none absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.16),transparent_40%),radial-gradient(circle_at_78%_24%,rgba(168,85,247,0.14),transparent_38%),radial-gradient(circle_at_50%_85%,rgba(56,189,248,0.12),transparent_46%)]" />
         <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(rgba(255,255,255,0.65)_1px,transparent_1px)] [background-size:90px_90px]" />
@@ -167,6 +165,52 @@ export default function Home() {
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-[1320px] px-4 sm:px-6 lg:px-10">
+        <div className="mb-5 rounded-2xl border border-white/12 bg-white/[0.04] px-5 py-4 shadow-[0_12px_50px_rgba(0,0,0,0.32)] backdrop-blur-xl">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-200/90">Matt Operator Runtime</p>
+              <p className="mt-1 text-sm text-white/75">{activeStep.hint}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/55">Current Stage</p>
+              <p className="text-sm font-medium text-white">
+                {safeStepIndex + 1}/{FLOW_STEPS.length} • {activeStep.label}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500"
+              initial={{ width: "0%" }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.35 }}
+            />
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {FLOW_STEPS.map((entry, index) => {
+              const isCurrent = index === safeStepIndex;
+              const isDone = index < safeStepIndex;
+
+              return (
+                <span
+                  key={entry.id}
+                  className={`rounded-md border px-2 py-1 text-[10px] uppercase tracking-[0.14em] ${
+                    isCurrent
+                      ? "border-cyan-300/60 bg-cyan-300/15 text-cyan-100"
+                      : isDone
+                        ? "border-emerald-300/40 bg-emerald-300/10 text-emerald-100"
+                        : "border-white/12 bg-white/[0.03] text-white/55"
+                  }`}
+                >
+                  {entry.label}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(320px,470px)_minmax(0,1fr)] lg:gap-10">
           <motion.section
             initial={{ opacity: 0, y: 24 }}
@@ -183,7 +227,17 @@ export default function Home() {
             <div className="relative flex flex-col items-center text-center">
               <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-200/90">Matt</p>
               <div className="mt-6 h-64 w-64 sm:h-72 sm:w-72">
-                <AIOrb wizardState={orbState} />
+                <NexusOrb
+                  state={
+                    step === "deploy"
+                      ? "deploying"
+                      : step === "demo"
+                        ? "thinking"
+                        : step === "payment"
+                          ? "listening"
+                          : "idle"
+                  }
+                />
               </div>
               <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/75">
                 Configure your assistant in one conversation. Matt reacts while you make each decision.
@@ -322,6 +376,16 @@ export default function Home() {
               </div>
             </div>
           </motion.section>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-3 backdrop-blur-xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] uppercase tracking-[0.14em] text-white/75">
+            <span className="text-cyan-100">NEXUS AI | Advanced Capability Platform</span>
+            <span>Instant Wizard Chat</span>
+            <span>Telegram-Ready Deployment</span>
+            <span>$150 First Month</span>
+            <span>24/7 AI Operator</span>
+          </div>
         </div>
       </div>
 
