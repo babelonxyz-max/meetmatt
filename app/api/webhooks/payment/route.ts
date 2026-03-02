@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verifyIPNSignature } from "@/lib/nowpayments";
 
 const NOWPAYMENTS_IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || "";
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify IPN signature (in production, validate properly)
-    const body = await req.json();
-    
-    const {
-      payment_id,
-      payment_status,
-      pay_address,
-      pay_amount,
-      actually_paid,
-      order_id,
-    } = body;
+    const rawBody = await req.text();
+    const body = JSON.parse(rawBody);
+
+    // Verify IPN signature
+    const signature = req.headers.get("x-nowpayments-sig") || "";
+    if (!verifyIPNSignature(body, signature, NOWPAYMENTS_IPN_SECRET)) {
+      console.error("[Payment Webhook] Invalid IPN signature");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    const { payment_status, order_id } = body;
 
     console.log("[Payment Webhook] Received:", { order_id, payment_status });
 
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
 
       if (agent && agent.activationStatus === "pending") {
         console.log("[Payment Webhook] Triggering deployment for agent:", agent.id);
-        
+
         // Update agent status
         await prisma.agent.update({
           where: { id: agent.id },
@@ -71,7 +72,10 @@ export async function POST(req: NextRequest) {
         // Trigger Devin deployment
         await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/agents/trigger-deploy`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-secret": process.env.INTERNAL_WEBHOOK_SECRET || "",
+          },
           body: JSON.stringify({ agentId: agent.id }),
         });
       }

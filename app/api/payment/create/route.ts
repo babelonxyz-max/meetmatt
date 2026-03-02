@@ -1,32 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
 const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await requireAuth(req);
     const body = await req.json();
-    const { agentId, userId, currency = "usdt" } = body;
+    const { agentId, currency = "usdt" } = body;
 
-    if (!agentId || !userId) {
+    if (!agentId) {
       return NextResponse.json(
-        { error: "agentId and userId required" },
+        { error: "agentId required" },
         { status: 400 }
       );
     }
 
     const agent = await prisma.agent.findUnique({
       where: { id: agentId },
-      include: { user: true },
     });
 
-    if (!agent) {
+    if (!agent || agent.userId !== userId) {
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
     }
 
     const orderId = `matt_${agentId}_${Date.now()}`;
-    
+
     const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
       method: "POST",
       headers: {
@@ -75,6 +76,9 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error.status) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("[Payment/Create] Error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to create payment" },

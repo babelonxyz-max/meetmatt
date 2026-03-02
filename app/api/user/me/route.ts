@@ -1,42 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { privyId, email, walletAddress } = body;
+    const { userId } = await requireAuth(request);
 
-    if (!privyId) {
-      return NextResponse.json({ error: "Missing privyId" }, { status: 400 });
-    }
-
-    let user = await prisma.user.findUnique({
-      where: { privyId },
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
     });
 
     if (!user) {
-      user = await prisma.user.create({
-        data: {
-          privyId,
-          email: email || null,
-          walletAddress: walletAddress || null,
-          lastLoginAt: new Date(),
-        },
-      });
-    } else {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { lastLoginAt: new Date() },
-      });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Update last login
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lastLoginAt: new Date() },
+    });
+
     const agents = await prisma.agent.findMany({
-      where: { userId: user.id },
+      where: { userId },
       orderBy: { createdAt: "desc" },
     });
 
     const payments = await prisma.payment.findMany({
-      where: { userId: user.id },
+      where: { userId },
       orderBy: { createdAt: "desc" },
       take: 10,
     });
@@ -58,6 +48,10 @@ export async function POST(request: NextRequest) {
         currentPeriodEnd: agent.currentPeriodEnd,
         cancelAtPeriodEnd: agent.cancelAtPeriodEnd,
         devinUrl: agent.devinUrl,
+        activationStatus: agent.activationStatus,
+        botUsername: agent.botUsername,
+        telegramLink: agent.telegramLink,
+        authCode: agent.authCode,
         createdAt: agent.createdAt,
       })),
       payments: payments.map(p => ({
@@ -75,6 +69,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
+    if (error.status) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("[User/Me] Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

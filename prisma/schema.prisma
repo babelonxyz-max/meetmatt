@@ -71,21 +71,6 @@ model Payment {
   @@map("payments")
 }
 
-model WalletPool {
-  id                  String    @id @default(cuid())
-  address             String    @unique
-  encryptedPrivateKey String    @map("encrypted_private_key")
-  status              String    @default("available")
-  assignedToSession   String?   @map("assigned_to_session")
-  assignedAt          DateTime? @map("assigned_at")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  hyperBalance        String    @default("0") @map("hyper_balance")
-  pmApproved          Boolean   @default(false) @map("pm_approved")
-
-  @@index([status])
-  @@index([assignedToSession])
-  @@map("wallet_pool")
-}
 
 model User {
   id               String    @id @default(cuid())
@@ -94,7 +79,6 @@ model User {
   walletAddress    String?   @map("wallet_address")
   name             String?
   avatar           String?
-  stripeCustomerId String?   @map("stripe_customer_id")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   lastLoginAt      DateTime? @map("last_login_at")
@@ -104,7 +88,6 @@ model User {
 
   @@index([email])
   @@index([walletAddress])
-  @@index([stripeCustomerId])
   @@map("users")
 }
 

@@ -156,33 +156,6 @@ export function playTyping() {
   } catch (e) {}
 }
 
-// Orb activation - sci-fi power up
-export function playOrbActivate() {
-  if (!synth || !isInitialized) return;
-  try {
-    const now = Tone!.now();
-    synth.triggerAttackRelease("A4", "8n", now);
-    synth.triggerAttackRelease("E5", "8n", now + 0.1);
-    synth.triggerAttackRelease("A5", "4n", now + 0.2);
-  } catch (e) {}
-}
-
-// Orb pulse - heartbeat-like
-export function playOrbPulse() {
-  if (!synth || !isInitialized) return;
-  try {
-    synth.triggerAttackRelease(["C3"], "32n", undefined, 0.1);
-  } catch (e) {}
-}
-
-// Orb hover - subtle feedback
-export function playOrbHover() {
-  if (!synth || !isInitialized) return;
-  try {
-    synth.triggerAttackRelease("E5", "64n", undefined, 0.05);
-  } catch (e) {}
-}
-
 // Payment success - cash register / coin sound
 export function playPaymentSuccess() {
   if (!successSynth || !isInitialized) return;

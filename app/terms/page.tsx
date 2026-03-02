@@ -71,7 +71,7 @@ Violation may result in immediate termination of your account without refund.`
   {
     icon: Gavel,
     title: "Governing Law & Disputes",
-    content: `**Governing Law**: These terms are governed by the laws of [Jurisdiction], without regard to conflict of law principles.
+    content: `**Governing Law**: These terms are governed by the laws of the State of Delaware, United States, without regard to conflict of law principles.
 
 **Dispute Resolution**: 
 • We encourage informal resolution first — contact support@meetmatt.xyz

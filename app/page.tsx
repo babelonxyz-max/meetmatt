@@ -49,7 +49,8 @@ function createNarrativeId() {
 }
 
 export default function Home() {
-  const { login, authenticated, user } = usePrivy();
+  const { login, authenticated, getAccessToken } = usePrivy();
+  const [pendingAgentId, setPendingAgentId] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("idle");
   const [agentName, setAgentName] = useState("");
   const [personality, setPersonality] = useState("");
@@ -93,34 +94,46 @@ export default function Home() {
     setStep("payment");
   };
 
-  const handlePaymentContinue = () => {
-    setShowPaymentModal(true);
+  const handlePaymentContinue = async () => {
+    // Create agent before opening payment modal
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        login();
+        return;
+      }
+      const response = await fetch("/api/agents", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          agentName,
+          personality,
+          useCase: config.useCase,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to create agent");
+
+      const data = await response.json();
+      setPendingAgentId(data.id);
+      setShowPaymentModal(true);
+    } catch (error) {
+      console.error("Agent creation error:", error);
+    }
   };
 
   const handlePaymentSuccess = async () => {
     setShowPaymentModal(false);
     setStep("deploy");
 
-    try {
-      const response = await fetch("/api/agents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agentName,
-          personality,
-          useCase: config.useCase,
-          userId: user?.id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create agent");
-      }
-
-      const data = await response.json();
-      pollAgentStatus(data.id);
-    } catch (error) {
-      console.error("Deployment error:", error);
+    // Agent already created — payment webhook triggers deployment.
+    // Just poll for status updates.
+    if (pendingAgentId) {
+      pollAgentStatus(pendingAgentId);
+    } else {
       setDeployStatus("failed");
     }
   };
@@ -128,7 +141,10 @@ export default function Home() {
   const pollAgentStatus = useCallback(async (id: string) => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/agents/status?agentId=${id}`);
+        const token = await getAccessToken();
+        const response = await fetch(`/api/agents/status?agentId=${id}`, {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {},
+        });
         if (!response.ok) return;
 
         const agent = await response.json();
@@ -153,7 +169,7 @@ export default function Home() {
     }, 3000);
 
     setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
-  }, []);
+  }, [getAccessToken]);
 
   const isWizardActive = step !== "idle";
   const currentStepIndex = isWizardActive ? FLOW_STEPS.findIndex((entry) => entry.id === step) : 0;

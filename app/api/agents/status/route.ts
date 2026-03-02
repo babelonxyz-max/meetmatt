@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const { userId } = await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const agentId = searchParams.get("agentId");
 
@@ -12,14 +14,14 @@ export async function GET(req: NextRequest) {
 
     const agent = await prisma.agent.findUnique({
       where: { id: agentId },
-      include: {
-        user: {
-          select: { email: true, privyId: true },
-        },
-      },
     });
 
     if (!agent) {
+      return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+    }
+
+    // Verify ownership
+    if (agent.userId !== userId) {
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
     }
 
@@ -37,6 +39,9 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error.status) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("[Agent/Status] Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const { userId } = await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const paymentId = searchParams.get("paymentId");
 
@@ -14,7 +16,7 @@ export async function GET(req: NextRequest) {
       where: { id: paymentId },
     });
 
-    if (!payment) {
+    if (!payment || payment.userId !== userId) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
@@ -28,6 +30,9 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error.status) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("[Payment/Status] Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

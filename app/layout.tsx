@@ -27,7 +27,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Meet Matt - Deploy Custom AI Agents in 15 Minutes",
-  description: "Create and deploy AI-powered assistants with Meet Matt. No coding required. $150 setup, $50/month. Deploy AI assistants, coworkers, or digital employees.",
+  description: "Create and deploy AI-powered assistants with Meet Matt. No coding required. $150/month. Deploy AI assistants, coworkers, or digital employees.",
   keywords: ["AI agent", "AI assistant", "deploy AI", "custom AI", "digital employee", "AI coworker"],
   authors: [{ name: "Meet Matt" }],
   openGraph: {

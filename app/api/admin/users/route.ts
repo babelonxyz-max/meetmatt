@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const ADMIN_TOKEN = process.env.ADMIN_AUTH_TOKEN || "ddec17a6bb0809ae085b65653292cf5bbf7a02eabb1d86f671b44f8d16fef7c4";
-
 function verifyAuth(request: NextRequest): boolean {
+  const token = process.env.ADMIN_AUTH_TOKEN;
+  if (!token) return false;
   const authHeader = request.headers.get("authorization");
-  return !!authHeader && authHeader === `Bearer ${ADMIN_TOKEN}`;
+  return !!authHeader && authHeader === `Bearer ${token}`;
 }
+
 
 // GET /api/admin/users - List all users with their agents
 export async function GET(request: NextRequest) {
+  if (!process.env.ADMIN_AUTH_TOKEN) {
+    return NextResponse.json({ error: "Admin auth not configured" }, { status: 503 });
+  }
   if (!verifyAuth(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

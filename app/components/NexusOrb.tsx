@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useMotionValue, useSpring } from "framer-motion";
+import { AnimatePresence, motion, useSpring } from "framer-motion";
 
 export type NexusOrbState = "idle" | "speaking" | "listening" | "thinking";
 export type NexusOrbVariant = "plasma" | "techy" | "ethereal";
@@ -29,8 +29,6 @@ export function NexusOrb({
   const rotateY = useSpring(0, { damping: 30, stiffness: 100 });
   const pupilX = useSpring(0, { damping: 25, stiffness: 250 });
   const pupilY = useSpring(0, { damping: 25, stiffness: 250 });
-  const audioScale = useMotionValue(1);
-
   useEffect(() => {
     const updateCenter = () => {
       if (!orbRef.current) return;
@@ -168,7 +166,7 @@ export function NexusOrb({
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        style={{ rotateX, rotateY, scale: audioScale }}
+        style={{ rotateX, rotateY }}
       >
         <motion.div
           className="absolute inset-[15%] rounded-full blur-2xl"

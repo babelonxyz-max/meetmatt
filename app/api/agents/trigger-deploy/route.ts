@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createDevinSession } from "@/lib/devin";
+import { requireAuth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,6 +10,18 @@ export async function POST(req: NextRequest) {
 
     if (!agentId) {
       return NextResponse.json({ error: "agentId required" }, { status: 400 });
+    }
+
+    // Allow internal webhook secret OR authenticated user
+    const internalSecret = req.headers.get("x-internal-secret");
+    const isInternalCall = internalSecret && internalSecret === process.env.INTERNAL_WEBHOOK_SECRET;
+
+    if (!isInternalCall) {
+      const { userId } = await requireAuth(req);
+      const agent = await prisma.agent.findUnique({ where: { id: agentId }, select: { userId: true } });
+      if (!agent || agent.userId !== userId) {
+        return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+      }
     }
 
     const agent = await prisma.agent.findUnique({
@@ -53,6 +66,9 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error.status) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("[TriggerDeploy] Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -11,8 +11,8 @@ export const privyClient = new PrivyClient(
  */
 export async function verifyPrivyToken(token: string) {
   try {
-    const user = await privyClient.getUser(token);
-    return user;
+    const claims = await privyClient.verifyAuthToken(token);
+    return claims;
   } catch (error) {
     console.error("[Privy] Token verification failed:", error);
     return null;

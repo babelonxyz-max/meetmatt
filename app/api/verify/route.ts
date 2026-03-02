@@ -1,15 +1,13 @@
-// API Route: Verify ownership of an agent instance
-// POST /api/verify - Verify code and activate instance
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await requireAuth(request);
     const body = await request.json();
     const { instanceId, code, telegramUserId } = body;
 
-    // Validate required fields
     if (!instanceId || !code) {
       return NextResponse.json(
         { error: "Missing required fields: instanceId, code" },
@@ -17,30 +15,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get agent from database
+    // Get agent and verify ownership
     const agent = await prisma.agent.findUnique({
       where: { id: instanceId },
     });
 
-    if (!agent) {
+    if (!agent || agent.userId !== userId) {
       return NextResponse.json(
         { error: "Agent not found" },
         { status: 404 }
       );
     }
 
-    // Check agent is awaiting verification
     if (agent.activationStatus !== "awaiting_verification") {
       return NextResponse.json(
-        { 
+        {
           error: "Agent is not awaiting verification",
-          currentStatus: agent.activationStatus 
+          currentStatus: agent.activationStatus
         },
         { status: 400 }
       );
     }
 
-    // Verify the code matches
     if (agent.authCode !== code) {
       return NextResponse.json(
         { valid: false, error: "Invalid auth code" },
@@ -48,7 +44,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Activate the agent
     const updatedAgent = await prisma.agent.update({
       where: { id: instanceId },
       data: {
@@ -59,8 +54,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: Notify Devin to make user admin of the bot
-    // This would be a webhook call to Devin or the provisioning system
     console.log(`[Verify] Agent ${instanceId} activated for user ${telegramUserId}`);
 
     return NextResponse.json({
@@ -70,7 +63,10 @@ export async function POST(request: NextRequest) {
       botUsername: updatedAgent.botUsername,
     });
 
-  } catch (error) {
+  } catch (error: any) {
+    if (error.status) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("Verification error:", error);
     return NextResponse.json(
       { error: "Verification failed" },

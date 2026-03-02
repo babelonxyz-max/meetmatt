@@ -60,7 +60,7 @@ export function StepPayment({ agentName, deploymentMode, onDeploymentModeChange,
         <div className="text-center">
           <span className="text-4xl font-bold">$150</span>
           <span className="text-white/65"> first month</span>
-          <p className="mt-2 text-sm text-white/65">Includes setup • $99/month after</p>
+          <p className="mt-2 text-sm text-white/65">Includes setup • $150/month after</p>
         </div>
         <ul className="mt-4 space-y-2 text-sm">
           {[

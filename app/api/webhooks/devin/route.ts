@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 }
 
 function extractFromOutput(output: string, key: string): string | null {
-  const regex = new RegExp(`${key}[:\s]+(.+)`, "i");
+  const regex = new RegExp(`${key}[:\\s]+(.+)`, "i");
   const match = output.match(regex);
   return match ? match[1].trim() : null;
 }

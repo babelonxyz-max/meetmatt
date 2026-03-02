@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Copy, Check, Loader2, AlertCircle, Wallet, MessageCircle, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SUPPORTED_CRYPTO } from "@/lib/nowpayments";
 import { playPaymentSuccess } from "@/lib/audio";
 
 interface PaymentData {
@@ -32,7 +30,6 @@ interface PaymentModalProps {
 }
 
 const PLAN_PRICE = 150;
-const DISCOUNTED_PRICE = 135;
 
 interface CryptoOption {
   code: string;
@@ -43,35 +40,26 @@ interface CryptoOption {
 }
 
 const ALL_CRYPTO_OPTIONS: CryptoOption[] = [
-  // USDH - Primary with 10% discount
-  {
-    code: "usdh",
-    name: "USDH",
-    icon: "🏦",
-    network: "HyperEVM",
-    discount: "-10%",
-  },
   // USDT options
   { code: "usdt", name: "USDT", icon: "💵", network: "TRC20" },
   { code: "usdterc20", name: "USDT", icon: "💵", network: "ERC20" },
   { code: "usdtbsc", name: "USDT", icon: "💵", network: "BSC" },
   { code: "usdtsol", name: "USDT", icon: "💵", network: "Solana" },
-  // USDC options  
+  // USDC options
   { code: "usdc", name: "USDC", icon: "💰", network: "Base" },
   { code: "usdccsol", name: "USDC", icon: "💰", network: "Solana" },
   { code: "usdcarb", name: "USDC", icon: "💰", network: "Arbitrum" },
 ];
 
 export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: PaymentModalProps) {
-  const [selectedCurrency, setSelectedCurrency] = useState("usdh");
+  const [selectedCurrency, setSelectedCurrency] = useState("usdt");
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState<"selecting" | "creating" | "waiting" | "confirming" | "confirmed" | "error">("selecting");
   const [payment, setPayment] = useState<PaymentData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(3600);
 
-  const isUSDH = selectedCurrency === "usdh";
-  const displayPrice = isUSDH ? DISCOUNTED_PRICE : PLAN_PRICE;
+  const displayPrice = PLAN_PRICE;
 
   useEffect(() => {
     if (isOpen) {
@@ -94,24 +82,6 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
     const interval = setInterval(async () => {
       try {
-        if (payment.currency === "usdh") {
-          const response = await fetch(`/api/payment/usdh?sessionId=${sessionId}`);
-          const data = await response.json();
-          
-          if (data.status === "transferred") {
-            setStatus("confirming");
-            playPaymentSuccess();
-            setTimeout(() => {
-              setStatus("confirmed");
-              setTimeout(onSuccess, 1000);
-            }, 1500);
-            clearInterval(interval);
-          }
-          return;
-        }
-
-        // Check NowPayments status via server API
-
         const response = await fetch(`/api/payment/nowpayments?paymentId=${payment.id}`);
         if (!response.ok) {
           console.error("Failed to check payment status");
@@ -141,25 +111,6 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     setError(null);
 
     try {
-      if (selectedCurrency === "usdh") {
-        // Direct PM wallet - hardcoded
-        const PM_WALLET = "0x2cc517dACE1e0076211356edf0447c79a432449D";
-        setPayment({
-          id: `usdh-${sessionId}`,
-          address: PM_WALLET,
-          amount: DISCOUNTED_PRICE,
-          currency: "usdh",
-          status: "waiting",
-          network: "HyperEVM",
-          discount: "10%",
-        });
-        setStatus("waiting");
-        return;
-      }
-
-      // Real NowPayments via server API
-
-      // Use server-side API to avoid exposing API key
       const response = await fetch("/api/payment/nowpayments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -200,12 +151,6 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     }
   }, [payment?.address]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
   const selectedCrypto = ALL_CRYPTO_OPTIONS.find((c) => c.code === selectedCurrency);
 
   return (
@@ -241,14 +186,8 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
               <div className="text-center py-4 bg-gradient-to-b from-[var(--card)] to-transparent rounded-xl border border-[var(--border)]">
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-4xl font-bold text-[#0ea5e9]">${displayPrice}</span>
-                  {isUSDH && (
-                    <span className="text-sm text-green-400 bg-green-400/10 px-2 py-1 rounded-full">-10%</span>
-                  )}
                 </div>
-                <p className="text-xs text-[var(--muted)] mt-1">
-                  First month
-                  {isUSDH && <span className="text-green-400 ml-1">(Save $15 with USDH)</span>}
-                </p>
+                <p className="text-xs text-[var(--muted)] mt-1">First month</p>
               </div>
 
               <div className="bg-[var(--card)] rounded-xl p-3 border border-[var(--border)] text-sm space-y-1">
@@ -350,9 +289,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                   </div>
 
                   <p className="text-xs text-[var(--muted)] text-center">
-                    {selectedCurrency === "usdh" 
-                      ? "Send USDH to the address above. Payment will be confirmed manually."
-                      : "Funds will be automatically transferred after confirmation."}
+                    Funds will be automatically transferred after confirmation.
                   </p>
                 </div>
               )}

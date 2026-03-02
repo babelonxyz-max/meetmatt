@@ -16,7 +16,6 @@ import {
   MessageCircle,
   Copy,
   ExternalLink,
-  Settings
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -68,7 +67,7 @@ const activationStatusConfig: Record<string, { color: string; icon: any; label: 
 };
 
 export default function DashboardPage() {
-  const { authenticated, user, logout } = usePrivy();
+  const { authenticated, user, logout, getAccessToken } = usePrivy();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,14 +83,10 @@ export default function DashboardPage() {
     async function fetchDashboard() {
       if (!user) return;
       try {
+        const token = await getAccessToken();
+        if (!token) throw new Error("Not authenticated");
         const response = await fetch("/api/user/me", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            privyId: user.id,
-            email: user.email?.address,
-            walletAddress: user.wallet?.address,
-          }),
+          headers: { "Authorization": `Bearer ${token}` },
         });
 
         if (!response.ok) {
@@ -442,11 +437,17 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 <div className="flex justify-between text-lg">
                   <span className="text-[var(--muted)]">Current Plan</span>
-                  <span className="font-medium">Pro</span>
+                  <span className="font-medium">{stats.activeSubscriptions > 0 ? "Active" : stats.inTrial > 0 ? "Trial" : "No plan"}</span>
                 </div>
                 <div className="flex justify-between text-lg">
                   <span className="text-[var(--muted)]">Next billing</span>
-                  <span className="font-medium">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
+                  <span className="font-medium">{(() => {
+                    const activeDates = agents
+                      .filter(a => a.currentPeriodEnd)
+                      .map(a => new Date(a.currentPeriodEnd!).getTime());
+                    if (activeDates.length === 0) return "No active subscription";
+                    return new Date(Math.min(...activeDates)).toLocaleDateString();
+                  })()}</span>
                 </div>
               </div>
 
@@ -483,25 +484,6 @@ export default function DashboardPage() {
               )}
             </motion.div>
 
-            {/* Settings Quick Link */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Settings className="w-6 h-6 text-[var(--muted)]" />
-                  <span className="text-lg font-medium">Settings</span>
-                </div>
-                <Link href="/settings">
-                  <button className="p-2 hover:bg-[var(--card)] rounded-lg transition-colors">
-                    <ArrowRight className="w-5 h-5 text-[var(--muted)]" />
-                  </button>
-                </Link>
-              </div>
-            </motion.div>
           </div>
         </div>
       </div>

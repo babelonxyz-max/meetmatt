@@ -3,7 +3,6 @@
 
 const API_BASE_URL = "https://api.nowpayments.io/v1";
 const API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
-const PUBLIC_KEY = process.env.NEXT_PUBLIC_NOWPAYMENTS_PUBLIC_KEY || "";
 
 interface CreatePaymentRequest {
   price_amount: number;
@@ -122,14 +121,23 @@ export async function getPaymentStatus(paymentId: string): Promise<PaymentRespon
 }
 
 // Verify IPN signature (for webhooks)
+import { createHmac } from "crypto";
+
 export function verifyIPNSignature(
-  payload: string,
+  payload: Record<string, unknown>,
   signature: string,
   secretKey: string
 ): boolean {
-  // In production, implement proper HMAC verification
-  // This is a placeholder - NOWPayments uses HMAC-SHA512
-  return true;
+  if (!signature || !secretKey) return false;
+  const sortedKeys = Object.keys(payload).sort();
+  const sortedPayload: Record<string, unknown> = {};
+  for (const key of sortedKeys) {
+    sortedPayload[key] = payload[key];
+  }
+  const hmac = createHmac("sha512", secretKey);
+  hmac.update(JSON.stringify(sortedPayload));
+  const expectedSignature = hmac.digest("hex");
+  return expectedSignature === signature;
 }
 
 // Supported cryptocurrencies with their details
@@ -145,34 +153,3 @@ export const SUPPORTED_CRYPTO = [
   { code: "trx", name: "TRON", icon: "T", network: "TRC20" },
 ];
 
-// Mock payment creation for development
-export function createMockPayment(
-  amount: number,
-  currency: string
-): PaymentResponse {
-  // Generate proper mock address based on currency
-  let address: string;
-  if (currency.startsWith('usdt') || currency.startsWith('usdc') || currency.includes('erc20')) {
-    // Ethereum address (42 chars: 0x + 40 hex)
-    address = '0x' + Array.from({length: 40}, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
-  } else if (currency.includes('sol')) {
-    // Solana address (44 chars base58)
-    address = Array.from({length: 44}, () => '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(Math.random() * 58)]).join('');
-  } else if (currency.includes('trx') || currency.includes('trc20')) {
-    // TRON address (34 chars, starts with T)
-    address = 'T' + Array.from({length: 33}, () => '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(Math.random() * 58)]).join('');
-  } else {
-    // Default EVM address
-    address = '0x' + Array.from({length: 40}, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
-  }
-  
-  return {
-    payment_id: `mock-${Date.now()}`,
-    payment_status: "waiting",
-    pay_address: address,
-    pay_amount: amount,
-    pay_currency: currency,
-    order_id: `order-${Date.now()}`,
-    valid_until: new Date(Date.now() + 3600000).toISOString(),
-  };
-}
