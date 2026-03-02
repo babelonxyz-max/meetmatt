@@ -1,358 +1,177 @@
 # MeetMatt Project State
-**Last Updated:** 2026-02-09
+**Last Updated:** 2026-03-02
 **Branch:** main
-**Deployment:** https://meetmatt.xyz
+**Deployment:** https://meetmatt.xyz (Vercel)
+**Repo:** https://github.com/babelonxyz-max/meetmatt
 
 ---
 
-## ✅ What's Working
+## Architecture
 
-### Core Features
-- [x] Landing page with AI Orb (spherical, blue-purple-green gradient, white eyes)
-- [x] 8-step wizard flow (Welcome → Name → Type → Expectations → Channel → Telegram → Payment → Deploy)
-- [x] Privy authentication (Web3 wallet)
-- [x] Dashboard showing user's agents
-- [x] Theme toggle (dark/light mode)
-- [x] Database schema with User-Agent relations
-- [x] **Fixed duplicate headers** - Removed duplicate header from main page
+Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 
-### Payments - MAJOR UPDATES ✅
-- [x] NowPayments integration (API keys configured)
-- [x] Pricing: $150/month or $1000/year (44% discount)
-- [x] Extension options: 1, 3, 6, 12 months
-- [x] Unified pricing system in `lib/pricing.ts`
-- [x] IPN callback URL properly configured
-- [x] **Payment webhook now extends subscription period** - FIXED
-- [x] **Extension payments properly handled** - FIXED
-- [x] **Invoice records created on payment confirmation** - FIXED
-- [x] **USDT/USDC currency estimate endpoint** - NEW
-- [x] **Proper currency formatting** (usdttrc20, etc.)
-- [x] **Unified PaymentModal component** - Supports both create & extend modes
-- [x] **CMS-managed cryptocurrency list** - Toggle currencies via admin API
-- [x] **Payment back button** - Can change currency after selecting
-
-### Admin Panel (CONTROL) - MAJOR UPDATE ✅
-- [x] Login page at `/control/login`
-- [x] Dashboard at `/control/dashboard`
-- [x] Credentials: Latamapac / latamapac
-- [x] **Full User Management**:
-  - View all users with pagination
-  - Search users by email, wallet, name
-  - Ban/unban users
-  - Delete users with confirmation
-  - View user details (agents, payments, activity)
-  - Add admin notes to users
-- [x] **Full Agent Management**:
-  - View all agents with pagination
-  - Edit agent details (name, purpose, tier, status)
-  - Delete agents
-  - Trigger redeployment
-  - View agent owner info
-- [x] **Payment Management**:
-  - View all payments
-  - Process refunds
-  - Filter by status
-- [x] **Website Content Management (CMS)**:
-  - **100+ content items** organized by section
-  - Seed default content with one click
-  - Collapsible sections
-  - Edit any text on the website
-  - Add/remove content sections
-  - Manage hero text, CTAs, descriptions
-- [x] **Cryptocurrency Management**:
-  - API endpoint to manage enabled currencies
-  - Toggle individual currencies on/off
-  - Supports USDH, USDT (TRC20/ERC20/BSC/Sol), USDC (Base/Sol/Arbitrum)
-- [x] **System Settings**:
-  - Toggle feature flags (signup, maintenance, devin)
-  - Update pricing
-  - Edit website metadata
-- [x] Comprehensive stats dashboard with KPIs
+- **Auth**: Privy (email, social, embedded wallets) — server-side verification via `verifyAuthToken()`
+- **Database**: PostgreSQL + Prisma 7.3
+- **Payments**: NowPayments (USDT, USDC, and other crypto via IPN webhooks)
+- **Agent Deployment**: Devin AI (creates Telegram bots)
+- **UI**: Tailwind 4, Framer Motion, Lucide icons, Tone.js (audio feedback)
 
 ---
 
-## 🟡 Known Issues / In Progress
+## What's Working
 
-### Devin Integration
-- **Status:** Currently using template deployment (fallback mode)
-- **Issue:** Need to verify DEVIN_API_KEY is set in Vercel
-- **Next Steps:**
-  - Test real Devin API calls
-  - Add deployment progress tracking
-  - Add retry mechanism for failed deployments
+### Core Flow
+- [x] Home page with NexusOrb + 5-step wizard (Name → Personality → Demo → Payment → Deploy)
+- [x] Privy authentication
+- [x] Agent creation with pending status (deployment triggers from payment webhook)
+- [x] NowPayments crypto payment (USDT/USDC on multiple networks)
+- [x] IPN webhook with HMAC-SHA512 signature verification
+- [x] Devin AI deployment triggered on payment confirmation
+- [x] Devin webhook parses bot username, auth code, telegram link
+- [x] Dashboard with agent status, verification flow, billing summary
+- [x] Billing page (shell — plan switching/notifications marked Coming Soon)
+- [x] Terms, Privacy, Pricing pages
 
-### Email System
-- **Status:** Not implemented
-- **Needed for:** Payment confirmations, deployment notifications
-- **Recommendation:** Resend or SendGrid integration
-
----
-
-## 📁 Key Files Created/Modified
-
-### Payment System (Recent Updates)
-```
-app/components/PaymentModal.tsx       # UNIFIED: Supports create & extend modes
-app/api/control/crypto/route.ts       # NEW: CMS-managed cryptocurrency options
-app/api/subscription/extend/route.ts  # FIXED: Currency mapping usdt → usdttrc20
-app/billing/page.tsx                  # UPDATED: Uses unified PaymentModal
-app/page.tsx                          # FIXED: Removed duplicate header
-```
-
-### Payment Fixes
-```
-app/api/webhooks/payment/route.ts    # Fixed subscription extension logic
-app/api/payment/create/route.ts      # Added currency validation & estimate check
-app/api/payment/estimate/route.ts    # NEW: Get USD to crypto estimates
-prisma/schema.prisma                  # Added Invoice, ActivityLog, AdminNote, WebsiteContent, SystemSetting models
-```
-
-### Backoffice (New)
-```
-app/control/dashboard/page.tsx        # Full admin dashboard with all features
-app/api/control/users/[id]/route.ts   # Get, update, delete user
-app/api/control/users/[id]/ban/route.ts    # Ban/unban user
-app/api/control/users/[id]/note/route.ts   # Add admin note
-app/api/control/agents/[id]/route.ts  # Get, update, delete agent
-app/api/control/agents/[id]/redeploy/route.ts  # Trigger redeploy
-app/api/control/agents/route.ts       # List agents with pagination
-app/api/control/payments/route.ts     # List payments
-app/api/control/payments/[id]/refund/route.ts  # Process refund
-app/api/control/content/route.ts      # Website CMS API
-app/api/control/content/seed/route.ts # Seed default content
-app/api/control/settings/route.ts     # System settings API
-app/api/control/crypto/route.ts       # Cryptocurrency management API
-app/api/control/stats/route.ts        # Enhanced stats API
-lib/cms-content.ts                    # 100+ website content items
-```
-
-### Database Models (New)
-```
-Invoice            # Payment invoices
-ActivityLog        # Audit trail
-AdminNote          # Admin notes on users
-SystemSetting      # Key-value settings store
-WebsiteContent     # CMS content (100+ items seeded)
-```
+### Security (cleaned 2026-03-02)
+- [x] All user-facing API routes require Bearer token auth via `lib/auth.ts`
+- [x] Admin route requires `ADMIN_AUTH_TOKEN` env var (no hardcoded fallback)
+- [x] NowPayments IPN signature verification (real HMAC-SHA512)
+- [x] Internal webhook-to-webhook calls use `INTERNAL_WEBHOOK_SECRET`
+- [x] Privy token verification uses `verifyAuthToken()` (not `getUser()`)
+- [x] No secrets in git (dev.db deleted, .gitignore covers *.db and logs/)
 
 ---
 
-## 🔐 Environment Variables (Vercel)
+## API Routes
 
-### Configured ✅
-- `DATABASE_URL` - Neon PostgreSQL
-- `DEVIN_API_KEY` - Devin API (Personal API Key)
-- `NOWPAYMENTS_API_KEY` - `6ZG9VZZ-5QRM6JV-P6TSWXA-XTQRB9C`
-- `NEXT_PUBLIC_NOWPAYMENTS_PUBLIC_KEY` - `5f3679ca-b5e0-46ea-b29b-e35b43504fad`
-- `NEXT_PUBLIC_PRIVY_APP_ID` - Privy app ID
-- `PRIVY_APP_SECRET` - Privy secret
-- `ADMIN_AUTH_TOKEN` - For admin endpoints
-- `NEXT_PUBLIC_APP_URL` - `https://meetmatt.xyz`
+| Route | Method | Auth | Description |
+|---|---|---|---|
+| `/api/agents` | GET | Bearer | List user's agents |
+| `/api/agents` | POST | Bearer | Create new agent (pending status) |
+| `/api/agents` | PATCH | Bearer/Internal | Update agent fields |
+| `/api/agents/status` | GET | Bearer | Get agent deployment status |
+| `/api/agents/trigger-deploy` | POST | Bearer/Internal | Trigger Devin deployment |
+| `/api/payment/create` | POST | Bearer | Create NowPayments payment |
+| `/api/payment/nowpayments` | POST/GET | None (API proxy) | Proxy to NowPayments API |
+| `/api/payment/status` | GET | Bearer | Check payment status |
+| `/api/verify` | POST | Bearer | Verify agent auth code |
+| `/api/user/me` | GET | Bearer | Get user profile + agents + payments |
+| `/api/admin/users` | GET | Admin token | List all users (admin only) |
+| `/api/webhooks/payment` | POST | IPN signature | NowPayments IPN webhook |
+| `/api/webhooks/devin` | POST | Webhook secret | Devin completion webhook |
+
+---
+
+## Environment Variables (Vercel)
+
+### Set ✅
+- `DATABASE_URL` — PostgreSQL connection
+- `NEXT_PUBLIC_PRIVY_APP_ID` — Privy app ID
+- `PRIVY_APP_SECRET` — Privy server secret
+- `NOWPAYMENTS_API_KEY` — NowPayments API key
+- `NEXT_PUBLIC_NOWPAYMENTS_PUBLIC_KEY` — NowPayments public key
+- `NOWPAYMENTS_IPN_SECRET` — IPN webhook verification
+- `DEVIN_API_KEY` — Devin AI API key
+- `ADMIN_AUTH_TOKEN` — Admin API bearer token (rotated 2026-03-02)
+- `INTERNAL_WEBHOOK_SECRET` — Service-to-service auth (added 2026-03-02)
 
 ### Still Needed
-- [ ] `NOWPAYMENTS_IPN_SECRET` (for webhook signature verification)
-- [ ] `DEVIN_WEBHOOK_SECRET` (for Devin webhook verification)
-- [ ] `RESEND_API_KEY` or `SENDGRID_API_KEY` (for email notifications)
+- [ ] `DEVIN_WEBHOOK_SECRET` — Devin webhook verification
+- [ ] `NEXT_PUBLIC_APP_URL` — Public URL (https://meetmatt.xyz)
 
 ---
 
-## 🗄️ Database State
+## Database Models
 
-### New Tables Created
-| Table | Purpose |
-|-------|---------|
-| `invoices` | Payment invoice records |
-| `activity_logs` | Audit trail |
-| `admin_notes` | Admin notes on users |
-| `system_settings` | Feature flags & config |
-| `website_content` | CMS content (100+ items) |
+| Model | Purpose |
+|---|---|
+| `User` | Privy-integrated user accounts |
+| `Agent` | AI agents with deployment/subscription tracking |
+| `Payment` | Payment transaction records |
 
-### Updated Tables
-| Table | Changes |
-|-------|---------|
-| `users` | Added `isBanned`, `banReason` |
-
-### CMS Content Sections
-| Section | Items | Description |
-|---------|-------|-------------|
-| `global` | 4 | Site title, description, brand |
-| `hero` | 5 | Homepage headlines, CTAs |
-| `wizard` | 9 | Wizard step titles |
-| `pricing` | 15 | Pricing page content |
-| `pricing_features` | 4 | Feature list |
-| `trust_badges` | 8 | Trust badges |
-| `metrics` | 12 | Performance stats |
-| `comparison` | 5 | Matt vs Agency table |
-| `roi` | 6 | ROI highlights |
-| `use_cases` | 16 | Use case descriptions |
-| `cta` | 5 | Call-to-action sections |
-| `dashboard` | 4 | Dashboard text |
-| `billing` | 7 | Billing page text |
-| `payment_modal` | 5 | Payment UI text |
-| `footer` | 4 | Footer links |
+**Removed (2026-03-02):** WalletPool (unused), User.stripeCustomerId (Stripe removed)
 
 ---
 
-## 🎯 TODO Items
+## Pricing
 
-### Critical
-1. [x] **Fix payment webhook** - Update `currentPeriodEnd` when payment confirmed ✅
-2. [x] **Fix extension payment handling** - Handle `extend_` order IDs ✅
-3. [x] **Add Invoice records** - Create Invoice model ✅
-4. [x] **Fix USDT estimate** - Added estimate endpoint & currency formatting ✅
-5. [x] **Fix duplicate headers** - Removed duplicate from main page ✅
-6. [x] **Unified PaymentModal** - Both create & extend use same component ✅
-7. [x] **CMS-managed currencies** - API to toggle payment options ✅
-8. [ ] **Test real Devin API** - Currently using template deployment
+- $150/month per agent (first month includes setup)
+- $1000/year (annual plan — marked Coming Soon in billing UI)
+- Payment via USDT, USDC on TRC20, ERC20, BSC, Solana, Base, Arbitrum
+
+---
+
+## Production Cleanup (2026-03-02)
+
+### Deleted
+- 30+ dead files: AIOrb, LoginButton, session.ts, tracking.ts, docker-compose, nginx.conf, dev.db, 8 stale docs, shared/ directory, control panel (API + pages), fleet API, infrastructure provisioner, settings page
+- 7 dead API routes: auth/verify, payment/usdh, user/dashboard, user/subscribe, fleet/*, control/*, infrastructure/*
+- 11 unused packages: stripe, ethers, viem, axios, bcryptjs, uuid, @neondatabase/serverless, @prisma/adapter-neon
+
+### Fixed
+- Hardcoded admin token removed
+- NowPayments IPN verification implemented (was a no-op)
+- All routes behind auth (were wide open)
+- Privy getUser→verifyAuthToken
+- Payment flow: agent created before payment, deploy triggers from webhook only
+- Regex escape bug in Devin webhook
+- Pricing inconsistency ($99→$150)
+- Terms jurisdiction placeholder
+- Dashboard hardcoded "Pro" plan and fake dates
+- Billing page fake USDH card and hardcoded date
+- USDH payment option removed (broken flow)
+
+---
+
+## Backlog
 
 ### High Priority
-9. [ ] **Test payment flow** - Verify subscription extension works end-to-end
-10. [ ] **Add email notifications** - Resend/SendGrid for payments/deployments
-11. [ ] **Add deployment progress tracking** - Show Devin session status to users
+1. [ ] Set `DEVIN_WEBHOOK_SECRET` and `NEXT_PUBLIC_APP_URL` in Vercel
+2. [ ] Test full payment→deployment flow end-to-end in production
+3. [ ] Run Prisma migration to drop WalletPool table and stripeCustomerId column
+4. [ ] Test real Devin API deployment (currently falls back to template)
 
 ### Medium Priority
-12. [x] **BACKOFFICE MODULE** - Full temp implementation complete ✅
-13. [x] **Website CMS** - 100+ content items manageable ✅
-14. [ ] **Add webhook retry** - Queue failed webhooks for retry
-15. [ ] **Export functionality** - CSV exports for users/payments
+5. [ ] Add rate limiting to unauthenticated `/api/payment/nowpayments` proxy
+6. [ ] Add email notifications (Resend) for payment confirmations and deployment completions
+7. [ ] Wire up billing page plan switching (currently Coming Soon)
+8. [ ] Add proper error pages (currently generic 404)
 
 ### Low Priority
-16. [ ] Add more pricing tiers (Pro plan)
-17. [ ] Add referral/affiliate system
-18. [ ] Add analytics charts (recharts)
-19. [ ] Improve error handling and logging
+9. [ ] Fix pre-existing lint errors (41 `no-explicit-any`, `set-state-in-effect`)
+10. [ ] Add monitoring/logging (Sentry or similar)
+11. [ ] Add analytics
+12. [ ] Consider annual plan implementation
 
 ---
 
-## 🐛 Recent Bugs Fixed
-
-1. ✅ **AI Orb overlap** - Moved down with mt-8
-2. ✅ **Orb not round** - Fixed aspect ratio
-3. ✅ **"Meet Matt" logo** - Fixed from "Matt"
-4. ✅ **ODONATUM user linkage** - Fixed Privy ID format mismatch
-5. ✅ **Billing page empty** - Fixed API endpoint
-6. ✅ **CONTROL 404** - Added root redirect
-7. ✅ **Payment webhook not extending subscriptions** - Fixed critical bug
-8. ✅ **Extension payments not working** - Added handler for `extend_` order IDs
-9. ✅ **No invoice system** - Added Invoice model and creation
-10. ✅ **USDT estimate error** - Added estimate endpoint and currency formatting
-11. ✅ **Duplicate headers** - Removed duplicate header from main page
-12. ✅ **Payment modal inconsistency** - Unified create & extend flows
-13. ✅ **No currency management** - Added CMS API for crypto options
-14. ✅ **No payment back button** - Added "Change Currency" option
-
----
-
-## 🚀 Deployment Commands
+## Deployment
 
 ```bash
 # Build locally
-cd meetmatt && npm run build
+npm run build
 
-# Deploy to production
-cd meetmatt && npx vercel --prod
+# Deploy (auto on push to main)
+git push origin main
 
-# Check deployment status
-cd meetmatt && npx vercel ls
+# Manual deploy
+npx vercel --prod
 
-# View logs
-cd meetmatt && npx vercel logs meetmatt.xyz
-
-# Database commands
-cd meetmatt && npx prisma db push          # Push schema changes
-cd meetmatt && npx prisma studio           # Open Prisma Studio
+# Database
+npx prisma generate
+npx prisma db push
+npx prisma studio
 ```
 
 ---
 
-## 🔗 Important URLs
+## URLs
 
 | URL | Purpose |
-|-----|---------|
-| https://meetmatt.xyz | Main site |
-| https://meetmatt.xyz/control | Admin panel (redirects to login) |
-| https://meetmatt.xyz/control/login | Admin login |
-| https://meetmatt.xyz/control/dashboard | Admin dashboard |
+|---|---|
+| https://meetmatt.xyz | Main site + wizard |
 | https://meetmatt.xyz/dashboard | User dashboard |
-| https://meetmatt.xyz/billing | Billing & subscriptions |
-
-### API Endpoints
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /api/payment/estimate?amount=150&currency=usdt` | Get USD to crypto estimate |
-| `GET /api/control/crypto` | Get enabled cryptocurrencies |
-| `POST /api/control/crypto` | Update crypto options (admin) |
-| `POST /api/control/content/seed` | Seed default CMS content |
-
----
-
-## 📋 Admin Panel Guide
-
-### Access
-- URL: https://meetmatt.xyz/control/login
-- Username: `Latamapac`
-- Password: `latamapac`
-
-### Features
-
-**Dashboard**: Overview stats, user/agent/payment counts, tier distribution
-
-**Users**:
-- View all users with search
-- Click eye icon to see details
-- Ban/unban with ban button
-- Delete with trash button
-- Add notes in detail view
-
-**Agents**:
-- View all agents
-- Edit agent properties
-- Redeploy failed agents
-- Delete agents
-
-**Payments**:
-- View all payments
-- Process refunds for confirmed payments
-
-**Website Content**:
-- **Seed Content button** - One-click to add all 100+ default items
-- Collapsible sections for each page area
-- Edit any text on the website
-- Organized by: global, hero, pricing, wizard, metrics, use_cases, etc.
-
-**Settings**:
-- Toggle feature flags (signup, maintenance mode)
-- Update pricing
-- Edit website metadata
-
----
-
-## 📞 Notes for Next Session
-
-### Immediate Actions
-1. **Seed CMS Content** - Go to `/control/dashboard` → Website Content → Click "Seed Content"
-2. **Test payment flow** - Create test agent, verify payment + extension works
-3. **Test currency selection** - Verify back button works in payment modal
-4. **Test crypto management** - Try toggling currencies via API
-
-### Short Term
-5. **Verify DEVIN_API_KEY** - Check Vercel env vars and test real Devin deployment
-6. **Add email notifications** - Integrate Resend for payment/deploy notifications
-7. **Test backoffice** - Verify all admin functions work in production
-8. **Monitor webhooks** - Check NowPayments IPN is reaching our endpoint
-
-### Future Enhancements (PRD-BACKOFFICE.md)
-- Advanced analytics with charts
-- Bulk user actions
-- Email templates management
-- Devin deployment monitoring dashboard
-- Referral/affiliate system
-
----
-
-## 💾 Backup Info
-
-- **Database:** Neon PostgreSQL (auto-backed up)
-- **Git:** Commits pushed to main
-- **Vercel:** Auto-deploys on push to main
-- **Last Deployment:** https://meetmatt.xyz
+| https://meetmatt.xyz/billing | Billing & settings |
+| https://meetmatt.xyz/pricing | Pricing page |
+| https://meetmatt.xyz/terms | Terms of service |
+| https://meetmatt.xyz/privacy | Privacy policy |
