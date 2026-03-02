@@ -41,14 +41,6 @@ const mockDb = {
     update: () => Promise.resolve({}),
     count: () => Promise.resolve(0),
   },
-  analyticsEvent: {
-    findMany: () => Promise.resolve([]),
-    findUnique: () => Promise.resolve(null),
-    create: (args: any) => Promise.resolve({ id: "analytics-" + Date.now(), ...args.data }),
-    update: () => Promise.resolve({}),
-    delete: () => Promise.resolve({}),
-    count: () => Promise.resolve(0),
-  },
   $connect: () => Promise.resolve(),
   $disconnect: () => Promise.resolve(),
   $transaction: (fn: any) => Promise.resolve(fn(mockDb)),
@@ -99,7 +91,6 @@ export async function checkDatabaseConnection(): Promise<boolean> {
   if (isBuildPhase) return true;
   
   try {
-    await prisma.$connect();
     await prisma.$queryRaw`SELECT 1`;
     return true;
   } catch (error) {
