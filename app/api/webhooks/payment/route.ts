@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyIPNSignature } from "@/lib/nowpayments";
 import { getErrorMessage } from "@/lib/http-error";
+import { activateSubscription } from "@/lib/subscription";
+import { sendEmail, paymentConfirmedEmail, deploymentFailedEmail } from "@/lib/email";
 
 const NOWPAYMENTS_IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || "";
 
@@ -115,8 +117,34 @@ export async function POST(req: NextRequest) {
               where: { id: agent.id },
               data: { activationStatus: "failed" },
             });
+
+            // Send deployment failed email
+            const failedUser = await prisma.user.findUnique({ where: { id: payment.userId ?? undefined } });
+            if (failedUser?.email) {
+              const { subject, html } = deploymentFailedEmail(agent.name);
+              await sendEmail(failedUser.email, subject, html).catch((e: unknown) => {
+                console.error("[Payment Webhook] Failed to send deployment-failed email:", e);
+              });
+            }
           } else {
             console.log("[Payment Webhook] Deploy triggered successfully for agent:", agent.id);
+
+            // Activate subscription
+            const subData = activateSubscription("monthly");
+            await prisma.agent.update({
+              where: { id: agent.id },
+              data: subData,
+            });
+            console.log("[Payment Webhook] Subscription activated for agent:", agent.id);
+
+            // Send payment confirmation email
+            const user = await prisma.user.findUnique({ where: { id: payment.userId ?? undefined } });
+            if (user?.email) {
+              const { subject, html } = paymentConfirmedEmail(agent.name, payment.amount);
+              await sendEmail(user.email, subject, html).catch((e: unknown) => {
+                console.error("[Payment Webhook] Failed to send confirmation email:", e);
+              });
+            }
           }
         }
       }
