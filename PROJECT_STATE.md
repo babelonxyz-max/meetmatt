@@ -1,5 +1,5 @@
 # MeetMatt Project State
-**Last Updated:** 2026-03-03
+**Last Updated:** 2026-03-03 (post-audit)
 **Branch:** main
 **Deployment:** https://meetmatt.xyz (Vercel)
 **Repo:** https://github.com/babelonxyz-max/meetmatt
@@ -40,7 +40,7 @@ Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 - [x] Privy token verification uses `verifyAuthToken()` (not `getUser()`)
 - [x] No secrets in git (dev.db deleted, .gitignore covers *.db and logs/)
 - [x] All secret comparisons use `safeCompare()` (SHA-256 + `timingSafeEqual`)
-- [x] NowPayments proxy requires auth + validates price against known tiers
+- [x] NowPayments proxy DELETED — single payment path via /api/payment/create
 - [x] PATCH mass assignment blocked — users can only update `telegramUserId`
 - [x] `authCode` never leaked in GET responses (removed from /user/me and /agents/status)
 - [x] Webhook replay protection (idempotency checks on payment + devin webhooks)
@@ -53,6 +53,13 @@ Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 - [x] Security headers via middleware.ts (HSTS, X-Frame-Options, nosniff, XSS-Protection, Referrer-Policy, Permissions-Policy)
 - [x] CORS fallback is `https://meetmatt.xyz` (not wildcard `*`)
 - [x] Dashboard verify call includes Authorization header (was missing before)
+- [x] PaymentModal wired to /api/payment/create (stores DB record, sets IPN URL, correct order_id format)
+- [x] Prisma fails fast when DATABASE_URL missing (no silent mock in production)
+- [x] Payment webhook checks trigger-deploy response, sets agent to failed on error
+- [x] Admin endpoint: privyId removed from response, rate limited (10 req/min)
+- [x] Content-Security-Policy header added
+- [x] Dead wizard components deleted (StepAgentType, StepChannel)
+- [x] Deploy polling timeout sets terminal failed state
 
 ---
 
@@ -80,6 +87,31 @@ Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 | `app/dashboard/page.tsx` | Added Authorization header to verify fetch |
 | `app/api/payment/create/route.ts` | Error masking |
 
+---
+
+## Post-Audit Fixes (2026-03-03)
+
+External audit found broken payment-to-deployment flow, Prisma mock DB fallback, fire-and-forget webhook, admin PII leak.
+
+### Critical: Payment flow fixed
+- **Root cause**: PaymentModal used `/api/payment/nowpayments` proxy (no DB record, no IPN URL, wrong order_id format). The correct `/api/payment/create` was dead code.
+- **Fix**: PaymentModal now calls `/api/payment/create` (stores Payment record, sets `ipn_callback_url`, uses `matt_{agentId}_{timestamp}` format). Proxy route deleted entirely. Polls `/api/payment/status` instead.
+- **Deleted**: `app/api/payment/nowpayments/route.ts`, `app/components/wizard/StepAgentType.tsx`, `app/components/wizard/StepChannel.tsx`
+
+### High: Prisma fail-fast
+- Throws error when `DATABASE_URL` missing instead of silent mock. Build-phase mock kept.
+
+### High: Webhook reliability
+- Payment webhook checks trigger-deploy HTTP response. Sets agent `activationStatus: "failed"` if trigger fails.
+
+### High: Admin hardening
+- `privyId` removed from `/api/admin/users` response. Rate limited at 10 req/min.
+
+### Medium
+- CSP header added to middleware.ts
+- Deploy polling timeout now sets terminal `failed` state
+- `authCode` read removed from deploy status polling (field no longer in response)
+
 ### Known Limitations (for auditor awareness)
 - Rate limiter is in-memory — on Vercel serverless, each cold start gets a fresh Map (best-effort only)
 - `x-forwarded-for` used for rate limiting is spoofable — need Redis/edge-config for production-grade
@@ -100,8 +132,7 @@ Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 | `/api/agents/status` | GET | Bearer | Get agent deployment status (no authCode) |
 | `/api/agents/trigger-deploy` | POST | Bearer/Internal | Trigger Devin deployment |
 | `/api/payment/create` | POST | Bearer | Create NowPayments payment |
-| `/api/payment/nowpayments` | POST/GET | Bearer | Proxy to NowPayments API (price validated) |
-| `/api/payment/status` | GET | Bearer | Check payment status |
+| `/api/payment/status` | GET | Bearer | Check payment status (single status endpoint) |
 | `/api/verify` | POST | Bearer + Rate Limited | Verify agent auth code (5 req/min) |
 | `/api/user/me` | GET | Bearer | Get user profile + agents + payments (no authCode) |
 | `/api/admin/users` | GET | Admin token | List all users (admin only) |
@@ -175,7 +206,7 @@ Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 
 ### High Priority
 1. [ ] Set `DEVIN_WEBHOOK_SECRET` and `NEXT_PUBLIC_APP_URL` in Vercel
-2. [ ] Test full payment→deployment flow end-to-end in production
+2. [ ] Test full payment→deployment flow end-to-end in production (CRITICAL — flow was broken before, now fixed)
 3. [ ] Run Prisma migration to drop WalletPool table and stripeCustomerId column
 4. [ ] Test real Devin API deployment (currently falls back to template)
 5. [ ] Rotate ALL production secrets from .env.production (especially wallet key)
