@@ -73,11 +73,19 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
   }, [isOpen]);
 
   useEffect(() => {
-    if (status === "waiting" && timeLeft > 0) {
-      const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-      return () => clearInterval(timer);
-    }
-  }, [status, timeLeft]);
+    if (status !== "waiting") return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setStatus("error");
+          setError("Payment expired. Please try again.");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [status]);
 
   // Poll our /api/payment/status for payment confirmation (updated by IPN webhook)
   useEffect(() => {
@@ -108,7 +116,7 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [payment, status, timeLeft, onSuccess, getAccessToken]);
+  }, [payment, status, onSuccess, getAccessToken]);
 
   const createNewPayment = useCallback(async () => {
     if (!agentId) {

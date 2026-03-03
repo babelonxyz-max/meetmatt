@@ -2,11 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
-const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
+
+const ALLOWED_CURRENCIES = [
+  "usdt", "usdterc20", "usdtbsc", "usdtsol",
+  "usdc", "usdccsol", "usdcarb",
+];
 
 export async function POST(req: NextRequest) {
   try {
+    const apiKey = process.env.NOWPAYMENTS_API_KEY;
+    if (!apiKey) {
+      console.error("[Payment/Create] NOWPAYMENTS_API_KEY not configured");
+      return NextResponse.json({ error: "Payment service not configured" }, { status: 503 });
+    }
+
     const { userId } = await requireAuth(req);
     const body = await req.json();
     const { agentId, currency = "usdt" } = body;
@@ -14,6 +24,13 @@ export async function POST(req: NextRequest) {
     if (!agentId) {
       return NextResponse.json(
         { error: "agentId required" },
+        { status: 400 }
+      );
+    }
+
+    if (!ALLOWED_CURRENCIES.includes(currency)) {
+      return NextResponse.json(
+        { error: "Unsupported currency" },
         { status: 400 }
       );
     }
@@ -32,7 +49,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": NOWPAYMENTS_API_KEY,
+        "x-api-key": apiKey,
       },
       body: JSON.stringify({
         price_amount: 150,

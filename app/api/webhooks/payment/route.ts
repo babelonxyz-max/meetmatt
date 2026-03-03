@@ -61,16 +61,15 @@ export async function POST(req: NextRequest) {
       const orderParts = order_id.split("_");
       const agentIdFromOrder = orderParts.length >= 3 ? orderParts.slice(1, -1).join("_") : null;
 
-      let agent = null;
-      if (agentIdFromOrder) {
-        agent = await prisma.agent.findUnique({ where: { id: agentIdFromOrder } });
+      if (!agentIdFromOrder) {
+        console.error("[Payment Webhook] Cannot parse agentId from order_id:", order_id);
+        return NextResponse.json({ success: true, warning: "Could not determine agent" });
       }
-      // Fallback to original behavior if order_id parsing fails
+
+      const agent = await prisma.agent.findUnique({ where: { id: agentIdFromOrder } });
       if (!agent) {
-        agent = await prisma.agent.findFirst({
-          where: { userId: payment.userId, status: "pending" },
-          orderBy: { createdAt: "desc" },
-        });
+        console.error("[Payment Webhook] Agent not found:", agentIdFromOrder);
+        return NextResponse.json({ success: true, warning: "Agent not found" });
       }
 
       if (agent && agent.activationStatus === "pending") {

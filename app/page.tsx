@@ -138,7 +138,12 @@ export default function Home() {
     }
   };
 
-  const pollAgentStatus = useCallback(async (id: string) => {
+  const pollCleanupRef = useRef<(() => void) | null>(null);
+
+  const pollAgentStatus = useCallback((id: string) => {
+    // Clean up any previous polling
+    pollCleanupRef.current?.();
+
     const interval = setInterval(async () => {
       try {
         const token = await getAccessToken();
@@ -157,10 +162,10 @@ export default function Home() {
           setDeployProgress(100);
           setDeployStatus("completed");
           setTelegramLink(agent.telegramLink || `https://t.me/${agent.name.toLowerCase()}_bot`);
-          clearInterval(interval);
+          cleanup();
         } else if (agent.status === "error") {
           setDeployStatus("failed");
-          clearInterval(interval);
+          cleanup();
         }
       } catch (e) {
         console.error("Poll error:", e);
@@ -168,11 +173,17 @@ export default function Home() {
     }, 3000);
 
     const timeoutId = setTimeout(() => {
-      clearInterval(interval);
       setDeployStatus("failed");
+      cleanup();
     }, 5 * 60 * 1000);
 
-    return () => { clearInterval(interval); clearTimeout(timeoutId); };
+    const cleanup = () => {
+      clearInterval(interval);
+      clearTimeout(timeoutId);
+      pollCleanupRef.current = null;
+    };
+
+    pollCleanupRef.current = cleanup;
   }, [getAccessToken]);
 
   const isWizardActive = step !== "idle";
