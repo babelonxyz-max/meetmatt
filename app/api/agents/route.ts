@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { safeCompare } from "@/lib/crypto-utils";
 import { sanitizeAgentName, sanitizeText } from "@/lib/sanitize";
+import { getStatusError } from "@/lib/http-error";
 
 // GET /api/agents - Get authenticated user's agents
 export async function GET(req: NextRequest) {
@@ -32,9 +33,10 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ agents });
-  } catch (error: any) {
-    if (error.status) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+  } catch (error: unknown) {
+    const statusError = getStatusError(error);
+    if (statusError) {
+      return NextResponse.json({ error: statusError.message }, { status: statusError.status });
     }
     console.error("Fetch agents error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -81,9 +83,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(agent);
-  } catch (error: any) {
-    if (error.status) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+  } catch (error: unknown) {
+    const statusError = getStatusError(error);
+    if (statusError) {
+      return NextResponse.json({ error: statusError.message }, { status: statusError.status });
     }
     console.error("Create agent error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -116,7 +119,17 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
 
     // Whitelist fields based on caller type
-    const updateData: Record<string, any> = {};
+    type AgentUpdatePayload = {
+      status?: string;
+      devinUrl?: string;
+      activationStatus?: string;
+      botUsername?: string;
+      telegramLink?: string;
+      authCode?: string;
+      verifiedAt?: Date;
+      telegramUserId?: string;
+    };
+    const updateData: AgentUpdatePayload = {};
 
     if (isInternalCall) {
       // Internal calls (webhooks) can set privileged fields
@@ -145,9 +158,10 @@ export async function PATCH(req: NextRequest) {
     });
 
     return NextResponse.json({ agent });
-  } catch (error: any) {
-    if (error.status) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+  } catch (error: unknown) {
+    const statusError = getStatusError(error);
+    if (statusError) {
+      return NextResponse.json({ error: statusError.message }, { status: statusError.status });
     }
     console.error("Update agent error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

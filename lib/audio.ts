@@ -101,7 +101,7 @@ export function playMessageSent() {
   if (!synth || !isInitialized) return;
   try {
     synth.triggerAttackRelease(["C6"], "32n", undefined, 0.5);
-  } catch (e) {}
+  } catch {}
 }
 
 // Message received - welcoming chord
@@ -109,7 +109,7 @@ export function playMessageReceived() {
   if (!synth || !isInitialized) return;
   try {
     synth.triggerAttackRelease(["E5", "G5", "B5"], "16n");
-  } catch (e) {}
+  } catch {}
 }
 
 // Option selected - pleasant confirmation
@@ -117,7 +117,7 @@ export function playOptionSelected() {
   if (!synth || !isInitialized) return;
   try {
     synth.triggerAttackRelease(["G5", "C6"], "32n");
-  } catch (e) {}
+  } catch {}
 }
 
 // Success - triumphant arpeggio
@@ -129,7 +129,7 @@ export function playSuccess() {
     successSynth.triggerAttackRelease("E5", "16n", now + 0.06);
     successSynth.triggerAttackRelease("G5", "16n", now + 0.12);
     successSynth.triggerAttackRelease("C6", "8n", now + 0.18);
-  } catch (e) {}
+  } catch {}
 }
 
 // Hover - subtle, futuristic
@@ -137,7 +137,7 @@ export function playHover() {
   if (!synth || !isInitialized) return;
   try {
     synth.triggerAttackRelease(["A6"], "64n", undefined, 0.2);
-  } catch (e) {}
+  } catch {}
 }
 
 // Click - tactile feedback
@@ -145,7 +145,7 @@ export function playClick() {
   if (!synth || !isInitialized) return;
   try {
     synth.triggerAttackRelease(["F6"], "64n", undefined, 0.3);
-  } catch (e) {}
+  } catch {}
 }
 
 // Typing sound - subtle ticks
@@ -153,7 +153,7 @@ export function playTyping() {
   if (!synth || !isInitialized) return;
   try {
     synth.triggerAttackRelease(["C7"], "128n", undefined, 0.1);
-  } catch (e) {}
+  } catch {}
 }
 
 // Payment success - cash register / coin sound
@@ -164,7 +164,7 @@ export function playPaymentSuccess() {
     successSynth.triggerAttackRelease("G6", "32n", now);
     successSynth.triggerAttackRelease("E6", "32n", now + 0.05);
     successSynth.triggerAttackRelease("C6", "16n", now + 0.1);
-  } catch (e) {}
+  } catch {}
 }
 
 // Error sound - gentle warning
@@ -174,7 +174,7 @@ export function playError() {
     const now = Tone!.now();
     synth.triggerAttackRelease("G4", "16n", now);
     synth.triggerAttackRelease("E4", "16n", now + 0.15);
-  } catch (e) {}
+  } catch {}
 }
 
 // Start ambient drone
@@ -182,7 +182,7 @@ export function startAmbientDrone() {
   if (!droneSynth || !isInitialized) return;
   try {
     droneSynth.triggerAttack(["C3", "G3", "C4"]);
-  } catch (e) {}
+  } catch {}
 }
 
 // Stop ambient drone
@@ -190,7 +190,7 @@ export function stopAmbientDrone() {
   if (!droneSynth || !isInitialized) return;
   try {
     droneSynth.triggerRelease(["C3", "G3", "C4"]);
-  } catch (e) {}
+  } catch {}
 }
 
 // Cleanup function

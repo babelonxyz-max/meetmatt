@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Send, Bot, User } from "lucide-react";
 
 interface StepDemoProps {
@@ -41,40 +41,25 @@ function createMessageId() {
 }
 
 export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
     { id: createMessageId(), role: "bot", text: `Hi! I'm ${agentName}. Try chatting with me - 3 messages free!` },
   ]);
   const [input, setInput] = useState("");
   const [remaining, setRemaining] = useState(3);
   const [sentCount, setSentCount] = useState(0);
-  const [responseQueue, setResponseQueue] = useState<string[]>([]);
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const replyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    setMessages([{ id: createMessageId(), role: "bot", text: `Hi! I'm ${agentName}. Try chatting with me - 3 messages free!` }]);
-    setInput("");
-    setRemaining(3);
-    setSentCount(0);
-    setResponseQueue([]);
-    setIsBotTyping(false);
-  }, [agentName, personality]);
-
-  useEffect(() => {
-    if (isBotTyping || responseQueue.length === 0) return;
-
-    setIsBotTyping(true);
-    const nextReply = responseQueue[0];
-    const timer = window.setTimeout(() => {
-      setMessages((prev) => [...prev, { id: createMessageId(), role: "bot", text: nextReply }]);
-      setResponseQueue((prev) => prev.slice(1));
-      setIsBotTyping(false);
-    }, 700);
-
-    return () => window.clearTimeout(timer);
-  }, [responseQueue, isBotTyping]);
+    return () => {
+      if (replyTimerRef.current !== null) {
+        window.clearTimeout(replyTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSend = () => {
-    if (!input.trim() || remaining <= 0) return;
+    if (!input.trim() || remaining <= 0 || isBotTyping) return;
 
     const userMsg = input.trim();
     setMessages((m) => [...m, { id: createMessageId(), role: "user", text: userMsg }]);
@@ -84,14 +69,20 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
     const responses = sampleResponses[personality] || sampleResponses.professional;
     const response = responses[sentCount] || "I'm ready to help you with more when you upgrade!";
     setSentCount((count) => count + 1);
-    setResponseQueue((queue) => [...queue, response]);
+    setIsBotTyping(true);
+
+    replyTimerRef.current = window.setTimeout(() => {
+      setMessages((prev) => [...prev, { id: createMessageId(), role: "bot", text: response }]);
+      setIsBotTyping(false);
+      replyTimerRef.current = null;
+    }, 700);
   };
 
   const visibleMessages = useMemo(
     () => messages.slice(-MAX_VISIBLE_MESSAGES),
     [messages]
   );
-  const canContinue = remaining === 0 && responseQueue.length === 0 && !isBotTyping;
+  const canContinue = remaining === 0 && !isBotTyping;
 
   return (
     <motion.div
@@ -167,13 +158,13 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={remaining > 0 ? "Type a message..." : "Upgrade to continue"}
-            disabled={remaining <= 0}
+            disabled={remaining <= 0 || isBotTyping}
             className="flex-1 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-xs text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none disabled:opacity-50"
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || remaining <= 0}
+            disabled={!input.trim() || remaining <= 0 || isBotTyping}
             className="rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 p-2 transition-opacity hover:opacity-95 disabled:opacity-40"
           >
             <Send className="w-4 h-4" />

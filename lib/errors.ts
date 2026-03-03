@@ -15,7 +15,7 @@ export class AppError extends Error {
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string, public details?: any) {
+  constructor(message: string, public details?: unknown) {
     super(message, 400, "VALIDATION_ERROR");
   }
 }
@@ -57,12 +57,27 @@ export class ConflictError extends AppError {
  */
 export function formatError(error: Error | AppError) {
   if (error instanceof AppError) {
-    return {
+    const payload: {
+      error: string;
+      code: string;
+      statusCode: number;
+      details?: unknown;
+      retryAfter?: number;
+    } = {
       error: error.message,
       code: error.code,
       statusCode: error.statusCode,
-      ...(error instanceof ValidationError && error.details && { details: error.details }),
-      ...(error instanceof RateLimitError && { retryAfter: error.retryAfter }),
+    };
+
+    if (error instanceof ValidationError && error.details !== undefined) {
+      payload.details = error.details;
+    }
+    if (error instanceof RateLimitError) {
+      payload.retryAfter = error.retryAfter;
+    }
+
+    return {
+      ...payload,
     };
   }
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createDevinSession } from "@/lib/devin";
 import { requireAuth } from "@/lib/auth";
 import { safeCompare } from "@/lib/crypto-utils";
+import { getStatusError } from "@/lib/http-error";
 
 export async function POST(req: NextRequest) {
   try {
@@ -66,9 +67,10 @@ export async function POST(req: NextRequest) {
       devinUrl: devinSession.url,
     });
 
-  } catch (error: any) {
-    if (error.status) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+  } catch (error: unknown) {
+    const statusError = getStatusError(error);
+    if (statusError) {
+      return NextResponse.json({ error: statusError.message }, { status: statusError.status });
     }
     console.error("[TriggerDeploy] Error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

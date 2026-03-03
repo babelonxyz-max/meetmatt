@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { safeCompare } from "@/lib/crypto-utils";
+import { getErrorMessage } from "@/lib/http-error";
 
 /**
  * Devin webhook - called when Devin session completes
@@ -84,9 +85,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, status: "ignored" });
 
-  } catch (err: any) {
-    console.error("[Devin Webhook] Error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("[Devin Webhook] Error:", error);
+    return NextResponse.json(
+      { error: getErrorMessage(error, "Internal server error") },
+      { status: 500 }
+    );
   }
 }
 

@@ -52,6 +52,12 @@ const ALL_CRYPTO_OPTIONS: CryptoOption[] = [
   { code: "usdcarb", name: "USDC", icon: "💰", network: "Arbitrum" },
 ];
 
+function formatTimeLeft(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: PaymentModalProps) {
   const { getAccessToken } = usePrivy();
   const [selectedCurrency, setSelectedCurrency] = useState("usdt");
@@ -163,8 +169,9 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
         status: data.payment.status,
       });
       setStatus("waiting");
-    } catch (e: any) {
-      setError(e.message || "Failed to create payment");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to create payment";
+      setError(message);
       setStatus("error");
     }
   }, [agentId, selectedCurrency, getAccessToken]);
@@ -269,6 +276,9 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
                 <div className="space-y-4">
                   <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                     <p className="text-xs text-amber-400 font-mono text-center">AWAITING PAYMENT</p>
+                    <p className="mt-1 text-[10px] text-amber-300/90 font-mono text-center">
+                      Expires in {formatTimeLeft(timeLeft)}
+                    </p>
                   </div>
 
                   {payment.network && (
@@ -279,6 +289,7 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
 
                   {/* QR Code */}
                   <div className="flex justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payment.address)}`}
                       alt="Payment QR Code"

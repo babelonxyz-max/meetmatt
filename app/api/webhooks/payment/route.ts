@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyIPNSignature } from "@/lib/nowpayments";
+import { getErrorMessage } from "@/lib/http-error";
 
 const NOWPAYMENTS_IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || "";
 
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text();
-    const body = JSON.parse(rawBody);
+    const body = JSON.parse(rawBody) as Record<string, unknown>;
 
     // Verify IPN signature
     const signature = req.headers.get("x-nowpayments-sig") || "";
@@ -16,33 +17,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const { payment_status, order_id } = body;
+    const paymentStatus = typeof body.payment_status === "string" ? body.payment_status : "";
+    const orderId = typeof body.order_id === "string" ? body.order_id : "";
+    const payinHash = typeof body.payin_hash === "string" ? body.payin_hash : null;
 
-    console.log("[Payment Webhook] Received:", { order_id, payment_status });
+    if (!orderId) {
+      return NextResponse.json({ error: "Invalid webhook payload: missing order_id" }, { status: 400 });
+    }
+
+    console.log("[Payment Webhook] Received:", { order_id: orderId, payment_status: paymentStatus });
 
     // Find payment by order_id
     const payment = await prisma.payment.findFirst({
-      where: { sessionId: order_id },
+      where: { sessionId: orderId },
     });
 
     if (!payment) {
-      console.error("[Payment Webhook] Payment not found:", order_id);
+      console.error("[Payment Webhook] Payment not found:", orderId);
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
     // Idempotency: skip if already processed
     if (payment.status === "confirmed" || payment.status === "failed") {
-      console.log("[Payment Webhook] Already processed:", order_id, payment.status);
+      console.log("[Payment Webhook] Already processed:", orderId, payment.status);
       return NextResponse.json({ success: true, message: "Already processed" });
     }
 
     // Update payment status
     let newStatus = payment.status;
-    if (payment_status === "finished" || payment_status === "confirmed") {
+    if (paymentStatus === "finished" || paymentStatus === "confirmed") {
       newStatus = "confirmed";
-    } else if (payment_status === "failed" || payment_status === "expired") {
+    } else if (paymentStatus === "failed" || paymentStatus === "expired") {
       newStatus = "failed";
-    } else if (payment_status === "partially_paid") {
+    } else if (paymentStatus === "partially_paid") {
       newStatus = "partial";
     }
 
@@ -50,7 +57,7 @@ export async function POST(req: NextRequest) {
       where: { id: payment.id },
       data: {
         status: newStatus,
-        txHash: body.payin_hash,
+        txHash: payinHash,
         confirmedAt: newStatus === "confirmed" ? new Date() : null,
       },
     });
@@ -58,11 +65,11 @@ export async function POST(req: NextRequest) {
     // If payment confirmed, trigger deployment
     if (newStatus === "confirmed") {
       // Extract agentId from order_id format: matt_{agentId}_{timestamp}
-      const orderParts = order_id.split("_");
+      const orderParts = orderId.split("_");
       const agentIdFromOrder = orderParts.length >= 3 ? orderParts.slice(1, -1).join("_") : null;
 
       if (!agentIdFromOrder) {
-        console.error("[Payment Webhook] Cannot parse agentId from order_id:", order_id);
+        console.error("[Payment Webhook] Cannot parse agentId from order_id:", orderId);
         return NextResponse.json({ success: true, warning: "Could not determine agent" });
       }
 
@@ -92,7 +99,8 @@ export async function POST(req: NextRequest) {
             data: { activationStatus: "failed" },
           });
         } else {
-          const triggerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/agents/trigger-deploy`, {
+          const triggerUrl = new URL("/api/agents/trigger-deploy", req.url).toString();
+          const triggerResponse = await fetch(triggerUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -116,8 +124,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Payment Webhook] Error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(error, "Internal server error") }, { status: 500 });
   }
 }

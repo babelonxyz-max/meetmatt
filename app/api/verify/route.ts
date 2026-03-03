@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { safeCompare } from "@/lib/crypto-utils";
 import { RateLimiter } from "@/lib/api-middleware";
+import { getStatusError } from "@/lib/http-error";
 
 // Strict rate limit: 5 attempts per minute per IP to prevent brute force
 const verifyLimiter = new RateLimiter(5, 60000);
@@ -83,9 +84,10 @@ export async function POST(request: NextRequest) {
       botUsername: updatedAgent.botUsername,
     });
 
-  } catch (error: any) {
-    if (error.status) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+  } catch (error: unknown) {
+    const statusError = getStatusError(error);
+    if (statusError) {
+      return NextResponse.json({ error: statusError.message }, { status: statusError.status });
     }
     console.error("Verification error:", error);
     return NextResponse.json(

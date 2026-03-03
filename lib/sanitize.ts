@@ -107,18 +107,18 @@ export function isValidUuid(id: string): boolean {
 /**
  * Deep sanitize object
  */
-export function deepSanitize<T extends Record<string, any>>(obj: T): T {
-  const result: any = {};
+export function deepSanitize<T extends Record<string, unknown>>(obj: T): T {
+  const result: Record<string, unknown> = {};
   
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === "string") {
       result[key] = sanitizeText(value);
-    } else if (typeof value === "object" && value !== null) {
-      result[key] = deepSanitize(value);
+    } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      result[key] = deepSanitize(value as Record<string, unknown>);
     } else {
       result[key] = value;
     }
   }
   
-  return result;
+  return result as T;
 }

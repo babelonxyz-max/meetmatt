@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { safeCompare } from "@/lib/crypto-utils";
 import { RateLimiter } from "@/lib/api-middleware";
+import { getErrorMessage } from "@/lib/http-error";
 
 const adminLimiter = new RateLimiter(10, 60000);
 
@@ -62,8 +63,12 @@ export async function GET(request: NextRequest) {
         agents: u.agents,
       })),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Admin/Users] Error:", error);
+    const message = getErrorMessage(error, "Internal server error");
+    if (process.env.NODE_ENV !== "production") {
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

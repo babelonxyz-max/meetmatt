@@ -17,6 +17,7 @@ import {
   Copy,
   ExternalLink,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface DashboardData {
@@ -28,13 +29,22 @@ interface DashboardData {
     createdAt: string;
   };
   agents: Agent[];
-  payments: any[];
+  payments: Payment[];
   stats: {
     totalAgents: number;
     activeSubscriptions: number;
     expired: number;
     inTrial: number;
   };
+}
+
+interface Payment {
+  id: string;
+  tier: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt: string;
 }
 
 interface Agent {
@@ -51,14 +61,14 @@ interface Agent {
   verifiedAt?: string;
 }
 
-const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
+const statusConfig: Record<string, { color: string; icon: LucideIcon; label: string }> = {
   active: { color: "bg-green-500", icon: CheckCircle2, label: "Active" },
   trial: { color: "bg-amber-500", icon: Clock, label: "Trial" },
   expired: { color: "bg-red-500", icon: AlertCircle, label: "Expired" },
   pending: { color: "bg-blue-500", icon: Loader2, label: "Pending" },
 };
 
-const activationStatusConfig: Record<string, { color: string; icon: any; label: string; action?: string }> = {
+const activationStatusConfig: Record<string, { color: string; icon: LucideIcon; label: string; action?: string }> = {
   pending: { color: "bg-gray-500", icon: Clock, label: "Pending Payment", action: "Pay Now" },
   activating: { color: "bg-amber-500", icon: Loader2, label: "Activating..." },
   awaiting_verification: { color: "bg-purple-500", icon: MessageCircle, label: "Awaiting Verification", action: "Verify Now" },
@@ -96,16 +106,16 @@ export default function DashboardPage() {
 
         const dashboardData = await response.json();
         setData(dashboardData);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[Dashboard] Error:", err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : "Failed to load dashboard");
       } finally {
         setLoading(false);
       }
     }
 
     fetchDashboard();
-  }, [authenticated, user]);
+  }, [authenticated, user, getAccessToken]);
 
   const handleVerify = async (agentId: string) => {
     if (!authCode.trim()) return;
@@ -136,7 +146,7 @@ export default function DashboardPage() {
       } else {
         alert("Invalid auth code. Please try again.");
       }
-    } catch (err) {
+    } catch {
       alert("Error verifying code. Please try again.");
     }
   };
@@ -499,7 +509,7 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: string }) {
+function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: LucideIcon; color: string }) {
   const colorClasses: Record<string, string> = {
     blue: "bg-blue-500/10 text-blue-500",
     green: "bg-green-500/10 text-green-500",

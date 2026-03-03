@@ -162,6 +162,7 @@ export default function Home() {
           setDeployProgress(100);
           setDeployStatus("completed");
           setTelegramLink(agent.telegramLink || `https://t.me/${agent.name.toLowerCase()}_bot`);
+          setAuthCode(agent.authCode || "");
           cleanup();
         } else if (agent.status === "error") {
           setDeployStatus("failed");

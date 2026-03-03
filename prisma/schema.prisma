@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Agent {
@@ -90,5 +91,4 @@ model User {
   @@index([walletAddress])
   @@map("users")
 }
-
 

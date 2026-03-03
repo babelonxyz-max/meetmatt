@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { getStatusError } from "@/lib/http-error";
 
 export async function GET(request: NextRequest) {
   try {
@@ -67,9 +68,10 @@ export async function GET(request: NextRequest) {
         inTrial: agents.filter(a => a.subscriptionStatus === "trial").length,
       },
     });
-  } catch (error: any) {
-    if (error.status) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+  } catch (error: unknown) {
+    const statusError = getStatusError(error);
+    if (statusError) {
+      return NextResponse.json({ error: statusError.message }, { status: statusError.status });
     }
     console.error("[User/Me] Error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

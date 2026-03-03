@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { getErrorMessage, getStatusError } from "@/lib/http-error";
 
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
@@ -45,6 +46,20 @@ export async function POST(req: NextRequest) {
 
     const orderId = `matt_${agentId}_${Date.now()}`;
 
+    const configuredBaseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL;
+    if (!configuredBaseUrl) {
+      console.error("[Payment/Create] APP_URL/NEXT_PUBLIC_APP_URL not configured");
+      return NextResponse.json({ error: "Application URL not configured" }, { status: 503 });
+    }
+
+    let callbackBaseUrl: string;
+    try {
+      callbackBaseUrl = new URL(configuredBaseUrl).origin;
+    } catch {
+      console.error("[Payment/Create] Invalid APP_URL/NEXT_PUBLIC_APP_URL:", configuredBaseUrl);
+      return NextResponse.json({ error: "Application URL invalid" }, { status: 503 });
+    }
+
     const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
       method: "POST",
       headers: {
@@ -57,7 +72,7 @@ export async function POST(req: NextRequest) {
         pay_currency: currency,
         order_id: orderId,
         order_description: `Deploy AI agent: ${agent.name}`,
-        ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/payment`,
+        ipn_callback_url: `${callbackBaseUrl}/api/webhooks/payment`,
       }),
     });
 
@@ -92,13 +107,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-  } catch (error: any) {
-    if (error.status) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+  } catch (error: unknown) {
+    const statusError = getStatusError(error);
+    if (statusError) {
+      return NextResponse.json({ error: statusError.message }, { status: statusError.status });
     }
     console.error("[Payment/Create] Error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: getErrorMessage(error, "Internal server error") },
       { status: 500 }
     );
   }

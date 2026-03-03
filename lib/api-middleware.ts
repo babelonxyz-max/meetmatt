@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AppError, formatError, getStatusCode } from "./errors";
+import { formatError, getStatusCode } from "./errors";
 
 export interface ApiContext {
   params?: Record<string, string>;
@@ -26,11 +26,12 @@ export function withErrorHandler(handler: ApiHandler): ApiHandler {
       response.headers.set("X-Request-ID", requestId);
       
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`[API Error] [${requestId}]`, error);
+      const normalizedError = error instanceof Error ? error : new Error("Unknown error");
       
-      const statusCode = getStatusCode(error);
-      const errorResponse = formatError(error);
+      const statusCode = getStatusCode(normalizedError);
+      const errorResponse = formatError(normalizedError);
       
       return NextResponse.json(
         { ...errorResponse, requestId },

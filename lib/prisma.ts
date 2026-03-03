@@ -9,12 +9,34 @@ const globalForPrisma = globalThis as unknown as {
 // Check if we're in build phase
 const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
 
+type MockCreateArgs = { data?: Record<string, unknown> };
+type MockRecord = Record<string, unknown>;
+
+interface MockModel {
+  findMany: () => Promise<MockRecord[]>;
+  findUnique: () => Promise<MockRecord | null>;
+  create: (args: MockCreateArgs) => Promise<MockRecord>;
+  update: () => Promise<MockRecord>;
+  delete: () => Promise<MockRecord>;
+}
+
+interface MockDbClient {
+  user: MockModel & { count: () => Promise<number> };
+  agent: MockModel;
+  payment: MockModel;
+  walletPool: MockModel & { findFirst: () => Promise<MockRecord | null>; count: () => Promise<number> };
+  $connect: () => Promise<void>;
+  $disconnect: () => Promise<void>;
+  $transaction: <T>(fn: (db: MockDbClient) => T | Promise<T>) => Promise<T>;
+  $queryRaw: () => Promise<number[]>;
+}
+
 // Mock implementation for build phase
-const mockDb = {
+const mockDb: MockDbClient = {
   user: {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
-    create: (args: any) => Promise.resolve({ id: "mock-" + Date.now(), ...args.data }),
+    create: (args: MockCreateArgs) => Promise.resolve({ id: "mock-" + Date.now(), ...(args.data ?? {}) }),
     update: () => Promise.resolve({}),
     delete: () => Promise.resolve({}),
     count: () => Promise.resolve(0),
@@ -22,14 +44,14 @@ const mockDb = {
   agent: {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
-    create: (args: any) => Promise.resolve({ id: "mock-" + Date.now(), ...args.data }),
+    create: (args: MockCreateArgs) => Promise.resolve({ id: "mock-" + Date.now(), ...(args.data ?? {}) }),
     update: () => Promise.resolve({}),
     delete: () => Promise.resolve({}),
   },
   payment: {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
-    create: (args: any) => Promise.resolve({ id: "pay-" + Date.now(), address: "0x" + "1".repeat(40), ...args.data }),
+    create: (args: MockCreateArgs) => Promise.resolve({ id: "pay-" + Date.now(), address: "0x" + "1".repeat(40), ...(args.data ?? {}) }),
     update: () => Promise.resolve({}),
     delete: () => Promise.resolve({}),
   },
@@ -37,20 +59,21 @@ const mockDb = {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
     findFirst: () => Promise.resolve(null),
-    create: (args: any) => Promise.resolve({ id: "wallet-" + Date.now(), address: "0x" + "1".repeat(40), ...args.data }),
+    create: (args: MockCreateArgs) => Promise.resolve({ id: "wallet-" + Date.now(), address: "0x" + "1".repeat(40), ...(args.data ?? {}) }),
     update: () => Promise.resolve({}),
+    delete: () => Promise.resolve({}),
     count: () => Promise.resolve(0),
   },
   $connect: () => Promise.resolve(),
   $disconnect: () => Promise.resolve(),
-  $transaction: (fn: any) => Promise.resolve(fn(mockDb)),
+  $transaction: <T>(fn: (db: typeof mockDb) => T | Promise<T>) => Promise.resolve(fn(mockDb)),
   $queryRaw: () => Promise.resolve([1]),
 };
 
 // Initialize Prisma Client
 function getPrismaClient(): PrismaClient | typeof mockDb {
   if (isBuildPhase) {
-    return mockDb as any;
+    return mockDb as unknown as PrismaClient;
   }
 
   if (!globalForPrisma.prisma) {

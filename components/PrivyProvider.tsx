@@ -1,31 +1,23 @@
 "use client";
 
 import { PrivyProvider as BasePrivyProvider } from "@privy-io/react-auth";
-import { useEffect, useState } from "react";
+
+interface WindowWithPrivyAppId extends Window {
+  __PRIVY_APP_ID__?: string;
+}
 
 export default function PrivyProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [mounted, setMounted] = useState(false);
-  const [appId, setAppId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Read from window.__PRIVY_APP_ID__ injected by layout.tsx
-    const id = (window as any).__PRIVY_APP_ID__;
-    console.log("[Privy] App ID from window:", id);
-    setAppId(id || null);
-    setMounted(true);
-  }, []);
-
-  // Don't render Privy during SSR/build
-  if (!mounted) {
+  if (typeof window === "undefined") {
     return <>{children}</>;
   }
 
+  const appId = (window as WindowWithPrivyAppId).__PRIVY_APP_ID__ ?? null;
+
   if (!appId) {
-    console.error("[Privy] App ID not found in window.__PRIVY_APP_ID__");
     return (
       <div className="fixed top-20 right-4 z-50 p-4 bg-red-900/90 text-white rounded-lg">
         Privy not configured. Check console.
