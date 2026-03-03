@@ -3,10 +3,10 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { 
-  Bot, 
-  CreditCard, 
-  Plus, 
+import {
+  Bot,
+  CreditCard,
+  Plus,
   ArrowRight,
   Clock,
   CheckCircle2,
@@ -16,6 +16,8 @@ import {
   MessageCircle,
   Copy,
   ExternalLink,
+  RotateCcw,
+  Trash2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
@@ -50,6 +52,7 @@ interface Payment {
 interface Agent {
   id: string;
   name: string;
+  status: string;
   subscriptionStatus: string;
   subscriptionType: string;
   currentPeriodEnd?: string;
@@ -83,6 +86,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [verifyingAgent, setVerifyingAgent] = useState<string | null>(null);
   const [authCode, setAuthCode] = useState("");
+  const [retryingAgent, setRetryingAgent] = useState<string | null>(null);
+  const [deletingAgent, setDeletingAgent] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authenticated || !user) {
@@ -155,6 +160,80 @@ export default function DashboardPage() {
     navigator.clipboard.writeText(text);
   };
 
+  const handleRetry = async (agentId: string) => {
+    setRetryingAgent(agentId);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        alert("Not authenticated. Please refresh the page.");
+        return;
+      }
+      const response = await fetch("/api/agents/retry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ agentId }),
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || "Failed to retry deployment.");
+      }
+    } catch {
+      alert("Error retrying deployment. Please try again.");
+    } finally {
+      setRetryingAgent(null);
+    }
+  };
+
+  const handleDelete = async (agentId: string) => {
+    if (!confirm("Delete this agent? This action cannot be undone.")) return;
+
+    setDeletingAgent(agentId);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        alert("Not authenticated. Please refresh the page.");
+        return;
+      }
+      const response = await fetch(`/api/agents/delete?id=${agentId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setData((prev) => {
+          if (!prev) return prev;
+          const updatedAgents = prev.agents.filter((a) => a.id !== agentId);
+          return {
+            ...prev,
+            agents: updatedAgents,
+            stats: {
+              ...prev.stats,
+              totalAgents: updatedAgents.length,
+              activeSubscriptions: updatedAgents.filter((a) => a.subscriptionStatus === "active").length,
+              expired: updatedAgents.filter((a) => a.subscriptionStatus === "expired").length,
+              inTrial: updatedAgents.filter((a) => a.subscriptionStatus === "trial").length,
+            },
+          };
+        });
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || "Failed to delete agent.");
+      }
+    } catch {
+      alert("Error deleting agent. Please try again.");
+    } finally {
+      setDeletingAgent(null);
+    }
+  };
+
   if (!authenticated) {
     return (
       <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4 pt-20">
@@ -201,7 +280,8 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const { agents, payments, stats } = data;
+  const { payments, stats } = data;
+  const agents = data.agents.filter((a) => a.status !== "deleted");
 
   return (
     <div className="py-8 pt-20 sm:pt-24 pb-20">
@@ -344,6 +424,18 @@ export default function DashboardPage() {
                                 </button>
                               </Link>
                             )}
+                            <button
+                              onClick={() => handleDelete(agent.id)}
+                              disabled={deletingAgent === agent.id}
+                              className="p-2 text-[var(--muted)] hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                              title="Delete agent"
+                            >
+                              {deletingAgent === agent.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </button>
                           </div>
                         </div>
 
@@ -428,6 +520,24 @@ export default function DashboardPage() {
                                 Enter Auth Code to Activate
                               </button>
                             )}
+                          </div>
+                        )}
+
+                        {/* Retry Deployment */}
+                        {agent.activationStatus === "failed" && (
+                          <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                            <button
+                              onClick={() => handleRetry(agent.id)}
+                              disabled={retryingAgent === agent.id}
+                              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-red-500/10 text-red-500 text-lg font-medium rounded-xl hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                            >
+                              {retryingAgent === agent.id ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                              ) : (
+                                <RotateCcw className="w-5 h-5" />
+                              )}
+                              {retryingAgent === agent.id ? "Retrying..." : "Retry Deployment"}
+                            </button>
                           </div>
                         )}
                       </div>
