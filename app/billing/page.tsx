@@ -4,19 +4,75 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   CreditCard,
-  Bell,
-  Shield,
-  Trash2,
-  Check,
-  Wallet,
+  Bot,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  CalendarDays,
+  Receipt,
+  ArrowLeft,
+  Mail,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+interface BillingAgent {
+  id: string;
+  name: string;
+  subscriptionStatus: string;
+  subscriptionType: string;
+  currentPeriodEnd?: string;
+  cancelAtPeriodEnd: boolean;
+  activationStatus: string;
+  createdAt: string;
+}
+
+interface BillingPayment {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+}
+
+interface BillingData {
+  user: {
+    id: string;
+    email: string | null;
+    name: string | null;
+  };
+  agents: BillingAgent[];
+  payments: BillingPayment[];
+  stats: {
+    totalAgents: number;
+    activeSubscriptions: number;
+    expired: number;
+    inTrial: number;
+  };
+}
+
+const statusBadge: Record<string, { bg: string; text: string; icon: LucideIcon; label: string }> = {
+  active: { bg: "bg-green-500/10", text: "text-green-500", icon: CheckCircle2, label: "Active" },
+  trial: { bg: "bg-amber-500/10", text: "text-amber-500", icon: Clock, label: "Trial" },
+  expired: { bg: "bg-red-500/10", text: "text-red-500", icon: AlertCircle, label: "Expired" },
+};
+
+const paymentStatusColors: Record<string, string> = {
+  confirmed: "text-green-500",
+  pending: "text-amber-500",
+  failed: "text-red-500",
+  partial: "text-orange-500",
+};
 
 export default function BillingPage() {
-  const { authenticated, ready } = usePrivy();
+  const { authenticated, ready, getAccessToken } = usePrivy();
   const router = useRouter();
+  const [data, setData] = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -24,9 +80,33 @@ export default function BillingPage() {
       router.push("/");
       return;
     }
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, [ready, authenticated, router]);
+
+    async function fetchBilling() {
+      try {
+        const token = await getAccessToken();
+        if (!token) throw new Error("Not authenticated");
+
+        const response = await fetch("/api/user/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to load billing data");
+        }
+
+        const result = await response.json();
+        setData(result);
+      } catch (err: unknown) {
+        console.error("[Billing] Error:", err);
+        setError(err instanceof Error ? err.message : "Failed to load billing data");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBilling();
+  }, [ready, authenticated, getAccessToken, router]);
 
   if (!ready || loading) {
     return (
@@ -34,226 +114,290 @@ export default function BillingPage() {
         <motion.div
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 1.5, repeat: Infinity }}
-          className="font-mono text-sm text-[var(--muted)]"
+          className="text-center"
         >
-          Loading...
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-[var(--accent)]" />
+          <p className="font-mono text-sm text-[var(--muted)]">Loading billing...</p>
         </motion.div>
       </div>
     );
   }
 
-  if (!authenticated) return null;
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+          <p className="text-[var(--muted)] text-lg mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-[var(--card)] border border-[var(--border)] rounded-xl hover:bg-[var(--card)]/80 text-lg"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authenticated || !data) return null;
+
+  const { agents, payments, stats } = data;
+  const totalMonthlySpend = agents
+    .filter((a) => a.subscriptionStatus === "active")
+    .reduce((sum, a) => sum + (a.subscriptionType === "annual" ? 83 : 150), 0);
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <div className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold mb-2">Billing & Settings</h1>
-          <p className="text-[var(--muted)]">Manage your subscription, payments, and account preferences</p>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 text-[var(--muted)] hover:text-[var(--foreground)] text-sm mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
+          <h1 className="text-3xl font-bold mb-2">Billing</h1>
+          <p className="text-[var(--muted)]">Manage subscriptions and view payment history</p>
+        </motion.div>
+
+        {/* Summary Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        >
+          <SummaryCard label="Active Agents" value={String(stats.activeSubscriptions)} icon={Bot} color="green" />
+          <SummaryCard label="In Trial" value={String(stats.inTrial)} icon={Clock} color="amber" />
+          <SummaryCard label="Expired" value={String(stats.expired)} icon={AlertCircle} color="red" />
+          <SummaryCard
+            label="Monthly Spend"
+            value={totalMonthlySpend > 0 ? `~$${totalMonthlySpend}` : "$0"}
+            icon={CreditCard}
+            color="blue"
+          />
         </motion.div>
 
         <div className="space-y-6">
-          {/* Current Plan Section */}
+          {/* Agent Subscriptions */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden"
           >
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-6">
+            <div className="px-6 py-5 border-b border-[var(--border)] flex items-center justify-between">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-[var(--accent)]" />
+                  <Bot className="w-5 h-5 text-[var(--accent)]" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold">Current Plan</h2>
-                  <p className="text-sm text-[var(--muted)]">Manage your subscription</p>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-4 mb-6">
-                {/* Free Plan */}
-                <div className="p-5 rounded-xl border-2 border-[var(--border)] relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold">Free</h3>
-                  </div>
-                  <p className="text-2xl font-bold mb-1">$0<span className="text-sm font-normal text-[var(--muted)]">/mo</span></p>
-                  <p className="text-xs text-[var(--muted)]">1 agent, basic features</p>
-                  <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-medium bg-amber-500/10 text-amber-500 rounded-full">Coming Soon</span>
-                </div>
-
-                {/* Monthly Plan */}
-                <div className="p-5 rounded-xl border-2 border-[var(--accent)] bg-[var(--accent)]/5 relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold">Monthly</h3>
-                    <Check className="w-5 h-5 text-[var(--accent)]" />
-                  </div>
-                  <p className="text-2xl font-bold mb-1">$150<span className="text-sm font-normal text-[var(--muted)]">/mo</span></p>
-                  <p className="text-xs text-[var(--muted)]">Unlimited agents, full features</p>
-                </div>
-
-                {/* Annual Plan */}
-                <div className="p-5 rounded-xl border-2 border-[var(--border)] relative">
-                  <div className="absolute -top-3 right-3">
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-green-500 text-white rounded-full">
-                      Save $800
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold">Annual</h3>
-                  </div>
-                  <p className="text-2xl font-bold mb-1">$1000<span className="text-sm font-normal text-[var(--muted)]">/yr</span></p>
-                  <p className="text-xs text-[var(--muted)]">~$83/mo, best value</p>
-                  <span className="mt-2 inline-block px-2 py-0.5 text-[10px] font-medium bg-amber-500/10 text-amber-500 rounded-full">Coming Soon</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-[var(--background)] rounded-xl">
-                <div>
-                  <p className="font-medium">Billing</p>
-                  <p className="text-sm text-[var(--muted)]">Per-agent pricing via crypto payment</p>
+                  <h2 className="text-lg font-semibold">Agent Subscriptions</h2>
+                  <p className="text-sm text-[var(--muted)]">{agents.length} agent{agents.length !== 1 ? "s" : ""}</p>
                 </div>
               </div>
             </div>
+
+            {agents.length === 0 ? (
+              <div className="p-10 text-center">
+                <Bot className="w-12 h-12 mx-auto mb-3 text-[var(--muted)]" />
+                <h3 className="font-medium text-lg mb-1">No agents yet</h3>
+                <p className="text-[var(--muted)]">
+                  <Link href="/" className="text-[var(--accent)] hover:underline">
+                    Create your first agent
+                  </Link>{" "}
+                  to get started.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[var(--border)]">
+                {agents.map((agent) => {
+                  const badge = statusBadge[agent.subscriptionStatus] || statusBadge.trial;
+                  const BadgeIcon = badge.icon;
+                  const periodEnd = agent.currentPeriodEnd
+                    ? new Date(agent.currentPeriodEnd)
+                    : null;
+                  const isExpired = agent.subscriptionStatus === "expired";
+                  const isCancelling = agent.cancelAtPeriodEnd && agent.subscriptionStatus === "active";
+
+                  return (
+                    <div key={agent.id} className="p-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-semibold text-lg truncate">{agent.name}</h3>
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}
+                            >
+                              <BadgeIcon className="w-3.5 h-3.5" />
+                              {badge.label}
+                            </span>
+                            {isCancelling && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-500/10 text-orange-500">
+                                Cancels at period end
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-[var(--muted)]">
+                            <span className="flex items-center gap-1.5">
+                              <CreditCard className="w-3.5 h-3.5" />
+                              {agent.subscriptionType === "annual" ? "Annual plan ($1,000/yr)" : "Monthly plan ($150/mo)"}
+                            </span>
+                            {periodEnd && (
+                              <span className="flex items-center gap-1.5">
+                                <CalendarDays className="w-3.5 h-3.5" />
+                                {isExpired ? "Expired" : "Renews"} {periodEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isExpired && (
+                            <Link href="/">
+                              <button className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-opacity">
+                                Renew
+                              </button>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Cancel info */}
+                      {agent.subscriptionStatus === "active" && !agent.cancelAtPeriodEnd && (
+                        <div className="mt-3 flex items-center gap-2 text-xs text-[var(--muted)]">
+                          <Mail className="w-3.5 h-3.5" />
+                          To cancel, contact support at support@meetmatt.xyz
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </motion.section>
 
-          {/* Payment Methods */}
+          {/* Payment History */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden"
           >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-[var(--accent)]" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold">Payment Methods</h2>
-                    <p className="text-sm text-[var(--muted)]">Cryptocurrency payments via NowPayments</p>
-                  </div>
+            <div className="px-6 py-5 border-b border-[var(--border)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center">
+                  <Receipt className="w-5 h-5 text-[var(--accent)]" />
                 </div>
-              </div>
-
-              <div className="p-4 border border-[var(--border)] rounded-xl text-center">
-                <p className="text-sm text-[var(--muted)]">Payments are processed per-agent at deployment time using USDT, USDC, and other supported cryptocurrencies.</p>
+                <div>
+                  <h2 className="text-lg font-semibold">Payment History</h2>
+                  <p className="text-sm text-[var(--muted)]">Your recent transactions</p>
+                </div>
               </div>
             </div>
+
+            {payments.length === 0 ? (
+              <div className="p-10 text-center">
+                <Receipt className="w-12 h-12 mx-auto mb-3 text-[var(--muted)]" />
+                <h3 className="font-medium text-lg mb-1">No payments yet</h3>
+                <p className="text-[var(--muted)]">Payments will appear here after your first transaction.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[var(--border)]">
+                {/* Table header */}
+                <div className="px-6 py-3 grid grid-cols-4 gap-4 text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                  <span>Date</span>
+                  <span>Amount</span>
+                  <span>Currency</span>
+                  <span className="text-right">Status</span>
+                </div>
+
+                {payments.map((payment) => (
+                  <div key={payment.id} className="px-6 py-4 grid grid-cols-4 gap-4 items-center text-sm">
+                    <span className="text-[var(--muted)]">
+                      {new Date(payment.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <span className="font-medium">${payment.amount.toFixed(2)}</span>
+                    <span className="text-[var(--muted)] uppercase">{payment.currency}</span>
+                    <span className={`text-right font-medium capitalize ${paymentStatusColors[payment.status] || "text-[var(--muted)]"}`}>
+                      {payment.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.section>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Notification Preferences */}
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center">
-                    <Bell className="w-5 h-5 text-[var(--accent)]" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold">Notifications</h2>
-                    <p className="text-sm text-[var(--muted)]">Choose what you want to be notified about</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Email notifications</p>
-                      <p className="text-xs text-[var(--muted)]">Receive updates about your agents</p>
-                    </div>
-                    <span className="px-2 py-0.5 text-[10px] font-medium bg-amber-500/10 text-amber-500 rounded-full">Coming Soon</span>
-                  </div>
-                  <div className="h-px bg-[var(--border)]" />
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Marketing emails</p>
-                      <p className="text-xs text-[var(--muted)]">Tips, offers, and product updates</p>
-                    </div>
-                    <span className="px-2 py-0.5 text-[10px] font-medium bg-amber-500/10 text-amber-500 rounded-full">Coming Soon</span>
-                  </div>
-                </div>
-              </div>
-            </motion.section>
-
-            {/* Security Settings */}
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-[var(--accent)]" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold">Security</h2>
-                    <p className="text-sm text-[var(--muted)]">Keep your account secure</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Two-factor authentication</p>
-                      <p className="text-xs text-[var(--muted)]">Add an extra layer of security</p>
-                    </div>
-                    <span className="px-2 py-0.5 text-[10px] font-medium bg-amber-500/10 text-amber-500 rounded-full">Coming Soon</span>
-                  </div>
-                  <div className="h-px bg-[var(--border)]" />
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Change password</p>
-                      <p className="text-xs text-[var(--muted)]">Update your account password</p>
-                    </div>
-                    <span className="px-2 py-0.5 text-[10px] font-medium bg-amber-500/10 text-amber-500 rounded-full">Coming Soon</span>
-                  </div>
-                </div>
-              </div>
-            </motion.section>
-          </div>
-
-          {/* Danger Zone */}
+          {/* Payment Methods */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-red-500/5 border border-red-500/20 rounded-2xl overflow-hidden"
+            transition={{ delay: 0.3 }}
+            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden"
           >
             <div className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-                  <Trash2 className="w-5 h-5 text-red-500" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-[var(--accent)]" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-red-500">Danger Zone</h2>
-                  <p className="text-sm text-[var(--muted)]">Irreversible actions</p>
+                  <h2 className="text-lg font-semibold">Payment Methods</h2>
+                  <p className="text-sm text-[var(--muted)]">Cryptocurrency payments via NowPayments</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-red-500/5 rounded-xl">
-                <div>
-                  <p className="font-medium">Delete Account</p>
-                  <p className="text-sm text-[var(--muted)]">This will permanently delete all your data</p>
-                </div>
-                <span className="px-2 py-0.5 text-[10px] font-medium bg-amber-500/10 text-amber-500 rounded-full">Coming Soon</span>
+              <div className="p-4 border border-[var(--border)] rounded-xl">
+                <p className="text-sm text-[var(--muted)]">
+                  Payments are processed per-agent at deployment time using USDT, USDC, and other supported
+                  cryptocurrencies. No saved payment methods required.
+                </p>
               </div>
             </div>
           </motion.section>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  color: string;
+}) {
+  const colorClasses: Record<string, string> = {
+    blue: "bg-blue-500/10 text-blue-500",
+    green: "bg-green-500/10 text-green-500",
+    amber: "bg-amber-500/10 text-amber-500",
+    red: "bg-red-500/10 text-red-500",
+  };
+
+  return (
+    <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5">
+      <div className={`w-10 h-10 rounded-xl ${colorClasses[color]} flex items-center justify-center mb-3`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-sm text-[var(--muted)]">{label}</p>
     </div>
   );
 }

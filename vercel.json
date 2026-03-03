@@ -7,5 +7,11 @@
   "github": {
     "silent": true
   },
-  "alias": ["meetmatt.xyz"]
+  "alias": ["meetmatt.xyz"],
+  "crons": [
+    {
+      "path": "/api/cron/expire-subscriptions",
+      "schedule": "0 2 * * *"
+    }
+  ]
 }
