@@ -85,7 +85,10 @@ function getPrismaClient(): PrismaClient | typeof mockDb {
 
     // Use pg adapter for PostgreSQL
     const pool = new Pool({
-      connectionString: process.env.POSTGRES_PRISMA_URL || connectionString
+      connectionString: process.env.POSTGRES_PRISMA_URL || connectionString,
+      max: 5,                       // Max connections per serverless instance
+      idleTimeoutMillis: 30000,     // Close idle after 30s
+      connectionTimeoutMillis: 5000, // Fail fast if can't connect
     });
     const adapter = new PrismaPg(pool);
     globalForPrisma.prisma = new PrismaClient({

@@ -2,24 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { safeCompare } from "@/lib/crypto-utils";
-import { RateLimiter } from "@/lib/api-middleware";
+import { verifyLimiter } from "@/lib/rate-limit";
 import { getStatusError } from "@/lib/http-error";
-
-// Strict rate limit: 5 attempts per minute per IP to prevent brute force
-const verifyLimiter = new RateLimiter(5, 60000);
 
 export async function POST(request: NextRequest) {
   // Rate limiting
   const clientId = request.headers.get("x-forwarded-for") ||
                    request.headers.get("x-real-ip") ||
                    "unknown";
-  const rateCheck = verifyLimiter.check(clientId);
-  if (!rateCheck.allowed) {
+  const rateCheck = await verifyLimiter.check(clientId);
+  if (!rateCheck.success) {
     return NextResponse.json(
       { error: "Too many attempts. Please try again later." },
       {
         status: 429,
-        headers: { "Retry-After": String(Math.ceil((rateCheck.resetAt - Date.now()) / 1000)) },
+        headers: { "Retry-After": String(Math.ceil((rateCheck.reset - Date.now()) / 1000)) },
       }
     );
   }

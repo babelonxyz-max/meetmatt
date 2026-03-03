@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { safeCompare } from "@/lib/crypto-utils";
-import { RateLimiter } from "@/lib/api-middleware";
+import { adminLimiter } from "@/lib/rate-limit";
 import { getErrorMessage } from "@/lib/http-error";
-
-const adminLimiter = new RateLimiter(10, 60000);
 
 function verifyAuth(request: NextRequest): boolean {
   const token = process.env.ADMIN_AUTH_TOKEN;
@@ -19,11 +17,11 @@ export async function GET(request: NextRequest) {
   const clientId = request.headers.get("x-forwarded-for") ||
                    request.headers.get("x-real-ip") ||
                    "unknown";
-  const rateCheck = adminLimiter.check(clientId);
-  if (!rateCheck.allowed) {
+  const rateCheck = await adminLimiter.check(clientId);
+  if (!rateCheck.success) {
     return NextResponse.json(
       { error: "Rate limit exceeded" },
-      { status: 429, headers: { "Retry-After": String(Math.ceil((rateCheck.resetAt - Date.now()) / 1000)) } }
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rateCheck.reset - Date.now()) / 1000)) } }
     );
   }
 
