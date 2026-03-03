@@ -1,8 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { safeCompare } from "@/lib/crypto-utils";
+import { RateLimiter } from "@/lib/api-middleware";
+
+// Strict rate limit: 5 attempts per minute per IP to prevent brute force
+const verifyLimiter = new RateLimiter(5, 60000);
 
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const clientId = request.headers.get("x-forwarded-for") ||
+                   request.headers.get("x-real-ip") ||
+                   "unknown";
+  const rateCheck = verifyLimiter.check(clientId);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil((rateCheck.resetAt - Date.now()) / 1000)) },
+      }
+    );
+  }
+
   try {
     const { userId } = await requireAuth(request);
     const body = await request.json();
@@ -37,7 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (agent.authCode !== code) {
+    if (!safeCompare(agent.authCode ?? "", code)) {
       return NextResponse.json(
         { valid: false, error: "Invalid auth code" },
         { status: 400 }
@@ -69,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
     console.error("Verification error:", error);
     return NextResponse.json(
-      { error: "Verification failed" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { safeCompare } from "@/lib/crypto-utils";
 
 /**
  * Devin webhook - called when Devin session completes
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     // Verify webhook secret
     const secret = req.headers.get("x-devin-webhook-secret");
-    if (secret !== process.env.DEVIN_WEBHOOK_SECRET) {
+    if (!process.env.DEVIN_WEBHOOK_SECRET || !safeCompare(secret ?? "", process.env.DEVIN_WEBHOOK_SECRET)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -30,6 +31,12 @@ export async function POST(req: NextRequest) {
     if (!agent) {
       console.error("[Devin Webhook] Agent not found for session:", session_id);
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+    }
+
+    // Idempotency: skip if already processed
+    if (agent.activationStatus === "active" || agent.activationStatus === "failed") {
+      console.log("[Devin Webhook] Already processed for agent:", agent.id);
+      return NextResponse.json({ success: true, message: "Already processed" });
     }
 
     if (status === "completed") {
@@ -79,7 +86,7 @@ export async function POST(req: NextRequest) {
 
   } catch (err: any) {
     console.error("[Devin Webhook] Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 

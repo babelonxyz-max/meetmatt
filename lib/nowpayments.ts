@@ -122,6 +122,7 @@ export async function getPaymentStatus(paymentId: string): Promise<PaymentRespon
 
 // Verify IPN signature (for webhooks)
 import { createHmac } from "crypto";
+import { safeCompare } from "./crypto-utils";
 
 export function verifyIPNSignature(
   payload: Record<string, unknown>,
@@ -137,7 +138,7 @@ export function verifyIPNSignature(
   const hmac = createHmac("sha512", secretKey);
   hmac.update(JSON.stringify(sortedPayload));
   const expectedSignature = hmac.digest("hex");
-  return expectedSignature === signature;
+  return safeCompare(expectedSignature, signature);
 }
 
 // Supported cryptocurrencies with their details

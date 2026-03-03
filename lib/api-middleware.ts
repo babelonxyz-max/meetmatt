@@ -138,7 +138,7 @@ export function withCors(handler: ApiHandler): ApiHandler {
       return new NextResponse(null, {
         status: 204,
         headers: {
-          "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_APP_URL || "*",
+          "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_APP_URL || "https://meetmatt.xyz",
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type, Authorization",
           "Access-Control-Max-Age": "86400",
@@ -148,7 +148,7 @@ export function withCors(handler: ApiHandler): ApiHandler {
     
     const response = await handler(req, ctx);
     
-    response.headers.set("Access-Control-Allow-Origin", process.env.NEXT_PUBLIC_APP_URL || "*");
+    response.headers.set("Access-Control-Allow-Origin", process.env.NEXT_PUBLIC_APP_URL || "https://meetmatt.xyz");
     response.headers.set("Access-Control-Allow-Credentials", "true");
     
     return response;

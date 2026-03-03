@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
     console.error("[Payment/Create] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create payment" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

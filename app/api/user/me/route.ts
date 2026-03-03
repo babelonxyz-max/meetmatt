@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
         activationStatus: agent.activationStatus,
         botUsername: agent.botUsername,
         telegramLink: agent.telegramLink,
-        authCode: agent.authCode,
         createdAt: agent.createdAt,
       })),
       payments: payments.map(p => ({
@@ -73,6 +72,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("[User/Me] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

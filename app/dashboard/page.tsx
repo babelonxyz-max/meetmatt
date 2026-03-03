@@ -109,11 +109,19 @@ export default function DashboardPage() {
 
   const handleVerify = async (agentId: string) => {
     if (!authCode.trim()) return;
-    
+
     try {
+      const token = await getAccessToken();
+      if (!token) {
+        alert("Not authenticated. Please refresh the page.");
+        return;
+      }
       const response = await fetch("/api/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
         body: JSON.stringify({
           instanceId: agentId,
           code: authCode,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Copy, Check, Loader2, AlertCircle, Wallet, MessageCircle, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ const ALL_CRYPTO_OPTIONS: CryptoOption[] = [
 ];
 
 export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: PaymentModalProps) {
+  const { getAccessToken } = usePrivy();
   const [selectedCurrency, setSelectedCurrency] = useState("usdt");
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState<"selecting" | "creating" | "waiting" | "confirming" | "confirmed" | "error">("selecting");
@@ -82,7 +84,10 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/payment/nowpayments?paymentId=${payment.id}`);
+        const token = await getAccessToken();
+        const response = await fetch(`/api/payment/nowpayments?paymentId=${payment.id}`, {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {},
+        });
         if (!response.ok) {
           console.error("Failed to check payment status");
           return;
@@ -111,9 +116,13 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     setError(null);
 
     try {
+      const token = await getAccessToken();
       const response = await fetch("/api/payment/nowpayments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           price_amount: PLAN_PRICE,
           price_currency: "usd",
@@ -141,7 +150,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
       setError(e.message || "Failed to create payment");
       setStatus("error");
     }
-  }, [config.agentName, selectedCurrency, sessionId]);
+  }, [config.agentName, selectedCurrency, sessionId, getAccessToken]);
 
   const copyAddress = useCallback(() => {
     if (payment?.address) {

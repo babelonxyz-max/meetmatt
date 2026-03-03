@@ -1,5 +1,5 @@
 # MeetMatt Project State
-**Last Updated:** 2026-03-02
+**Last Updated:** 2026-03-03
 **Branch:** main
 **Deployment:** https://meetmatt.xyz (Vercel)
 **Repo:** https://github.com/babelonxyz-max/meetmatt
@@ -32,13 +32,61 @@ Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 - [x] Billing page (shell — plan switching/notifications marked Coming Soon)
 - [x] Terms, Privacy, Pricing pages
 
-### Security (cleaned 2026-03-02)
+### Security (hardened 2026-03-02, audit-prepped 2026-03-03)
 - [x] All user-facing API routes require Bearer token auth via `lib/auth.ts`
 - [x] Admin route requires `ADMIN_AUTH_TOKEN` env var (no hardcoded fallback)
-- [x] NowPayments IPN signature verification (real HMAC-SHA512)
+- [x] NowPayments IPN signature verification (real HMAC-SHA512, timing-safe)
 - [x] Internal webhook-to-webhook calls use `INTERNAL_WEBHOOK_SECRET`
 - [x] Privy token verification uses `verifyAuthToken()` (not `getUser()`)
 - [x] No secrets in git (dev.db deleted, .gitignore covers *.db and logs/)
+- [x] All secret comparisons use `safeCompare()` (SHA-256 + `timingSafeEqual`)
+- [x] NowPayments proxy requires auth + validates price against known tiers
+- [x] PATCH mass assignment blocked — users can only update `telegramUserId`
+- [x] `authCode` never leaked in GET responses (removed from /user/me and /agents/status)
+- [x] Webhook replay protection (idempotency checks on payment + devin webhooks)
+- [x] Payment webhook extracts agentId from order_id (no race condition)
+- [x] Internal secret fails closed when env var missing
+- [x] Rate limiting on /api/verify (5 req/min per IP, best-effort in-memory)
+- [x] Input sanitization on agent creation (sanitizeAgentName + sanitizeText)
+- [x] Agent GET uses select clause (excludes authCode, sessionId, devinSessionId)
+- [x] Error responses return generic "Internal server error" for 500s (no message leaks)
+- [x] Security headers via middleware.ts (HSTS, X-Frame-Options, nosniff, XSS-Protection, Referrer-Policy, Permissions-Policy)
+- [x] CORS fallback is `https://meetmatt.xyz` (not wildcard `*`)
+- [x] Dashboard verify call includes Authorization header (was missing before)
+
+---
+
+## Security Hardening (2026-03-03) — Pre-Audit
+
+### New Files
+- `lib/crypto-utils.ts` — `safeCompare()` utility (SHA-256 hash + timingSafeEqual)
+- `middleware.ts` — Next.js security headers (HSTS, X-Frame-Options, nosniff, etc.)
+
+### Files Modified (14)
+| File | Changes |
+|---|---|
+| `lib/nowpayments.ts` | Timing-safe IPN signature verification |
+| `lib/api-middleware.ts` | CORS fallback → `https://meetmatt.xyz` |
+| `app/api/payment/nowpayments/route.ts` | Added requireAuth + price validation + error masking |
+| `app/components/PaymentModal.tsx` | Passes Bearer token on proxy calls (usePrivy) |
+| `app/api/webhooks/payment/route.ts` | Idempotency + agentId from order_id + fail-closed secret + error masking |
+| `app/api/webhooks/devin/route.ts` | Timing-safe + idempotency + fail-closed + error masking |
+| `app/api/admin/users/route.ts` | Timing-safe admin token + error masking |
+| `app/api/agents/route.ts` | Timing-safe + mass assignment whitelist + sanitization + select clause + error masking |
+| `app/api/agents/trigger-deploy/route.ts` | Timing-safe + fail-closed + error masking |
+| `app/api/agents/status/route.ts` | Removed authCode from response + error masking |
+| `app/api/user/me/route.ts` | Removed authCode from response + error masking |
+| `app/api/verify/route.ts` | Timing-safe + rate limiting (5/min) + error masking |
+| `app/dashboard/page.tsx` | Added Authorization header to verify fetch |
+| `app/api/payment/create/route.ts` | Error masking |
+
+### Known Limitations (for auditor awareness)
+- Rate limiter is in-memory — on Vercel serverless, each cold start gets a fresh Map (best-effort only)
+- `x-forwarded-for` used for rate limiting is spoofable — need Redis/edge-config for production-grade
+- 12 npm dependency vulnerabilities (2 high via transitive deps: axios prototype pollution, minimatch ReDoS)
+- Payment addresses sent to third-party QR service (api.qrserver.com) — should use client-side qrcode.react
+- `.env.production` with real secrets exists on local disk (not in git) — should use secrets manager
+- Wallet encryption key is still placeholder value in local .env.production
 
 ---
 
@@ -46,25 +94,25 @@ Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 
 | Route | Method | Auth | Description |
 |---|---|---|---|
-| `/api/agents` | GET | Bearer | List user's agents |
-| `/api/agents` | POST | Bearer | Create new agent (pending status) |
-| `/api/agents` | PATCH | Bearer/Internal | Update agent fields |
-| `/api/agents/status` | GET | Bearer | Get agent deployment status |
+| `/api/agents` | GET | Bearer | List user's agents (filtered fields) |
+| `/api/agents` | POST | Bearer | Create new agent (sanitized input) |
+| `/api/agents` | PATCH | Bearer/Internal | Update agent (whitelisted fields per caller) |
+| `/api/agents/status` | GET | Bearer | Get agent deployment status (no authCode) |
 | `/api/agents/trigger-deploy` | POST | Bearer/Internal | Trigger Devin deployment |
 | `/api/payment/create` | POST | Bearer | Create NowPayments payment |
-| `/api/payment/nowpayments` | POST/GET | None (API proxy) | Proxy to NowPayments API |
+| `/api/payment/nowpayments` | POST/GET | Bearer | Proxy to NowPayments API (price validated) |
 | `/api/payment/status` | GET | Bearer | Check payment status |
-| `/api/verify` | POST | Bearer | Verify agent auth code |
-| `/api/user/me` | GET | Bearer | Get user profile + agents + payments |
+| `/api/verify` | POST | Bearer + Rate Limited | Verify agent auth code (5 req/min) |
+| `/api/user/me` | GET | Bearer | Get user profile + agents + payments (no authCode) |
 | `/api/admin/users` | GET | Admin token | List all users (admin only) |
-| `/api/webhooks/payment` | POST | IPN signature | NowPayments IPN webhook |
-| `/api/webhooks/devin` | POST | Webhook secret | Devin completion webhook |
+| `/api/webhooks/payment` | POST | IPN signature | NowPayments IPN (idempotent, agentId-aware) |
+| `/api/webhooks/devin` | POST | Webhook secret | Devin completion (idempotent, fail-closed) |
 
 ---
 
 ## Environment Variables (Vercel)
 
-### Set ✅
+### Set
 - `DATABASE_URL` — PostgreSQL connection
 - `NEXT_PUBLIC_PRIVY_APP_ID` — Privy app ID
 - `PRIVY_APP_SECRET` — Privy server secret
@@ -130,18 +178,21 @@ Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 2. [ ] Test full payment→deployment flow end-to-end in production
 3. [ ] Run Prisma migration to drop WalletPool table and stripeCustomerId column
 4. [ ] Test real Devin API deployment (currently falls back to template)
+5. [ ] Rotate ALL production secrets from .env.production (especially wallet key)
 
 ### Medium Priority
-5. [ ] Add rate limiting to unauthenticated `/api/payment/nowpayments` proxy
 6. [ ] Add email notifications (Resend) for payment confirmations and deployment completions
 7. [ ] Wire up billing page plan switching (currently Coming Soon)
 8. [ ] Add proper error pages (currently generic 404)
+9. [ ] Replace QR code service with client-side qrcode.react
+10. [ ] Upgrade to Redis/edge-config rate limiting for production-grade protection
 
 ### Low Priority
-9. [ ] Fix pre-existing lint errors (41 `no-explicit-any`, `set-state-in-effect`)
-10. [ ] Add monitoring/logging (Sentry or similar)
-11. [ ] Add analytics
-12. [ ] Consider annual plan implementation
+11. [ ] Fix pre-existing lint errors (41 `no-explicit-any`, `set-state-in-effect`)
+12. [ ] Add monitoring/logging (Sentry or similar)
+13. [ ] Add analytics
+14. [ ] Consider annual plan implementation
+15. [ ] Run `npm audit fix` for transitive dependency vulnerabilities
 
 ---
 

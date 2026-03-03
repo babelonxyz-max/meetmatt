@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
 
 const API_BASE_URL = "https://api.nowpayments.io/v1";
 const API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
 
+const VALID_PRICES = [150, 1000]; // Monthly and annual plan prices
+
 export async function POST(req: NextRequest) {
   try {
+    await requireAuth(req);
+
     if (!API_KEY) {
       return NextResponse.json({ error: "NowPayments not configured" }, { status: 500 });
     }
 
     const body = await req.json();
     const { price_amount, price_currency, pay_currency, order_id, order_description } = body;
+
+    if (!VALID_PRICES.includes(price_amount)) {
+      return NextResponse.json({ error: "Invalid price amount" }, { status: 400 });
+    }
 
     const response = await fetch(`${API_BASE_URL}/payment`, {
       method: "POST",
@@ -38,12 +47,18 @@ export async function POST(req: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error.status) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    console.error("[NowPayments Proxy] Error:", error);
+    return NextResponse.json({ error: "Payment operation failed" }, { status: 500 });
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
+    await requireAuth(req);
+
     if (!API_KEY) {
       return NextResponse.json({ error: "NowPayments not configured" }, { status: 500 });
     }
@@ -55,7 +70,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "paymentId required" }, { status: 400 });
     }
 
-    const response = await fetch(`${API_BASE_URL}/payment/${paymentId}`, {
+    const response = await fetch(`${API_BASE_URL}/payment/${encodeURIComponent(paymentId)}`, {
       headers: {
         "x-api-key": API_KEY,
       },
@@ -71,6 +86,10 @@ export async function GET(req: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error.status) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    console.error("[NowPayments Proxy] Error:", error);
+    return NextResponse.json({ error: "Payment operation failed" }, { status: 500 });
   }
 }

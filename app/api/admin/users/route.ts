@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { safeCompare } from "@/lib/crypto-utils";
 
 function verifyAuth(request: NextRequest): boolean {
   const token = process.env.ADMIN_AUTH_TOKEN;
   if (!token) return false;
   const authHeader = request.headers.get("authorization");
-  return !!authHeader && authHeader === `Bearer ${token}`;
+  return !!authHeader && safeCompare(authHeader, `Bearer ${token}`);
 }
 
 
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[Admin/Users] Error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

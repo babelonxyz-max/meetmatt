@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createDevinSession } from "@/lib/devin";
 import { requireAuth } from "@/lib/auth";
+import { safeCompare } from "@/lib/crypto-utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     // Allow internal webhook secret OR authenticated user
     const internalSecret = req.headers.get("x-internal-secret");
-    const isInternalCall = internalSecret && internalSecret === process.env.INTERNAL_WEBHOOK_SECRET;
+    const isInternalCall = !!process.env.INTERNAL_WEBHOOK_SECRET && safeCompare(internalSecret ?? "", process.env.INTERNAL_WEBHOOK_SECRET);
 
     if (!isInternalCall) {
       const { userId } = await requireAuth(req);
@@ -70,6 +71,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("[TriggerDeploy] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

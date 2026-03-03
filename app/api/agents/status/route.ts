@@ -33,7 +33,6 @@ export async function GET(req: NextRequest) {
       devinUrl: agent.devinUrl,
       botUsername: agent.botUsername,
       telegramLink: agent.telegramLink,
-      authCode: agent.authCode,
       createdAt: agent.createdAt,
       updatedAt: agent.updatedAt,
     });
@@ -43,6 +42,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("[Agent/Status] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

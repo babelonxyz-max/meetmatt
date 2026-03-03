@@ -30,6 +30,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
+    // Idempotency: skip if already processed
+    if (payment.status === "confirmed" || payment.status === "failed") {
+      console.log("[Payment Webhook] Already processed:", order_id, payment.status);
+      return NextResponse.json({ success: true, message: "Already processed" });
+    }
+
     // Update payment status
     let newStatus = payment.status;
     if (payment_status === "finished" || payment_status === "confirmed") {
@@ -51,11 +57,21 @@ export async function POST(req: NextRequest) {
 
     // If payment confirmed, trigger deployment
     if (newStatus === "confirmed") {
-      // Find the agent and trigger deployment
-      const agent = await prisma.agent.findFirst({
-        where: { userId: payment.userId, status: "pending" },
-        orderBy: { createdAt: "desc" },
-      });
+      // Extract agentId from order_id format: matt_{agentId}_{timestamp}
+      const orderParts = order_id.split("_");
+      const agentIdFromOrder = orderParts.length >= 3 ? orderParts.slice(1, -1).join("_") : null;
+
+      let agent = null;
+      if (agentIdFromOrder) {
+        agent = await prisma.agent.findUnique({ where: { id: agentIdFromOrder } });
+      }
+      // Fallback to original behavior if order_id parsing fails
+      if (!agent) {
+        agent = await prisma.agent.findFirst({
+          where: { userId: payment.userId, status: "pending" },
+          orderBy: { createdAt: "desc" },
+        });
+      }
 
       if (agent && agent.activationStatus === "pending") {
         console.log("[Payment Webhook] Triggering deployment for agent:", agent.id);
@@ -70,14 +86,18 @@ export async function POST(req: NextRequest) {
         });
 
         // Trigger Devin deployment
-        await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/agents/trigger-deploy`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-internal-secret": process.env.INTERNAL_WEBHOOK_SECRET || "",
-          },
-          body: JSON.stringify({ agentId: agent.id }),
-        });
+        if (!process.env.INTERNAL_WEBHOOK_SECRET) {
+          console.error("[Payment Webhook] INTERNAL_WEBHOOK_SECRET not set, cannot trigger deploy");
+        } else {
+          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/agents/trigger-deploy`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-internal-secret": process.env.INTERNAL_WEBHOOK_SECRET,
+            },
+            body: JSON.stringify({ agentId: agent.id }),
+          });
+        }
       }
     }
 
@@ -85,6 +105,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("[Payment Webhook] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

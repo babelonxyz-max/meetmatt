@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { safeCompare } from "@/lib/crypto-utils";
+import { sanitizeAgentName, sanitizeText } from "@/lib/sanitize";
 
 // GET /api/agents - Get authenticated user's agents
 export async function GET(req: NextRequest) {
@@ -10,6 +12,23 @@ export async function GET(req: NextRequest) {
     const agents = await prisma.agent.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        tier: true,
+        activationStatus: true,
+        botUsername: true,
+        telegramLink: true,
+        subscriptionStatus: true,
+        subscriptionType: true,
+        currentPeriodEnd: true,
+        cancelAtPeriodEnd: true,
+        devinUrl: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     return NextResponse.json({ agents });
@@ -18,7 +37,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("Fetch agents error:", error);
-    return NextResponse.json({ error: error.message || "Failed to fetch agents" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -34,8 +53,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "agentName and personality required" }, { status: 400 });
     }
 
+    const sanitizedName = sanitizeAgentName(agentName);
+    const sanitizedPersonality = sanitizeText(personality, 500);
+
+    if (!sanitizedName || !sanitizedPersonality) {
+      return NextResponse.json({ error: "agentName and personality required" }, { status: 400 });
+    }
+
     // Generate unique slug from agent name
-    const baseSlug = agentName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const baseSlug = sanitizedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
     const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
@@ -44,9 +70,9 @@ export async function POST(req: NextRequest) {
       data: {
         sessionId,
         slug: uniqueSlug,
-        name: agentName,
-        purpose: personality,
-        features: [JSON.stringify({ personality, useCase: normalizedUseCase })],
+        name: sanitizedName,
+        purpose: sanitizedPersonality,
+        features: [JSON.stringify({ personality: sanitizedPersonality, useCase: normalizedUseCase })],
         tier: "matt",
         status: "pending",
         userId,
@@ -60,7 +86,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("Create agent error:", error);
-    return NextResponse.json({ error: error.message || "Failed to create agent" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -76,41 +102,46 @@ export async function PATCH(req: NextRequest) {
 
     // Allow internal webhook secret bypass (for payment/devin webhooks)
     const internalSecret = req.headers.get("x-internal-secret");
-    const isInternalCall = internalSecret && internalSecret === process.env.INTERNAL_WEBHOOK_SECRET;
+    const isInternalCall = !!process.env.INTERNAL_WEBHOOK_SECRET && safeCompare(internalSecret ?? "", process.env.INTERNAL_WEBHOOK_SECRET);
 
     if (!isInternalCall) {
       const { userId } = await requireAuth(req);
       // Verify ownership
-      const agent = await prisma.agent.findUnique({ where: { id: agentId }, select: { userId: true } });
-      if (!agent || agent.userId !== userId) {
+      const existing = await prisma.agent.findUnique({ where: { id: agentId }, select: { userId: true } });
+      if (!existing || existing.userId !== userId) {
         return NextResponse.json({ error: "Agent not found" }, { status: 404 });
       }
     }
 
     const body = await req.json();
-    const {
-      status,
-      devinUrl,
-      activationStatus,
-      botUsername,
-      telegramLink,
-      authCode,
-      verifiedAt,
-      telegramUserId,
-    } = body;
+
+    // Whitelist fields based on caller type
+    const updateData: Record<string, any> = {};
+
+    if (isInternalCall) {
+      // Internal calls (webhooks) can set privileged fields
+      const { status, devinUrl, activationStatus, botUsername, telegramLink, authCode, verifiedAt, telegramUserId } = body;
+      if (status) updateData.status = status;
+      if (devinUrl) updateData.devinUrl = devinUrl;
+      if (activationStatus) updateData.activationStatus = activationStatus;
+      if (botUsername) updateData.botUsername = botUsername;
+      if (telegramLink) updateData.telegramLink = telegramLink;
+      if (authCode) updateData.authCode = authCode;
+      if (verifiedAt) updateData.verifiedAt = new Date(verifiedAt);
+      if (telegramUserId) updateData.telegramUserId = telegramUserId;
+    } else {
+      // User calls can only update safe fields
+      const { telegramUserId } = body;
+      if (telegramUserId) updateData.telegramUserId = telegramUserId;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
 
     const agent = await prisma.agent.update({
       where: { id: agentId },
-      data: {
-        ...(status && { status }),
-        ...(devinUrl && { devinUrl }),
-        ...(activationStatus && { activationStatus }),
-        ...(botUsername && { botUsername }),
-        ...(telegramLink && { telegramLink }),
-        ...(authCode && { authCode }),
-        ...(verifiedAt && { verifiedAt: new Date(verifiedAt) }),
-        ...(telegramUserId && { telegramUserId }),
-      },
+      data: updateData,
     });
 
     return NextResponse.json({ agent });
@@ -119,6 +150,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("Update agent error:", error);
-    return NextResponse.json({ error: error.message || "Failed to update agent" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
