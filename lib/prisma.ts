@@ -57,28 +57,22 @@ function getPrismaClient(): PrismaClient | typeof mockDb {
     const connectionString = process.env.DATABASE_URL;
     
     if (!connectionString) {
-      console.warn("[Prisma] DATABASE_URL not set, using mock database");
-      return mockDb as any;
+      throw new Error("[Prisma] DATABASE_URL is required. Cannot start without a database.");
     }
 
-    try {
-      // Use pg adapter for PostgreSQL
-      const pool = new Pool({ 
-        connectionString: process.env.POSTGRES_PRISMA_URL || connectionString 
-      });
-      const adapter = new PrismaPg(pool);
-      globalForPrisma.prisma = new PrismaClient({
-        adapter,
-        log: process.env.NODE_ENV === "development" 
-          ? ["query", "error", "warn"] 
-          : ["error"],
-      });
-      
-      console.log("[Prisma] Client initialized with pg adapter");
-    } catch (error) {
-      console.error("[Prisma] Failed to initialize:", error);
-      return mockDb as any;
-    }
+    // Use pg adapter for PostgreSQL
+    const pool = new Pool({
+      connectionString: process.env.POSTGRES_PRISMA_URL || connectionString
+    });
+    const adapter = new PrismaPg(pool);
+    globalForPrisma.prisma = new PrismaClient({
+      adapter,
+      log: process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
+    });
+
+    console.log("[Prisma] Client initialized with pg adapter");
   }
   
   return globalForPrisma.prisma;

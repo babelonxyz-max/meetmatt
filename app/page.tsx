@@ -157,7 +157,6 @@ export default function Home() {
           setDeployProgress(100);
           setDeployStatus("completed");
           setTelegramLink(agent.telegramLink || `https://t.me/${agent.name.toLowerCase()}_bot`);
-          setAuthCode(agent.authCode || "");
           clearInterval(interval);
         } else if (agent.status === "error") {
           setDeployStatus("failed");
@@ -168,7 +167,12 @@ export default function Home() {
       }
     }, 3000);
 
-    setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
+    const timeoutId = setTimeout(() => {
+      clearInterval(interval);
+      setDeployStatus("failed");
+    }, 5 * 60 * 1000);
+
+    return () => { clearInterval(interval); clearTimeout(timeoutId); };
   }, [getAccessToken]);
 
   const isWizardActive = step !== "idle";
@@ -436,7 +440,7 @@ export default function Home() {
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         config={config}
-        sessionId={`sess_${Date.now()}`}
+        agentId={pendingAgentId}
         onSuccess={handlePaymentSuccess}
       />
     </div>

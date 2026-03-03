@@ -26,7 +26,7 @@ interface PaymentModalProps {
     scope: string;
     contactMethod: string;
   };
-  sessionId: string;
+  agentId: string | null;
   onSuccess: () => void;
 }
 
@@ -52,7 +52,7 @@ const ALL_CRYPTO_OPTIONS: CryptoOption[] = [
   { code: "usdcarb", name: "USDC", icon: "💰", network: "Arbitrum" },
 ];
 
-export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: PaymentModalProps) {
   const { getAccessToken } = usePrivy();
   const [selectedCurrency, setSelectedCurrency] = useState("usdt");
   const [copied, setCopied] = useState(false);
@@ -79,26 +79,25 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     }
   }, [status, timeLeft]);
 
+  // Poll our /api/payment/status for payment confirmation (updated by IPN webhook)
   useEffect(() => {
     if (!payment || status !== "waiting") return;
 
     const interval = setInterval(async () => {
       try {
         const token = await getAccessToken();
-        const response = await fetch(`/api/payment/nowpayments?paymentId=${payment.id}`, {
+        const response = await fetch(`/api/payment/status?paymentId=${payment.id}`, {
           headers: token ? { "Authorization": `Bearer ${token}` } : {},
         });
-        if (!response.ok) {
-          console.error("Failed to check payment status");
-          return;
-        }
+        if (!response.ok) return;
+
         const data = await response.json();
-        if (data.payment_status === "finished" || data.payment_status === "confirmed" || data.payment_status === "sending") {
+        if (data.status === "confirmed") {
           setStatus("confirmed");
           playPaymentSuccess();
           setTimeout(onSuccess, 1000);
           clearInterval(interval);
-        } else if (data.payment_status === "failed" || data.payment_status === "expired") {
+        } else if (data.status === "failed") {
           setStatus("error");
           setError("Payment failed or expired.");
           clearInterval(interval);
@@ -109,48 +108,58 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [payment, status, timeLeft, onSuccess, sessionId]);
+  }, [payment, status, timeLeft, onSuccess, getAccessToken]);
 
   const createNewPayment = useCallback(async () => {
+    if (!agentId) {
+      setError("No agent selected. Please try again.");
+      setStatus("error");
+      return;
+    }
+
     setStatus("creating");
     setError(null);
 
     try {
       const token = await getAccessToken();
-      const response = await fetch("/api/payment/nowpayments", {
+      if (!token) {
+        setError("Not authenticated. Please refresh the page.");
+        setStatus("error");
+        return;
+      }
+
+      // Use /api/payment/create — stores DB record + sets IPN callback URL
+      const response = await fetch("/api/payment/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
-          price_amount: PLAN_PRICE,
-          price_currency: "usd",
-          pay_currency: selectedCurrency,
-          order_id: `${sessionId}-${Date.now()}`,
-          order_description: `Deploy ${config.agentName}`,
+          agentId,
+          currency: selectedCurrency,
         }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Payment creation failed");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Payment creation failed");
       }
 
       const data = await response.json();
       setPayment({
-        id: data.payment_id,
-        address: data.pay_address,
-        amount: data.pay_amount,
-        currency: data.pay_currency,
-        status: data.payment_status,
+        id: data.payment.id,
+        address: data.payment.address,
+        amount: data.payment.amount,
+        currency: data.payment.currency,
+        status: data.payment.status,
       });
       setStatus("waiting");
     } catch (e: any) {
       setError(e.message || "Failed to create payment");
       setStatus("error");
     }
-  }, [config.agentName, selectedCurrency, sessionId, getAccessToken]);
+  }, [agentId, selectedCurrency, getAccessToken]);
 
   const copyAddress = useCallback(() => {
     if (payment?.address) {
@@ -262,7 +271,7 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
 
                   {/* QR Code */}
                   <div className="flex justify-center">
-                    <img 
+                    <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payment.address)}`}
                       alt="Payment QR Code"
                       className="rounded-lg border border-[var(--border)]"
@@ -272,9 +281,9 @@ export function PaymentModal({ isOpen, onClose, config, sessionId, onSuccess }: 
                   <div className="space-y-2">
                     <label className="text-xs font-mono text-[var(--muted)]">SEND {selectedCrypto?.name.toUpperCase()} TO:</label>
                     <div className="flex gap-2">
-                      <textarea 
-                        value={payment.address} 
-                        readOnly 
+                      <textarea
+                        value={payment.address}
+                        readOnly
                         rows={3}
                         className="flex-1 bg-[var(--card)] border border-[var(--border)] text-xs font-mono p-3 rounded-lg resize-none break-all"
                       />

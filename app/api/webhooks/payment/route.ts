@@ -88,8 +88,12 @@ export async function POST(req: NextRequest) {
         // Trigger Devin deployment
         if (!process.env.INTERNAL_WEBHOOK_SECRET) {
           console.error("[Payment Webhook] INTERNAL_WEBHOOK_SECRET not set, cannot trigger deploy");
+          await prisma.agent.update({
+            where: { id: agent.id },
+            data: { activationStatus: "failed" },
+          });
         } else {
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/agents/trigger-deploy`, {
+          const triggerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/agents/trigger-deploy`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -97,6 +101,16 @@ export async function POST(req: NextRequest) {
             },
             body: JSON.stringify({ agentId: agent.id }),
           });
+
+          if (!triggerResponse.ok) {
+            console.error("[Payment Webhook] Deploy trigger failed:", triggerResponse.status, await triggerResponse.text().catch(() => ""));
+            await prisma.agent.update({
+              where: { id: agent.id },
+              data: { activationStatus: "failed" },
+            });
+          } else {
+            console.log("[Payment Webhook] Deploy triggered successfully for agent:", agent.id);
+          }
         }
       }
     }

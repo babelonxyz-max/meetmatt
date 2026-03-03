@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { safeCompare } from "@/lib/crypto-utils";
+import { RateLimiter } from "@/lib/api-middleware";
+
+const adminLimiter = new RateLimiter(10, 60000);
 
 function verifyAuth(request: NextRequest): boolean {
   const token = process.env.ADMIN_AUTH_TOKEN;
@@ -9,9 +12,20 @@ function verifyAuth(request: NextRequest): boolean {
   return !!authHeader && safeCompare(authHeader, `Bearer ${token}`);
 }
 
-
 // GET /api/admin/users - List all users with their agents
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const clientId = request.headers.get("x-forwarded-for") ||
+                   request.headers.get("x-real-ip") ||
+                   "unknown";
+  const rateCheck = adminLimiter.check(clientId);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rateCheck.resetAt - Date.now()) / 1000)) } }
+    );
+  }
+
   if (!process.env.ADMIN_AUTH_TOKEN) {
     return NextResponse.json({ error: "Admin auth not configured" }, { status: 503 });
   }
@@ -42,7 +56,6 @@ export async function GET(request: NextRequest) {
       users: users.map(u => ({
         id: u.id,
         email: u.email,
-        privyId: u.privyId,
         walletAddress: u.walletAddress,
         createdAt: u.createdAt,
         agentCount: u.agents.length,
