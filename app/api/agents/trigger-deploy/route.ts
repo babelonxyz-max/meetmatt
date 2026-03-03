@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
     }
 
-    if (agent.status !== "pending") {
-      return NextResponse.json({ error: "Agent already processed" }, { status: 400 });
+    if (agent.status !== "pending" && agent.status !== "error") {
+      return NextResponse.json({ error: "Agent cannot be deployed in current state" }, { status: 400 });
     }
 
     const features = JSON.parse(agent.features[0] || '{}');

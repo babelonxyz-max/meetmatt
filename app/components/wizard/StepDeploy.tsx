@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Loader2, Check, Bot, MessageSquare, Shield } from "lucide-react";
+import { Loader2, Check, Bot, MessageSquare, Shield, AlertCircle } from "lucide-react";
 
 interface StepDeployProps {
   agentName: string;
@@ -54,6 +54,30 @@ export function StepDeploy({ agentName, status, progress, telegramLink, authCode
             <p className="mt-1 text-[11px] text-white/50">Send this to the bot to activate</p>
           </div>
         )}
+      </motion.div>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="mx-auto max-w-md text-center"
+      >
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20">
+          <AlertCircle className="h-8 w-8 text-red-400" />
+        </div>
+        <h2 className="mb-1 text-2xl font-bold text-white">Deployment failed</h2>
+        <p className="mb-4 text-sm text-white/65">
+          Something went wrong during setup. You can retry from the dashboard or contact support.
+        </p>
+        <a
+          href="/dashboard"
+          className="inline-block rounded-xl border border-white/12 bg-white/[0.05] px-6 py-3 text-sm font-medium text-white backdrop-blur-md transition-colors hover:bg-white/10"
+        >
+          Go to Dashboard
+        </a>
       </motion.div>
     );
   }
