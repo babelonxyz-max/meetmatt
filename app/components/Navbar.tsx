@@ -69,6 +69,12 @@ export function Navbar() {
         >
           Pricing
         </Link>
+        <Link
+          href="/whitelabel"
+          className={`text-lg transition-colors ${isHome ? "text-white/85 hover:text-cyan-200" : "text-[var(--foreground)] hover:text-[var(--accent)]"}`}
+        >
+          Toolkit
+        </Link>
         {authenticated ? (
           <div className="relative" ref={dropdownRef}>
             <button

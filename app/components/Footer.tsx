@@ -55,6 +55,12 @@ export function Footer() {
               >
                 Terms
               </Link>
+              <Link 
+                href="/whitelabel" 
+                className={`text-sm transition-colors ${isHome ? "text-white/75 hover:text-cyan-200" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+              >
+                Toolkit
+              </Link>
             </div>
           </div>
         </div>
