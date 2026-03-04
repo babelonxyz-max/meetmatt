@@ -1,5 +1,5 @@
 # MeetMatt Project State
-**Last Updated:** 2026-03-03 (post-audit)
+**Last Updated:** 2026-03-04 (whitelabel toolkit)
 **Branch:** main
 **Deployment:** https://meetmatt.xyz (Vercel)
 **Repo:** https://github.com/babelonxyz-max/meetmatt
@@ -19,6 +19,13 @@ Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
 ---
 
 ## What's Working
+
+### Latest Update (2026-03-04)
+- [x] Matt Whitelabeling Toolkit shipped (`/whitelabel`)
+- [x] Brand preset configurator (Agency/SaaS/Creator)
+- [x] Export tools: `*.brand.json`, `*.theme.css`, `*.launch.md`
+- [x] Toolkit navigation links added to Navbar and Footer
+- [x] Changes pushed to `main` (commit `fbe41f0`)
 
 ### Core Flow
 - [x] Home page with NexusOrb + 5-step wizard (Name → Personality → Demo → Payment → Deploy)
@@ -214,16 +221,17 @@ External audit found broken payment-to-deployment flow, Prisma mock DB fallback,
 ### Medium Priority
 6. [ ] Add email notifications (Resend) for payment confirmations and deployment completions
 7. [ ] Wire up billing page plan switching (currently Coming Soon)
-8. [ ] Add proper error pages (currently generic 404)
-9. [ ] Replace QR code service with client-side qrcode.react
-10. [ ] Upgrade to Redis/edge-config rate limiting for production-grade protection
+8. [ ] Persist whitelabel toolkit configs (tenant model + storage) instead of local-only export
+9. [ ] Add proper error pages (currently generic 404)
+10. [ ] Replace QR code service with client-side qrcode.react
+11. [ ] Upgrade to Redis/edge-config rate limiting for production-grade protection
 
 ### Low Priority
-11. [ ] Fix pre-existing lint errors (41 `no-explicit-any`, `set-state-in-effect`)
-12. [ ] Add monitoring/logging (Sentry or similar)
-13. [ ] Add analytics
-14. [ ] Consider annual plan implementation
-15. [ ] Run `npm audit fix` for transitive dependency vulnerabilities
+12. [ ] Fix pre-existing lint errors (41 `no-explicit-any`, `set-state-in-effect`)
+13. [ ] Add monitoring/logging (Sentry or similar)
+14. [ ] Add analytics
+15. [ ] Consider annual plan implementation
+16. [ ] Run `npm audit fix` for transitive dependency vulnerabilities
 
 ---
 
@@ -255,5 +263,6 @@ npx prisma studio
 | https://meetmatt.xyz/dashboard | User dashboard |
 | https://meetmatt.xyz/billing | Billing & settings |
 | https://meetmatt.xyz/pricing | Pricing page |
+| https://meetmatt.xyz/whitelabel | Matt Whitelabeling Toolkit |
 | https://meetmatt.xyz/terms | Terms of service |
 | https://meetmatt.xyz/privacy | Privacy policy |
