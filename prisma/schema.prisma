@@ -15,6 +15,14 @@ model Agent {
   tier               String
   devinSessionId     String?   @map("devin_session_id")
   devinUrl           String?   @map("devin_url")
+  runtimeProvider    String?   @map("runtime_provider")
+  runtimeAgentId     String?   @map("runtime_agent_id")
+  runtimeSessionId   String?   @map("runtime_session_id")
+  runtimeUrl         String?   @map("runtime_url")
+  deployState        String    @default("pending") @map("deploy_state")
+  deployErrorCode    String?   @map("deploy_error_code")
+  deployErrorMessage String?   @map("deploy_error_message")
+  lastHeartbeatAt    DateTime? @map("last_heartbeat_at")
   status             String    @default("pending")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
@@ -41,6 +49,8 @@ model Agent {
   authCode         String?   @map("auth_code")
   verifiedAt       DateTime? @map("verified_at")
   telegramUserId   String?   @map("telegram_user_id")
+  cortexId         String    @default("matt-consumer") @map("cortex_id")
+  deployJobs       DeployJob[]
 
   @@index([status])
   @@index([devinSessionId])
@@ -48,6 +58,9 @@ model Agent {
   @@index([slug])
   @@index([userId])
   @@index([activationStatus])
+  @@index([deployState])
+  @@index([runtimeProvider])
+  @@index([runtimeAgentId])
   @@map("agents")
 }
 
@@ -72,6 +85,29 @@ model Payment {
   @@map("payments")
 }
 
+model DeployJob {
+  id             String    @id @default(cuid())
+  agentId        String    @map("agent_id")
+  type           String    @default("deploy")
+  status         String    @default("queued")
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(5) @map("max_attempts")
+  idempotencyKey String    @unique @map("idempotency_key")
+  providerHint   String?   @map("provider_hint")
+  payload        Json?
+  errorCode      String?   @map("error_code")
+  errorMessage   String?   @map("error_message")
+  lastAttemptAt  DateTime? @map("last_attempt_at")
+  nextRunAt      DateTime  @default(now()) @map("next_run_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  agent          Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, status])
+  @@index([status, nextRunAt])
+  @@map("deploy_jobs")
+}
+
 
 model User {
   id               String    @id @default(cuid())
@@ -92,3 +128,44 @@ model User {
   @@map("users")
 }
 
+model InferenceLog {
+  id                  String   @id @default(cuid())
+  agentId             String   @map("agent_id")
+  cortexId            String   @map("cortex_id")
+
+  // Classification
+  classifiedTier      String   @map("classified_tier")
+  actualTier          String   @map("actual_tier")
+  classificationScore Int      @map("classification_score")
+  budgetAdjusted      Boolean  @default(false) @map("budget_adjusted")
+
+  // Model
+  provider            String
+  model               String
+  wasFailover         Boolean  @default(false) @map("was_failover")
+
+  // Tokens
+  inputTokens         Int      @map("input_tokens")
+  outputTokens        Int      @map("output_tokens")
+  cachedInputTokens   Int      @default(0) @map("cached_input_tokens")
+
+  // Cost
+  costUsd             Float    @map("cost_usd")
+  dailyBudgetPct      Float    @map("daily_budget_pct")
+
+  // Performance
+  latencyMs           Int      @map("latency_ms")
+  ttftMs              Int?     @map("ttft_ms")
+
+  // Quality signals
+  contextCompressed   Boolean  @default(false) @map("context_compressed")
+  errorOccurred       Boolean  @default(false) @map("error_occurred")
+  errorCode           String?  @map("error_code")
+
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([agentId, createdAt])
+  @@index([cortexId, createdAt])
+  @@index([createdAt])
+  @@map("inference_logs")
+}
