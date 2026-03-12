@@ -14,7 +14,8 @@ export function Footer() {
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.5, duration: 0.5 }}
-      className={isHome ? "fixed inset-x-0 bottom-0 z-50 h-14 border-t border-white/10 bg-[#070a12]/84 text-white backdrop-blur-2xl" : "relative z-40 pb-4"}
+      data-home-footer={isHome ? "true" : "false"}
+      className={isHome ? "fixed inset-x-0 bottom-0 z-50 h-14 border-t border-white/10 bg-[#070a12]/84 text-white backdrop-blur-2xl transition-all duration-300" : "relative z-40 pb-4"}
     >
       <div className={isHome ? "mx-auto flex h-full w-full max-w-7xl items-center px-4 sm:px-6" : "mx-4"}>
         <div

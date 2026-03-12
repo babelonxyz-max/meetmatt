@@ -374,6 +374,19 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const body = document.body;
+    if (isWizardActive) {
+      body.dataset.homeWizardActive = "true";
+    } else {
+      delete body.dataset.homeWizardActive;
+    }
+
+    return () => {
+      delete body.dataset.homeWizardActive;
+    };
+  }, [isWizardActive]);
+
+  useEffect(() => {
     narrativeTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
     narrativeTimeoutsRef.current = [];
 
@@ -398,7 +411,12 @@ export default function Home() {
   }, [activeStep, isWizardActive]);
 
   return (
-    <div data-home-shell="true" className="brand-shell fixed inset-x-0 top-16 bottom-14 overflow-hidden">
+    <div
+      data-home-shell="true"
+      className={`brand-shell fixed inset-x-0 top-16 overflow-hidden ${
+        isWizardActive ? "bottom-0" : "bottom-14"
+      }`}
+    >
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div className="brand-dot-grid absolute inset-x-[4%] top-10 bottom-20 opacity-25 [mask-image:radial-gradient(circle_at_center,black,transparent_76%)]" />
         <div className="absolute left-[8%] top-[18%] h-[24rem] w-[24rem] rounded-full bg-[#ff6b35]/20 blur-[110px] mix-blend-screen" />
@@ -414,14 +432,14 @@ export default function Home() {
       </div>
 
       <main
-        className={`relative z-10 flex h-full w-full justify-center px-4 py-1.5 md:px-5 ${
-          isWizardActive ? "items-stretch" : "items-center"
+        className={`relative z-10 flex h-full w-full justify-center px-4 md:px-5 ${
+          isWizardActive ? "items-center py-0" : "items-center py-1.5"
         }`}
       >
         <motion.div
           className={
             isWizardActive
-              ? "grid h-full min-h-0 w-full max-w-[88rem] grid-cols-1 grid-rows-[minmax(5.4rem,6.6rem)_minmax(0,1fr)] gap-2 overflow-hidden transition-all duration-700 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)] lg:grid-rows-1 lg:gap-4"
+              ? "grid h-full min-h-0 w-full max-w-[94rem] grid-cols-1 grid-rows-[minmax(0,0.84fr)_minmax(0,1.16fr)] gap-4 overflow-hidden transition-all duration-700 lg:h-[min(100%,46rem)] lg:grid-cols-[minmax(24rem,0.95fr)_minmax(34rem,1.05fr)] lg:grid-rows-1 lg:items-center lg:gap-8"
               : "flex h-full max-h-full w-full max-w-6xl flex-col items-center justify-center gap-4 overflow-hidden transition-all duration-700"
           }
         >
@@ -476,7 +494,7 @@ export default function Home() {
                     state={getOrbState(step)}
                     variant="plasma"
                     className="relative z-10"
-                    orbClassName="h-[clamp(9.5rem,20vw,13rem)] w-[clamp(9.5rem,20vw,13rem)] lg:h-[clamp(17rem,32vw,25rem)] lg:w-[clamp(17rem,32vw,25rem)]"
+                    orbClassName="h-[clamp(10.5rem,24vw,14rem)] w-[clamp(10.5rem,24vw,14rem)] lg:h-[clamp(22rem,38vw,30rem)] lg:w-[clamp(22rem,38vw,30rem)]"
                   />
                 </div>
               </div>
@@ -488,7 +506,7 @@ export default function Home() {
                   animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
                   exit={{ opacity: 0, x: 20, filter: "blur(8px)" }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="relative z-20 flex h-full min-h-0 w-full flex-col overflow-hidden"
+                  className="relative z-20 mx-auto flex h-full min-h-0 w-full max-w-[48rem] flex-col justify-center overflow-hidden"
                 >
                   <div className="wizard-stage-divider" />
 
