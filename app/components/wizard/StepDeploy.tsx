@@ -28,15 +28,19 @@ export function StepDeploy({ agentName, status, progress, telegramLink, botUsern
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mx-auto flex h-full w-full max-w-md flex-col justify-start text-center"
+        className="mx-auto flex h-full w-full max-w-lg flex-col justify-start"
       >
-        <div className="brand-panel-strong brand-noise rounded-[1.55rem] p-4">
-          <NexusOrb className="mx-auto mb-3" orbClassName="h-20 w-20" state="speaking" variant="plasma" />
-          <p className="brand-kicker">Launch Confirmed</p>
-          <h2 className="mt-1.5 text-[1.4rem] font-semibold text-white">{agentName} is ready!</h2>
-          <p className="mt-1 text-sm text-white/65">Your AI assistant has been deployed and linked to your Telegram bot.</p>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+            <NexusOrb className="shrink-0" orbClassName="h-20 w-20" state="speaking" variant="plasma" />
+            <div className="text-left">
+              <p className="brand-kicker">Launch Confirmed</p>
+              <h2 className="mt-1.5 text-[1.35rem] font-semibold text-white">{agentName} is ready!</h2>
+              <p className="mt-1 text-sm text-white/65">Your AI assistant has been deployed and linked to your Telegram bot.</p>
+            </div>
+          </div>
 
-          <div className="brand-panel mt-4 rounded-[1.25rem] p-3">
+          <div className="wizard-preview-card p-3">
             <p className="mb-1 text-xs uppercase tracking-[0.14em] text-white/55">Bot username</p>
             <p className="font-mono text-base text-white sm:text-lg">
               {resolvedBotUsername ? `@${resolvedBotUsername.replace(/^@+/, "")}` : "Connected"}
@@ -47,7 +51,7 @@ export function StepDeploy({ agentName, status, progress, telegramLink, botUsern
             href={telegramLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="brand-button mt-3.5 block w-full py-2.5 text-center text-xs font-semibold uppercase tracking-[0.14em]"
+            className="brand-button block w-full max-w-xs py-2.5 text-center text-xs font-semibold uppercase tracking-[0.14em]"
           >
             Open in Telegram
           </a>
@@ -61,20 +65,24 @@ export function StepDeploy({ agentName, status, progress, telegramLink, botUsern
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mx-auto flex h-full w-full max-w-md flex-col justify-start text-center"
+        className="mx-auto flex h-full w-full max-w-lg flex-col justify-start"
       >
-        <div className="brand-panel-strong brand-noise rounded-[1.55rem] p-4">
-          <div className="relative mx-auto mb-3 flex h-[4rem] w-[4rem] items-center justify-center rounded-full border border-red-400/20 bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.14),rgba(248,113,113,0.2)_30%,rgba(14,10,14,0.98)_100%)]">
-            <div className="absolute inset-[-20%] rounded-full bg-red-400/18 blur-xl" />
-            <AlertCircle className="relative z-10 h-7 w-7 text-red-300" />
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+            <div className="relative flex h-[4rem] w-[4rem] items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.14),rgba(248,113,113,0.2)_30%,rgba(14,10,14,0.98)_100%)] shadow-[inset_0_0_0_1px_rgba(248,113,113,0.18),0_18px_34px_rgba(0,0,0,0.2)]">
+              <div className="absolute inset-[-20%] rounded-full bg-red-400/18 blur-xl" />
+              <AlertCircle className="relative z-10 h-7 w-7 text-red-300" />
+            </div>
+            <div className="text-left">
+              <h2 className="text-[1.35rem] font-semibold text-white">Deployment failed</h2>
+              <p className="mt-1.5 text-sm text-white/65">
+                Something went wrong during setup. You can retry from the dashboard or contact support.
+              </p>
+            </div>
           </div>
-          <h2 className="text-[1.35rem] font-semibold text-white">Deployment failed</h2>
-          <p className="mt-1.5 text-sm text-white/65">
-            Something went wrong during setup. You can retry from the dashboard or contact support.
-          </p>
           <a
             href="/dashboard"
-            className="brand-button-secondary mt-4 inline-block px-5 py-2.5 text-xs font-medium uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/10"
+            className="brand-button-secondary inline-block w-fit px-5 py-2.5 text-xs font-medium uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/10"
           >
             Go to Dashboard
           </a>
@@ -87,10 +95,11 @@ export function StepDeploy({ agentName, status, progress, telegramLink, botUsern
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="mx-auto flex h-full w-full max-w-md flex-col justify-start text-center"
+      className="mx-auto flex h-full w-full max-w-lg flex-col justify-start"
     >
-      <div className="brand-panel-strong brand-noise rounded-[1.55rem] p-3.5">
-        <div className="relative mx-auto mb-3 flex h-24 w-24 items-center justify-center">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-4">
+          <div className="relative flex h-24 w-24 shrink-0 items-center justify-center">
           <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,170,68,0.18),transparent_68%)] blur-2xl" />
           <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
             <path
@@ -111,21 +120,22 @@ export function StepDeploy({ agentName, status, progress, telegramLink, botUsern
             />
           </svg>
           <NexusOrb className="relative z-10" orbClassName="h-14 w-14" state={deployOrbState} variant="plasma" />
-          <div className="pointer-events-none absolute bottom-0 rounded-full border border-white/10 bg-[#0f1422]/88 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-white/65">
+          <div className="pointer-events-none absolute bottom-0 rounded-full bg-[#0f1422]/88 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-white/65 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
             {progress}% synced
           </div>
         </div>
-
-        <p className="brand-kicker">Provisioning</p>
-        <h2 className="mt-1.5 text-[1.2rem] font-semibold text-white">Deploying {agentName}...</h2>
-        <p className="mt-1 text-[13px] text-white/65">Usually takes around 2 minutes.</p>
-
-        <div className="mt-2.5 flex items-center justify-center gap-2 text-[13px] text-white/70">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-[#ffaa44]" />
-          Matt is connecting the runtime to your Telegram bot.
+          <div className="text-left">
+            <p className="brand-kicker">Provisioning</p>
+            <h2 className="mt-1.5 text-[1.2rem] font-semibold text-white">Deploying {agentName}...</h2>
+            <p className="mt-1 text-[13px] text-white/65">Usually takes around 2 minutes.</p>
+            <div className="mt-2.5 flex items-center gap-2 text-[13px] text-white/70">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#ffaa44]" />
+              Matt is connecting the runtime to your Telegram bot.
+            </div>
+          </div>
         </div>
 
-        <div className="mt-3 space-y-1.5">
+        <div className="space-y-1.5">
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isActive = index === currentStep;
@@ -134,12 +144,12 @@ export function StepDeploy({ agentName, status, progress, telegramLink, botUsern
             return (
               <div
                 key={step.label}
-                className={`flex items-center gap-2.5 rounded-[1rem] px-3 py-2.5 transition-colors ${
+                className={`flex items-center gap-2.5 rounded-[1rem] px-3 py-2.5 transition-colors shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] ${
                   isActive
-                    ? "border border-[#ffaa44]/30 bg-[#ffaa44]/12"
+                    ? "bg-[#ffaa44]/12"
                     : isComplete
-                      ? "border border-emerald-300/25 bg-emerald-500/10"
-                      : "border border-white/10 bg-white/[0.05]"
+                      ? "bg-emerald-500/10"
+                      : "bg-white/[0.05]"
                 }`}
               >
                 <div className={`rounded-full p-1.5 ${

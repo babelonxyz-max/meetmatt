@@ -124,14 +124,14 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
         </span>
       </div>
 
-      <div className="brand-panel-strong brand-noise flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.45rem] p-2">
-        <div className="rounded-[1rem] border border-white/10 bg-white/[0.03] px-3 py-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
+        <div className="wizard-preview-card px-3 py-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-left">
               <p className="text-[10px] uppercase tracking-[0.18em] text-white/42">Channel</p>
               <p className="mt-0.5 text-[13px] font-medium text-white">Matt simulating a live Telegram thread</p>
             </div>
-            <div className="rounded-full border border-[#ffb075]/20 bg-[#ffaa44]/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[#ffe2c1]">
+            <div className="rounded-full bg-[#ffaa44]/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[#ffe2c1]">
               {remaining} free messages
             </div>
           </div>
@@ -142,7 +142,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
                 type="button"
                 onClick={() => sendMessage(prompt)}
                 disabled={remaining <= 0 || isBotTyping}
-                className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-left text-[10px] text-white/68 transition-colors hover:border-white/20 hover:text-white disabled:opacity-40"
+                className="rounded-full bg-white/[0.04] px-2.5 py-1 text-left text-[10px] text-white/68 transition-colors hover:bg-white/[0.08] hover:text-white disabled:opacity-40"
               >
                 {prompt}
               </button>
@@ -150,7 +150,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
           </div>
         </div>
 
-        <div className="relative mt-2 min-h-0 flex-1 overflow-hidden rounded-[1.1rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(255,112,64,0.12),transparent_30%),linear-gradient(180deg,rgba(10,12,22,0.98),rgba(14,16,28,0.94))] p-2.5">
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-[1.1rem] bg-[radial-gradient(circle_at_top,rgba(255,112,64,0.12),transparent_30%),linear-gradient(180deg,rgba(10,12,22,0.98),rgba(14,16,28,0.94))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_0_0_1px_rgba(255,255,255,0.04),0_18px_40px_rgba(0,0,0,0.2)]">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-[rgba(16,10,10,0.9)] to-transparent" />
           <div ref={messageViewportRef} className="flex h-full flex-col justify-end gap-1.5 overflow-y-auto pr-1">
             <AnimatePresence initial={false}>
@@ -177,8 +177,8 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
                     </div>
                     <div className={`max-w-[80%] rounded-[1rem] px-3 py-2.5 text-[13px] leading-relaxed ${
                       m.role === "user"
-                        ? "rounded-br-none border border-white/12 bg-[linear-gradient(135deg,rgba(255,255,255,0.11),rgba(255,255,255,0.04))] text-white"
-                        : "rounded-bl-none border border-[#ffb075]/30 bg-[linear-gradient(135deg,rgba(255,107,53,0.94),rgba(255,170,68,0.92))] text-white shadow-[0_16px_40px_rgba(255,107,53,0.16)]"
+                        ? "rounded-br-none bg-[linear-gradient(135deg,rgba(255,255,255,0.11),rgba(255,255,255,0.04))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] text-white"
+                        : "rounded-bl-none bg-[linear-gradient(135deg,rgba(255,107,53,0.94),rgba(255,170,68,0.92))] text-white shadow-[0_16px_40px_rgba(255,107,53,0.16)]"
                     }`}>
                       {m.text}
                     </div>
@@ -196,7 +196,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
                 <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[#ffb075]/25 bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.18),rgba(255,170,68,0.1)_28%,rgba(255,107,53,0.78)_100%)]">
                   <Bot className="h-3.5 w-3.5" />
                 </div>
-                <div className="rounded-[1rem] rounded-bl-none border border-white/10 bg-white/[0.06] px-3 py-2 text-[13px] text-white/80">
+                <div className="rounded-[1rem] rounded-bl-none bg-white/[0.06] px-3 py-2 text-[13px] text-white/80 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
                   <span className="inline-flex items-center gap-1">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ffaa44]/90" />
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff9a60]/75 [animation-delay:120ms]" />
@@ -208,7 +208,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
           </div>
         </div>
 
-        <div className="mt-2 rounded-[1rem] border border-white/10 bg-black/16 p-2">
+        <div className="wizard-preview-card p-2">
           <div className="flex gap-2">
             <input
               type="text"

@@ -508,9 +508,7 @@ export default function Home() {
                   transition={{ duration: 0.6, ease: "easeOut" }}
                   className="relative z-20 mx-auto flex h-full min-h-0 w-full max-w-[48rem] flex-col justify-center overflow-hidden"
                 >
-                  <div className="wizard-stage-divider" />
-
-                  <div className="wizard-chat-stack mt-2.5">
+                  <div className="wizard-chat-stack">
                     <AnimatePresence initial={false}>
                       {renderedNarrativeMessages.map((message, index) => (
                         <motion.div
@@ -539,118 +537,114 @@ export default function Home() {
                     ) : null}
                   </div>
 
-                  <div className="mt-2 wizard-content-shell flex min-h-0 flex-1 flex-col p-3 md:p-3.5">
-                    <div className="flex flex-wrap items-center justify-between gap-2.5">
-                      <div className="flex items-center gap-2.5">
-                        {canGoBack ? (
-                          <button
-                            type="button"
-                            onClick={handleBack}
-                            className="brand-button-secondary inline-flex h-9 items-center gap-2 rounded-full px-3 text-xs uppercase tracking-[0.14em] text-white/80 transition-colors hover:text-white"
-                          >
-                            <ArrowLeft className="h-3.5 w-3.5" />
-                            Back
-                          </button>
-                        ) : null}
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-white/34">
-                            Chat wizard
-                          </p>
-                          <h2 className="mt-0.5 text-[1.05rem] font-semibold tracking-tight text-white sm:text-[1.12rem]">
-                            {getStepHeading(step, agentName)}
-                          </h2>
-                        </div>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      {canGoBack ? (
+                        <button
+                          type="button"
+                          onClick={handleBack}
+                          className="inline-flex items-center gap-2 rounded-full bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-white/72 transition-colors hover:bg-white/[0.08] hover:text-white"
+                        >
+                          <ArrowLeft className="h-3.5 w-3.5" />
+                          Back
+                        </button>
+                      ) : null}
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/28">
+                          Chat flow
+                        </p>
+                        <h2 className="mt-1 text-[1.02rem] font-semibold tracking-tight text-white sm:text-[1.1rem]">
+                          {getStepHeading(step, agentName)}
+                        </h2>
                       </div>
+                    </div>
 
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/62">
-                          Stage {safeStepIndex + 1} / {FLOW_STEPS.length}
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <span className="rounded-full bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/54">
+                        Stage {safeStepIndex + 1} / {FLOW_STEPS.length}
+                      </span>
+                      {agentName ? (
+                        <span className="rounded-full bg-[#ffaa44]/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[#ffe3c5]">
+                          {agentName}
                         </span>
-                        {agentName ? (
-                          <span className="rounded-full border border-[#ffb075]/18 bg-[#ffaa44]/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[#ffe3c5]">
-                            {agentName}
-                          </span>
-                        ) : null}
-                        {personality ? (
-                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/62">
-                            {formatPersonality(personality)}
-                          </span>
-                        ) : null}
-                      </div>
+                      ) : null}
+                      {personality ? (
+                        <span className="rounded-full bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/54">
+                          {formatPersonality(personality)}
+                        </span>
+                      ) : null}
                     </div>
+                  </div>
 
-                    <div className="mt-2.5 h-[1px] bg-white/8" />
+                  <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                    <AnimatePresence mode="wait">
+                      {step === "name" ? (
+                        <motion.div key="name" className="h-full min-h-0" exit={{ opacity: 0, x: -20 }}>
+                          <StepName onSubmit={handleNameSubmit} />
+                        </motion.div>
+                      ) : null}
 
-                    <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
-                      <AnimatePresence mode="wait">
-                        {step === "name" ? (
-                          <motion.div key="name" className="h-full min-h-0" exit={{ opacity: 0, x: -20 }}>
-                            <StepName onSubmit={handleNameSubmit} />
-                          </motion.div>
-                        ) : null}
+                      {step === "personality" ? (
+                        <motion.div key="personality" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                          <StepPersonality onSelect={handlePersonalitySelect} />
+                        </motion.div>
+                      ) : null}
 
-                        {step === "personality" ? (
-                          <motion.div key="personality" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                            <StepPersonality onSelect={handlePersonalitySelect} />
-                          </motion.div>
-                        ) : null}
+                      {step === "demo" ? (
+                        <motion.div key="demo" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                          <StepDemo agentName={agentName} personality={personality} onContinue={handleDemoComplete} />
+                        </motion.div>
+                      ) : null}
 
-                        {step === "demo" ? (
-                          <motion.div key="demo" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                            <StepDemo agentName={agentName} personality={personality} onContinue={handleDemoComplete} />
-                          </motion.div>
-                        ) : null}
+                      {step === "telegram" ? (
+                        <motion.div key="telegram" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                          <StepTelegram
+                            token={telegramBotToken}
+                            bot={telegramBot}
+                            isValidating={isValidatingTelegramBot}
+                            errorMessage={telegramBotError}
+                            onTokenChange={handleTelegramTokenChange}
+                            onContinue={handleTelegramContinue}
+                          />
+                        </motion.div>
+                      ) : null}
 
-                        {step === "telegram" ? (
-                          <motion.div key="telegram" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                            <StepTelegram
-                              token={telegramBotToken}
-                              bot={telegramBot}
-                              isValidating={isValidatingTelegramBot}
-                              errorMessage={telegramBotError}
-                              onTokenChange={handleTelegramTokenChange}
-                              onContinue={handleTelegramContinue}
-                            />
-                          </motion.div>
-                        ) : null}
+                      {step === "payment" ? (
+                        <motion.div key="payment" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                          <StepPayment
+                            agentName={agentName}
+                            deploymentMode={config.useCase}
+                            launchOffer={launchOffer}
+                            botUsername={telegramBot?.username}
+                            errorMessage={launchError}
+                            isSubmitting={isSubmittingLaunch}
+                            onDeploymentModeChange={(mode) => {
+                              setPendingAgentId(null);
+                              setLaunchError(null);
+                              setConfig((prev) => ({ ...prev, useCase: mode }));
+                            }}
+                            onLaunchOfferChange={(offer) => {
+                              setPendingAgentId(null);
+                              setLaunchError(null);
+                              setLaunchOffer(offer);
+                            }}
+                            onContinue={handlePaymentContinue}
+                          />
+                        </motion.div>
+                      ) : null}
 
-                        {step === "payment" ? (
-                          <motion.div key="payment" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                            <StepPayment
-                              agentName={agentName}
-                              deploymentMode={config.useCase}
-                              launchOffer={launchOffer}
-                              botUsername={telegramBot?.username}
-                              errorMessage={launchError}
-                              isSubmitting={isSubmittingLaunch}
-                              onDeploymentModeChange={(mode) => {
-                                setPendingAgentId(null);
-                                setLaunchError(null);
-                                setConfig((prev) => ({ ...prev, useCase: mode }));
-                              }}
-                              onLaunchOfferChange={(offer) => {
-                                setPendingAgentId(null);
-                                setLaunchError(null);
-                                setLaunchOffer(offer);
-                              }}
-                              onContinue={handlePaymentContinue}
-                            />
-                          </motion.div>
-                        ) : null}
-
-                        {step === "deploy" ? (
-                          <motion.div key="deploy" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                            <StepDeploy
-                              agentName={agentName}
-                              status={deployStatus}
-                              progress={deployProgress}
-                              telegramLink={telegramLink}
-                              botUsername={telegramBot?.username || undefined}
-                            />
-                          </motion.div>
-                        ) : null}
-                      </AnimatePresence>
-                    </div>
+                      {step === "deploy" ? (
+                        <motion.div key="deploy" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                          <StepDeploy
+                            agentName={agentName}
+                            status={deployStatus}
+                            progress={deployProgress}
+                            telegramLink={telegramLink}
+                            botUsername={telegramBot?.username || undefined}
+                          />
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
                   </div>
                 </motion.section>
               </AnimatePresence>
