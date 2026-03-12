@@ -327,6 +327,9 @@ export default function Home() {
   const visibleNarrativeMessages = STEP_MESSAGES[activeStep].slice(0, visibleNarrativeCount);
   const isNarrativeStreaming =
     isWizardActive && visibleNarrativeCount < STEP_MESSAGES[activeStep].length;
+  const renderedNarrativeMessages = isNarrativeStreaming
+    ? visibleNarrativeMessages.slice(-2)
+    : visibleNarrativeMessages.slice(-1);
   const canGoBack =
     step === "personality" ||
     step === "demo" ||
@@ -470,15 +473,15 @@ export default function Home() {
 
                   <div className="wizard-chat-stack mt-4">
                     <AnimatePresence initial={false}>
-                      {visibleNarrativeMessages.map((message, index) => (
+                      {renderedNarrativeMessages.map((message, index) => (
                         <motion.div
-                          key={`${activeStep}-${index}`}
+                          key={`${activeStep}-${visibleNarrativeCount}-${index}-${message}`}
                           initial={{ opacity: 0, x: 18, y: 12, filter: "blur(8px)" }}
                           animate={{ opacity: 1, x: 0, y: 0, filter: "blur(0px)" }}
                           exit={{ opacity: 0, x: -10, y: -6, filter: "blur(6px)" }}
                           transition={{ duration: 0.45, ease: "easeOut" }}
-                          className={`wizard-chat-bubble text-left text-[clamp(1.02rem,1.7vw,1.16rem)] font-medium leading-[1.12] text-white/92 ${
-                            index === 0 ? "wizard-chat-bubble-accent" : ""
+                          className={`wizard-chat-bubble text-left text-[clamp(0.98rem,1.55vw,1.08rem)] font-medium leading-[1.12] text-white/92 ${
+                            index === renderedNarrativeMessages.length - 1 ? "wizard-chat-bubble-accent" : ""
                           }`}
                         >
                           {message}

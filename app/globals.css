@@ -342,19 +342,22 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: flex-end;
   gap: 0.55rem;
-  min-height: 8.5rem;
+  min-height: 5.5rem;
+  max-height: 7.5rem;
+  overflow: hidden;
 }
 
 .wizard-chat-bubble {
   position: relative;
-  max-width: 28rem;
-  border-radius: 1.6rem;
+  max-width: 26rem;
+  border-radius: 1.45rem;
   border: 1px solid rgba(255, 170, 68, 0.26);
   background:
     linear-gradient(180deg, rgba(27, 25, 40, 0.82), rgba(15, 16, 28, 0.78)),
     radial-gradient(circle at top right, rgba(255, 170, 68, 0.08), transparent 60%);
-  padding: 0.85rem 1rem;
+  padding: 0.75rem 0.95rem;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 42px rgba(0, 0, 0, 0.2);
 }
 
@@ -476,7 +479,8 @@
 
 @media (max-width: 1023px) {
   .wizard-chat-stack {
-    min-height: 7.25rem;
+    min-height: 4.75rem;
+    max-height: 6.2rem;
   }
 
   .wizard-matt-stage::before {
