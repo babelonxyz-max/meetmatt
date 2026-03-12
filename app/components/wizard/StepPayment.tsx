@@ -36,8 +36,8 @@ export function StepPayment({
         </div>
       ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)]">
-        <div className="space-y-3">
+      <div className="grid gap-2.5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+        <div className="space-y-2.5">
           <button
             type="button"
             onClick={() => onDeploymentModeChange("assistant")}
@@ -46,10 +46,10 @@ export function StepPayment({
             }`}
           >
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">Single</p>
-            <p className="mt-3 text-[1.65rem] font-medium tracking-tight text-white">
+            <p className="mt-2.5 text-[1.35rem] font-medium tracking-tight text-white sm:text-[1.5rem]">
               One operator thread
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-white/62">
+            <p className="mt-1.5 text-xs leading-relaxed text-white/62 sm:text-sm">
               Best when Matt is deploying a single assistant into one primary relationship flow.
             </p>
           </button>
@@ -62,23 +62,23 @@ export function StepPayment({
             }`}
           >
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">Fleet</p>
-            <p className="mt-3 text-[1.65rem] font-medium tracking-tight text-white">
+            <p className="mt-2.5 text-[1.35rem] font-medium tracking-tight text-white sm:text-[1.5rem]">
               Multi-agent rollout
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-white/62">
+            <p className="mt-1.5 text-xs leading-relaxed text-white/62 sm:text-sm">
               Prepares orchestration and a broader runtime shape after the first launch.
             </p>
           </button>
         </div>
 
-        <div className="wizard-preview-card p-5">
+        <div className="wizard-preview-card p-4">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">
                 Starter launch
               </p>
-              <div className="mt-3 flex items-end gap-2">
-                <span className="text-4xl font-semibold tracking-tight text-white">$150</span>
+              <div className="mt-2.5 flex items-end gap-2">
+                <span className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">$150</span>
                 <span className="pb-1 text-sm text-white/58">first month</span>
               </div>
             </div>
@@ -87,7 +87,7 @@ export function StepPayment({
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
             <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-3">
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Operator</p>
               <p className="mt-1 text-sm text-white/84">{agentName}</p>
@@ -104,7 +104,7 @@ export function StepPayment({
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2">
+          <div className="mt-3 grid gap-2">
             {[
               "Unlimited messages",
               botUsername ? `Uses @${botUsername}` : "Uses your connected Telegram bot",
@@ -122,7 +122,7 @@ export function StepPayment({
         </div>
       </div>
 
-      <label className="mt-4 flex max-w-3xl cursor-pointer items-start gap-3 rounded-[1.25rem] border border-white/10 bg-white/[0.04] p-4">
+      <label className="mt-3 flex max-w-3xl cursor-pointer items-start gap-3 rounded-[1.1rem] border border-white/10 bg-white/[0.04] p-3.5">
         <input
           type="checkbox"
           checked={accepted}
@@ -139,7 +139,7 @@ export function StepPayment({
         type="button"
         onClick={onContinue}
         disabled={!accepted}
-        className="brand-button mt-5 flex w-full max-w-sm items-center justify-center gap-2 py-3 text-sm font-semibold uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-35"
+        className="brand-button mt-4 flex w-full max-w-sm items-center justify-center gap-2 py-3 text-sm font-semibold uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-35"
       >
         <Wallet className="h-5 w-5" />
         Proceed to Payment

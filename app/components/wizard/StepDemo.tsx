@@ -115,7 +115,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
       animate={{ opacity: 1, y: 0 }}
       className="mx-auto flex h-full min-h-0 w-full max-w-xl flex-col justify-start"
     >
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.14em]">
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.14em]">
         <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-white/70">
           Tone: {toneLabel}
         </span>
@@ -124,8 +124,8 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
         </span>
       </div>
 
-      <div className="brand-panel-strong brand-noise flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.75rem] p-2.5">
-        <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-3 py-2">
+      <div className="brand-panel-strong brand-noise flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.6rem] p-2">
+        <div className="rounded-[1.1rem] border border-white/10 bg-white/[0.03] px-3 py-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-left">
               <p className="text-[10px] uppercase tracking-[0.18em] text-white/42">Channel</p>
@@ -150,7 +150,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
           </div>
         </div>
 
-        <div className="relative mt-2.5 min-h-0 flex-1 overflow-hidden rounded-[1.35rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(255,112,64,0.12),transparent_30%),linear-gradient(180deg,rgba(10,12,22,0.98),rgba(14,16,28,0.94))] p-3.5">
+        <div className="relative mt-2 min-h-0 flex-1 overflow-hidden rounded-[1.2rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(255,112,64,0.12),transparent_30%),linear-gradient(180deg,rgba(10,12,22,0.98),rgba(14,16,28,0.94))] p-3">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-[rgba(16,10,10,0.9)] to-transparent" />
           <div ref={messageViewportRef} className="flex h-full flex-col justify-end gap-2 overflow-y-auto pr-1">
             <AnimatePresence initial={false}>
@@ -208,7 +208,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
           </div>
         </div>
 
-        <div className="mt-2.5 rounded-[1.2rem] border border-white/10 bg-black/16 p-2.5">
+        <div className="mt-2 rounded-[1.1rem] border border-white/10 bg-black/16 p-2">
           <div className="flex gap-2">
             <input
               type="text"
@@ -228,7 +228,7 @@ export function StepDemo({ agentName, personality, onContinue }: StepDemoProps) 
               <Send className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs leading-relaxed text-white/55">{helperText}</p>
             <button
               type="button"
