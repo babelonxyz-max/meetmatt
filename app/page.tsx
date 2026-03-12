@@ -421,7 +421,7 @@ export default function Home() {
         <motion.div
           className={
             isWizardActive
-              ? "grid h-full min-h-0 w-full max-w-[88rem] grid-cols-1 grid-rows-[minmax(9rem,11.25rem)_minmax(0,1fr)] gap-2.5 overflow-hidden transition-all duration-700 lg:grid-cols-[minmax(17rem,0.82fr)_minmax(0,1.18fr)] lg:grid-rows-1 lg:gap-5"
+              ? "grid h-full min-h-0 w-full max-w-[88rem] grid-cols-1 grid-rows-[minmax(5.4rem,6.6rem)_minmax(0,1fr)] gap-2 overflow-hidden transition-all duration-700 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)] lg:grid-rows-1 lg:gap-4"
               : "flex h-full max-h-full w-full max-w-6xl flex-col items-center justify-center gap-4 overflow-hidden transition-all duration-700"
           }
         >
@@ -492,7 +492,7 @@ export default function Home() {
                 >
                   <div className="wizard-stage-divider" />
 
-                  <div className="wizard-chat-stack mt-4">
+                  <div className="wizard-chat-stack mt-2.5">
                     <AnimatePresence initial={false}>
                       {renderedNarrativeMessages.map((message, index) => (
                         <motion.div
@@ -501,7 +501,7 @@ export default function Home() {
                           animate={{ opacity: 1, x: 0, y: 0, filter: "blur(0px)" }}
                           exit={{ opacity: 0, x: -10, y: -6, filter: "blur(6px)" }}
                           transition={{ duration: 0.45, ease: "easeOut" }}
-                          className={`wizard-chat-bubble text-left text-[clamp(0.98rem,1.55vw,1.08rem)] font-medium leading-[1.12] text-white/92 ${
+                          className={`wizard-chat-bubble text-left text-[clamp(0.9rem,1.35vw,1rem)] font-medium leading-[1.12] text-white/92 ${
                             index === renderedNarrativeMessages.length - 1 ? "wizard-chat-bubble-accent" : ""
                           }`}
                         >
@@ -510,7 +510,7 @@ export default function Home() {
                       ))}
                     </AnimatePresence>
                     {isNarrativeStreaming ? (
-                      <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/56">
+                      <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/56">
                         Matt is briefing you
                         <span className="inline-flex items-center gap-1">
                           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ffaa44]/90" />
@@ -521,16 +521,16 @@ export default function Home() {
                     ) : null}
                   </div>
 
-                  <div className="mt-3 wizard-content-shell flex h-full min-h-0 flex-col p-3.5 md:p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
+                  <div className="mt-2 wizard-content-shell flex h-full min-h-0 flex-col p-3 md:p-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5">
                         {canGoBack ? (
                           <button
                             type="button"
                             onClick={handleBack}
-                            className="brand-button-secondary inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm text-white/80 transition-colors hover:text-white"
+                            className="brand-button-secondary inline-flex h-9 items-center gap-2 rounded-full px-3 text-xs uppercase tracking-[0.14em] text-white/80 transition-colors hover:text-white"
                           >
-                            <ArrowLeft className="h-4 w-4" />
+                            <ArrowLeft className="h-3.5 w-3.5" />
                             Back
                           </button>
                         ) : null}
@@ -538,32 +538,32 @@ export default function Home() {
                           <p className="text-[10px] uppercase tracking-[0.22em] text-white/34">
                             Chat wizard
                           </p>
-                          <h2 className="mt-1 text-[1.2rem] font-semibold tracking-tight text-white">
+                          <h2 className="mt-0.5 text-[1.05rem] font-semibold tracking-tight text-white sm:text-[1.12rem]">
                             {getStepHeading(step, agentName)}
                           </h2>
                         </div>
                       </div>
 
                       <div className="flex flex-wrap items-center justify-end gap-2">
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-white/62">
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/62">
                           Stage {safeStepIndex + 1} / {FLOW_STEPS.length}
                         </span>
                         {agentName ? (
-                          <span className="rounded-full border border-[#ffb075]/18 bg-[#ffaa44]/10 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-[#ffe3c5]">
+                          <span className="rounded-full border border-[#ffb075]/18 bg-[#ffaa44]/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[#ffe3c5]">
                             {agentName}
                           </span>
                         ) : null}
                         {personality ? (
-                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-white/62">
+                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/62">
                             {formatPersonality(personality)}
                           </span>
                         ) : null}
                       </div>
                     </div>
 
-                    <div className="mt-3 h-[1px] bg-white/8" />
+                    <div className="mt-2.5 h-[1px] bg-white/8" />
 
-                    <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                    <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
                       <AnimatePresence mode="wait">
                         {step === "name" ? (
                           <motion.div key="name" className="h-full min-h-0" exit={{ opacity: 0, x: -20 }}>
