@@ -468,7 +468,7 @@ export default function Home() {
             </div>
           ) : (
             <>
-              <div className="flex min-h-0 flex-col">
+              <div className="flex h-full min-h-0 flex-col">
                 <div className="wizard-matt-stage h-full min-h-0">
                   <div className="wizard-matt-base" />
                   <div className="wizard-matt-pedestal" />
@@ -488,7 +488,7 @@ export default function Home() {
                   animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
                   exit={{ opacity: 0, x: 20, filter: "blur(8px)" }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="relative z-20 flex min-h-0 w-full flex-col overflow-hidden"
+                  className="relative z-20 flex h-full min-h-0 w-full flex-col overflow-hidden"
                 >
                   <div className="wizard-stage-divider" />
 
@@ -521,7 +521,7 @@ export default function Home() {
                     ) : null}
                   </div>
 
-                  <div className="mt-2 wizard-content-shell flex h-full min-h-0 flex-col p-3 md:p-3.5">
+                  <div className="mt-2 wizard-content-shell flex min-h-0 flex-1 flex-col p-3 md:p-3.5">
                     <div className="flex flex-wrap items-center justify-between gap-2.5">
                       <div className="flex items-center gap-2.5">
                         {canGoBack ? (
