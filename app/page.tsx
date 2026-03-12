@@ -33,16 +33,6 @@ const FLOW_STEPS: Array<{ id: ActiveStep; label: string; hint: string }> = [
   { id: "deploy", label: "Deploy", hint: "Provisioning in progress" },
 ];
 
-const STEP_PROMPTS: Record<Step, string> = {
-  idle: "Deploy AI agents in minutes. Ready to start?",
-  name: "Give your operator a clear name before it joins the thread.",
-  personality: "Choose the tone people will feel when the operator replies.",
-  demo: "Run a short live preview before you launch it for real.",
-  telegram: "Connect the BotFather token for the Telegram bot this operator should use.",
-  payment: "Confirm the deployment setup and continue to checkout.",
-  deploy: "Matt is provisioning everything now and will finish the handoff.",
-};
-
 const STEP_MESSAGES: Record<ActiveStep, string[]> = {
   name: [
     "Welcome. Let's start with stage 1 of 5.",
@@ -334,7 +324,6 @@ export default function Home() {
   const activeStep = step === "idle" ? "name" : step;
   const currentStepIndex = isWizardActive ? FLOW_STEPS.findIndex((entry) => entry.id === step) : 0;
   const safeStepIndex = currentStepIndex >= 0 ? currentStepIndex : 0;
-  const mattPrompt = STEP_PROMPTS[step];
   const visibleNarrativeMessages = STEP_MESSAGES[activeStep].slice(0, visibleNarrativeCount);
   const isNarrativeStreaming =
     isWizardActive && visibleNarrativeCount < STEP_MESSAGES[activeStep].length;
@@ -401,14 +390,14 @@ export default function Home() {
       </div>
 
       <main
-        className={`relative z-10 flex h-full w-full justify-center px-4 py-2 md:px-6 ${
+        className={`relative z-10 flex h-full w-full justify-center px-4 py-1.5 md:px-5 ${
           isWizardActive ? "items-stretch" : "items-center"
         }`}
       >
         <motion.div
           className={
             isWizardActive
-              ? "grid h-full min-h-0 w-full max-w-[86rem] grid-cols-1 grid-rows-[minmax(10.5rem,13rem)_minmax(0,1fr)] gap-3 overflow-hidden transition-all duration-700 lg:grid-cols-[minmax(19rem,0.92fr)_minmax(0,1.08fr)] lg:grid-rows-1 lg:gap-6"
+              ? "grid h-full min-h-0 w-full max-w-[88rem] grid-cols-1 grid-rows-[minmax(9rem,11.25rem)_minmax(0,1fr)] gap-2.5 overflow-hidden transition-all duration-700 lg:grid-cols-[minmax(17rem,0.82fr)_minmax(0,1.18fr)] lg:grid-rows-1 lg:gap-5"
               : "flex h-full max-h-full w-full max-w-6xl flex-col items-center justify-center gap-4 overflow-hidden transition-all duration-700"
           }
         >
@@ -508,7 +497,7 @@ export default function Home() {
                     ) : null}
                   </div>
 
-                  <div className="mt-4 wizard-content-shell flex h-full min-h-0 flex-col p-4 md:p-5">
+                  <div className="mt-3 wizard-content-shell flex h-full min-h-0 flex-col p-3.5 md:p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         {canGoBack ? (
@@ -548,13 +537,9 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="mt-4 h-[1px] bg-white/8" />
+                    <div className="mt-3 h-[1px] bg-white/8" />
 
-                    <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/52">
-                      {mattPrompt}
-                    </p>
-
-                    <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                    <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
                       <AnimatePresence mode="wait">
                         {step === "name" ? (
                           <motion.div key="name" className="h-full min-h-0" exit={{ opacity: 0, x: -20 }}>
