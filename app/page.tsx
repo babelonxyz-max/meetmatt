@@ -128,6 +128,8 @@ export default function Home() {
   });
 
   const pollCleanupRef = useRef<(() => void) | null>(null);
+  const narrativeTimeoutsRef = useRef<number[]>([]);
+  const [visibleNarrativeCount, setVisibleNarrativeCount] = useState(0);
 
   const handleWake = () => {
     if (step !== "idle") return;
@@ -333,6 +335,9 @@ export default function Home() {
   const currentStepIndex = isWizardActive ? FLOW_STEPS.findIndex((entry) => entry.id === step) : 0;
   const safeStepIndex = currentStepIndex >= 0 ? currentStepIndex : 0;
   const mattPrompt = STEP_PROMPTS[step];
+  const visibleNarrativeMessages = STEP_MESSAGES[activeStep].slice(0, visibleNarrativeCount);
+  const isNarrativeStreaming =
+    isWizardActive && visibleNarrativeCount < STEP_MESSAGES[activeStep].length;
   const canGoBack =
     step === "personality" ||
     step === "demo" ||
@@ -355,6 +360,30 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    narrativeTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    narrativeTimeoutsRef.current = [];
+
+    if (!isWizardActive) {
+      setVisibleNarrativeCount(0);
+      return;
+    }
+
+    setVisibleNarrativeCount(0);
+
+    STEP_MESSAGES[activeStep].forEach((_, index) => {
+      const timeoutId = window.setTimeout(() => {
+        setVisibleNarrativeCount(index + 1);
+      }, 180 + index * 720);
+      narrativeTimeoutsRef.current.push(timeoutId);
+    });
+
+    return () => {
+      narrativeTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      narrativeTimeoutsRef.current = [];
+    };
+  }, [activeStep, isWizardActive]);
+
   return (
     <div data-home-shell="true" className="brand-shell fixed inset-x-0 top-16 bottom-14 overflow-hidden">
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -371,11 +400,15 @@ export default function Home() {
         />
       </div>
 
-      <main className="relative z-10 flex h-full w-full items-center justify-center px-4 py-2 md:px-8">
+      <main
+        className={`relative z-10 flex h-full w-full justify-center px-4 py-2 md:px-6 ${
+          isWizardActive ? "items-stretch" : "items-center"
+        }`}
+      >
         <motion.div
           className={
             isWizardActive
-              ? "grid h-full max-h-full w-full max-w-[92rem] grid-cols-1 gap-4 overflow-hidden transition-all duration-700 lg:grid-cols-[9rem_minmax(20rem,34rem)_minmax(0,42rem)] lg:items-stretch lg:gap-7"
+              ? "grid h-full min-h-0 w-full max-w-[86rem] grid-cols-1 grid-rows-[minmax(10.5rem,13rem)_minmax(0,1fr)] gap-3 overflow-hidden transition-all duration-700 lg:grid-cols-[minmax(19rem,0.92fr)_minmax(0,1.08fr)] lg:grid-rows-1 lg:gap-6"
               : "flex h-full max-h-full w-full max-w-6xl flex-col items-center justify-center gap-4 overflow-hidden transition-all duration-700"
           }
         >
@@ -391,7 +424,6 @@ export default function Home() {
                 onClick={handleWake}
                 className="mb-5 md:mb-6"
                 orbClassName={idleOrbSizeClass}
-                showEyes={false}
               />
 
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex max-w-4xl flex-col items-center text-center">
@@ -423,91 +455,16 @@ export default function Home() {
             </div>
           ) : (
             <>
-              <aside className="order-2 flex min-h-0 flex-col justify-between lg:order-1">
-                <div className="wizard-step-column">
-                  {FLOW_STEPS.map((entry, index) => {
-                    const isCurrent = index === safeStepIndex;
-                    const isDone = index < safeStepIndex;
-
-                    return (
-                      <div
-                        key={entry.id}
-                        className={`wizard-rail-item relative ml-0 flex items-center gap-3 px-3 py-3 ${
-                          isCurrent ? "wizard-rail-item-active" : ""
-                        }`}
-                      >
-                        <span
-                          className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
-                            isCurrent
-                              ? "bg-[#ffaa44] text-[#1d120a]"
-                              : isDone
-                                ? "bg-emerald-300 text-[#07140b]"
-                                : "bg-white/8 text-white/42"
-                          }`}
-                        >
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className={`text-base leading-none ${isCurrent ? "text-white" : isDone ? "text-white/78" : "text-white/42"}`}>
-                            {entry.label}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="hidden pb-4 pl-1 lg:block">
-                  <div className="wizard-spec-list">
-                    <div className="wizard-spec-item">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/32">Operator</p>
-                      <p className="text-[1.9rem] font-medium tracking-tight text-white">
-                        {agentName || "Unnamed"}
-                      </p>
-                    </div>
-                    <div className="wizard-spec-item">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/32">Tone</p>
-                      <p className="text-lg text-white/72">{formatPersonality(personality)}</p>
-                    </div>
-                    <div className="wizard-spec-item">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/32">Mode</p>
-                      <p className="text-lg text-white/72">
-                        {config.useCase === "fleet" ? "Fleet" : "Single"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </aside>
-
-              <div className="order-1 flex min-h-0 flex-col lg:order-2">
-                <div className="wizard-matt-stage">
+              <div className="flex min-h-0 flex-col">
+                <div className="wizard-matt-stage h-full min-h-0">
                   <div className="wizard-matt-base" />
                   <div className="wizard-matt-pedestal" />
                   <NexusOrb
                     state={getOrbState(step)}
                     variant="plasma"
                     className="relative z-10"
-                    orbClassName="h-[clamp(18rem,34vw,29rem)] w-[clamp(18rem,34vw,29rem)]"
-                    showEyes={false}
+                    orbClassName="h-[clamp(9.5rem,20vw,13rem)] w-[clamp(9.5rem,20vw,13rem)] lg:h-[clamp(17rem,32vw,25rem)] lg:w-[clamp(17rem,32vw,25rem)]"
                   />
-                </div>
-                <div className="wizard-preview-card w-full max-w-[22rem] self-center rounded-[1.65rem] p-4 lg:hidden">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-[1rem] border border-white/10 bg-black/16 px-2 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-white/34">Operator</p>
-                      <p className="mt-1 text-xs text-white/82">{agentName || "Unset"}</p>
-                    </div>
-                    <div className="rounded-[1rem] border border-white/10 bg-black/16 px-2 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-white/34">Tone</p>
-                      <p className="mt-1 text-xs text-white/82">{formatPersonality(personality)}</p>
-                    </div>
-                    <div className="rounded-[1rem] border border-white/10 bg-black/16 px-2 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-white/34">Bot</p>
-                      <p className="mt-1 text-xs text-white/82">
-                        {telegramBot?.username ? `@${telegramBot.username}` : "Pending"}
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -518,24 +475,40 @@ export default function Home() {
                   animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
                   exit={{ opacity: 0, x: 20, filter: "blur(8px)" }}
                   transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="order-3 relative z-20 flex min-h-0 w-full flex-col overflow-hidden pt-3"
+                  className="relative z-20 flex min-h-0 w-full flex-col overflow-hidden"
                 >
                   <div className="wizard-stage-divider" />
 
                   <div className="wizard-chat-stack mt-4">
-                    {STEP_MESSAGES[activeStep].map((message, index) => (
-                      <div
-                        key={`${activeStep}-${index}`}
-                        className={`wizard-chat-bubble text-left text-[clamp(1.05rem,1.7vw,1.2rem)] font-medium leading-[1.12] text-white/92 ${
-                          index === 0 ? "wizard-chat-bubble-accent" : ""
-                        }`}
-                      >
-                        {message}
+                    <AnimatePresence initial={false}>
+                      {visibleNarrativeMessages.map((message, index) => (
+                        <motion.div
+                          key={`${activeStep}-${index}`}
+                          initial={{ opacity: 0, x: 18, y: 12, filter: "blur(8px)" }}
+                          animate={{ opacity: 1, x: 0, y: 0, filter: "blur(0px)" }}
+                          exit={{ opacity: 0, x: -10, y: -6, filter: "blur(6px)" }}
+                          transition={{ duration: 0.45, ease: "easeOut" }}
+                          className={`wizard-chat-bubble text-left text-[clamp(1.02rem,1.7vw,1.16rem)] font-medium leading-[1.12] text-white/92 ${
+                            index === 0 ? "wizard-chat-bubble-accent" : ""
+                          }`}
+                        >
+                          {message}
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    {isNarrativeStreaming ? (
+                      <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/56">
+                        Matt is briefing you
+                        <span className="inline-flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ffaa44]/90" />
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff9a60]/75 [animation-delay:120ms]" />
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff6835]/60 [animation-delay:240ms]" />
+                        </span>
                       </div>
-                    ))}
+                    ) : null}
                   </div>
 
-                  <div className="mt-5 wizard-content-shell flex h-full min-h-0 flex-col p-4 md:p-5">
+                  <div className="mt-4 wizard-content-shell flex h-full min-h-0 flex-col p-4 md:p-5">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         {canGoBack ? (

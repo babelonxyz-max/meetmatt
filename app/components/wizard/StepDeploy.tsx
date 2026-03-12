@@ -31,7 +31,7 @@ export function StepDeploy({ agentName, status, progress, telegramLink, botUsern
         className="mx-auto flex h-full w-full max-w-md flex-col justify-start text-center"
       >
         <div className="brand-panel-strong brand-noise rounded-[1.75rem] p-5">
-          <NexusOrb className="mx-auto mb-4" orbClassName="h-24 w-24" state="speaking" variant="plasma" showEyes={false} />
+          <NexusOrb className="mx-auto mb-4" orbClassName="h-24 w-24" state="speaking" variant="plasma" />
           <p className="brand-kicker">Launch Confirmed</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">{agentName} is ready!</h2>
           <p className="mt-1.5 text-sm text-white/65">Your AI assistant has been deployed and linked to your Telegram bot.</p>
@@ -110,7 +110,7 @@ export function StepDeploy({ agentName, status, progress, telegramLink, botUsern
               strokeLinecap="round"
             />
           </svg>
-          <NexusOrb className="relative z-10" orbClassName="h-16 w-16" state={deployOrbState} variant="plasma" showEyes={false} />
+          <NexusOrb className="relative z-10" orbClassName="h-16 w-16" state={deployOrbState} variant="plasma" />
           <div className="pointer-events-none absolute bottom-0 rounded-full border border-white/10 bg-[#0f1422]/88 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white/65">
             {progress}% synced
           </div>

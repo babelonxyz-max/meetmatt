@@ -341,7 +341,9 @@
 .wizard-chat-stack {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.7rem;
+  min-height: 11rem;
 }
 
 .wizard-chat-bubble {
@@ -421,6 +423,7 @@
   flex: 1;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .wizard-matt-stage::before {
@@ -472,6 +475,29 @@
 }
 
 @media (max-width: 1023px) {
+  .wizard-chat-stack {
+    min-height: 8.75rem;
+  }
+
+  .wizard-matt-stage::before {
+    inset: 14% 22% 24%;
+    filter: blur(32px);
+  }
+
+  .wizard-matt-base {
+    bottom: 6%;
+    height: 2.75rem;
+    width: min(11rem, 52%);
+    filter: blur(11px);
+  }
+
+  .wizard-matt-pedestal {
+    bottom: 2%;
+    height: 4.2rem;
+    width: min(14rem, 68%);
+    filter: blur(7px);
+  }
+
   .wizard-chat-bubble::before {
     display: none;
   }
