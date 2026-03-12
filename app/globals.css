@@ -297,27 +297,34 @@
   position: relative;
   overflow: hidden;
   border-radius: 1.35rem;
-  border: 1px solid rgba(255, 107, 53, 0.18);
+  border: 1px solid transparent;
   background:
     radial-gradient(circle at top left, rgba(255, 170, 68, 0.1), transparent 42%),
     linear-gradient(180deg, rgba(35, 25, 34, 0.78), rgba(14, 15, 26, 0.74));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 36px rgba(0, 0, 0, 0.24);
-  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 16px 36px rgba(0, 0, 0, 0.22);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .wizard-option-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 170, 68, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 170, 68, 0.12),
+    0 18px 40px rgba(0, 0, 0, 0.24);
 }
 
 .wizard-input-shell {
   border-radius: 1.25rem;
-  border: 1px solid rgba(255, 170, 68, 0.28);
+  border: 1px solid transparent;
   background:
     linear-gradient(90deg, rgba(12, 14, 25, 0.94), rgba(10, 12, 22, 0.84)),
     rgba(255, 255, 255, 0.03);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 170, 68, 0.12),
     0 10px 28px rgba(0, 0, 0, 0.24);
 }
 
@@ -325,17 +332,20 @@
   position: relative;
   overflow: hidden;
   border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid transparent;
   background:
     radial-gradient(circle at top left, rgba(255, 170, 68, 0.08), transparent 36%),
     linear-gradient(180deg, rgba(24, 27, 42, 0.7), rgba(12, 14, 23, 0.72));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 34px rgba(0, 0, 0, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+    0 14px 34px rgba(0, 0, 0, 0.24);
 }
 
 .wizard-stage-divider {
   height: 1px;
   width: 100%;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
 }
 
 .wizard-chat-stack {
@@ -393,11 +403,14 @@
   flex: 1;
   overflow: hidden;
   border-radius: 1.6rem;
-  border: 1px solid rgba(255, 170, 68, 0.12);
+  border: 1px solid transparent;
   background:
-    linear-gradient(180deg, rgba(11, 13, 23, 0.74), rgba(8, 10, 18, 0.66)),
-    radial-gradient(circle at top left, rgba(255, 170, 68, 0.05), transparent 34rem);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 70px rgba(0, 0, 0, 0.28);
+    linear-gradient(180deg, rgba(10, 12, 22, 0.58), rgba(7, 9, 17, 0.52)),
+    radial-gradient(circle at top left, rgba(255, 170, 68, 0.04), transparent 34rem);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 24px 70px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(22px);
 }
 
