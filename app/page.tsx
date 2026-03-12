@@ -186,17 +186,10 @@ export default function Home() {
       setTelegramBotError(null);
       setLaunchError(null);
 
-      const token = await getAccessToken();
-      if (!token) {
-        login();
-        return;
-      }
-
       const response = await fetch("/api/telegram/bot/validate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           telegramBotToken,

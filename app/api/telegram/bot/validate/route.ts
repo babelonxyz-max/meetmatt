@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
 import { getStatusError } from "@/lib/http-error";
 import { fetchTelegramBotProfile } from "@/lib/telegram-bot-api";
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth(req);
     const body = (await req.json()) as Record<string, unknown>;
     const telegramBotToken =
       typeof body.telegramBotToken === "string" ? body.telegramBotToken : "";
