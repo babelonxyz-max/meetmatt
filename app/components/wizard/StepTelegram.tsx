@@ -48,7 +48,7 @@ export function StepTelegram({
         />
       </div>
 
-      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+      <div className="mt-2 flex flex-wrap gap-2">
         {[
           "Create the bot with @BotFather first",
           "We validate the token with Telegram before payment",
@@ -56,7 +56,7 @@ export function StepTelegram({
         ].map((item) => (
           <div
             key={item}
-            className="rounded-[0.95rem] border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] leading-relaxed text-white/58"
+            className="wizard-choice-chip px-3 py-2 text-[11px] leading-relaxed text-white/58"
           >
             {item}
           </div>
@@ -70,24 +70,24 @@ export function StepTelegram({
       ) : null}
 
       {bot ? (
-        <div className="wizard-preview-card mt-2.5 p-3.5">
+        <div className="wizard-inline-surface mt-2.5 p-3.5">
           <div className="flex items-center gap-2 text-emerald-100">
             <CheckCircle2 className="h-4 w-4" />
             <p className="text-sm font-medium">Telegram verified this bot</p>
           </div>
 
           <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-2.5">
+            <div className="rounded-[1rem] bg-black/16 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/36">Handle</p>
               <p className="mt-1 text-sm font-medium text-white">
                 {bot.username ? `@${bot.username}` : "Private bot"}
               </p>
             </div>
-            <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-2.5">
+            <div className="rounded-[1rem] bg-black/16 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/36">Bot ID</p>
               <p className="mt-1 text-sm font-medium text-white">{bot.id}</p>
             </div>
-            <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-2.5">
+            <div className="rounded-[1rem] bg-black/16 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/36">Display name</p>
               <p className="mt-1 text-sm font-medium text-white">
                 {bot.firstName || "Not set"}
@@ -96,9 +96,9 @@ export function StepTelegram({
           </div>
         </div>
       ) : (
-        <div className="wizard-preview-card mt-2.5 p-3.5">
+        <div className="wizard-inline-surface mt-2.5 p-3.5">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/16 text-[#ffd3a7]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/16 text-[#ffd3a7] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
               <Bot className="h-4.5 w-4.5" />
             </div>
             <div>

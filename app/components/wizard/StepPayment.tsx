@@ -43,17 +43,17 @@ export function StepPayment({
         </div>
       ) : null}
 
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <div className="space-y-2">
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => onDeploymentModeChange("assistant")}
-            className={`wizard-option-card w-full p-4 text-left ${
-              !isFleet ? "border-[#ffaa44]/40" : ""
+            className={`wizard-choice-chip min-w-[14rem] flex-1 px-4 py-3 text-left ${
+              !isFleet ? "wizard-choice-chip-active" : ""
             }`}
           >
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">Single</p>
-            <p className="mt-2 text-[1.1rem] font-medium tracking-tight text-white sm:text-[1.22rem]">
+            <p className="mt-1.5 text-[1rem] font-medium tracking-tight text-white sm:text-[1.08rem]">
               One operator thread
             </p>
             <p className="mt-1 text-xs leading-relaxed text-white/62">
@@ -64,12 +64,12 @@ export function StepPayment({
           <button
             type="button"
             onClick={() => onDeploymentModeChange("fleet")}
-            className={`wizard-option-card w-full p-4 text-left ${
-              isFleet ? "border-[#ffaa44]/40" : ""
+            className={`wizard-choice-chip min-w-[14rem] flex-1 px-4 py-3 text-left ${
+              isFleet ? "wizard-choice-chip-active" : ""
             }`}
           >
             <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">Fleet</p>
-            <p className="mt-2 text-[1.1rem] font-medium tracking-tight text-white sm:text-[1.22rem]">
+            <p className="mt-1.5 text-[1rem] font-medium tracking-tight text-white sm:text-[1.08rem]">
               Multi-agent rollout
             </p>
             <p className="mt-1 text-xs leading-relaxed text-white/62">
@@ -78,7 +78,7 @@ export function StepPayment({
           </button>
         </div>
 
-        <div className="wizard-preview-card p-3.5">
+        <div className="wizard-inline-surface p-3.5">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">
@@ -93,19 +93,17 @@ export function StepPayment({
                 </span>
               </div>
             </div>
-            <div className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/62">
+            <div className="rounded-full bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/62 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
               Card or crypto
             </div>
           </div>
 
-          <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+          <div className="mt-2.5 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => onLaunchOfferChange("day_pass")}
-              className={`rounded-[1rem] border px-3 py-2.5 text-left transition ${
-                isDayPass
-                  ? "border-[#ffaa44]/40 bg-[#ffaa44]/10"
-                  : "border-white/10 bg-black/16 hover:border-white/20"
+              className={`wizard-choice-chip min-w-[14rem] flex-1 px-3 py-2.5 text-left ${
+                isDayPass ? "wizard-choice-chip-active" : ""
               }`}
             >
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Day Pass</p>
@@ -118,10 +116,8 @@ export function StepPayment({
             <button
               type="button"
               onClick={() => onLaunchOfferChange("monthly")}
-              className={`rounded-[1rem] border px-3 py-2.5 text-left transition ${
-                !isDayPass
-                  ? "border-[#ffaa44]/40 bg-[#ffaa44]/10"
-                  : "border-white/10 bg-black/16 hover:border-white/20"
+              className={`wizard-choice-chip min-w-[14rem] flex-1 px-3 py-2.5 text-left ${
+                !isDayPass ? "wizard-choice-chip-active" : ""
               }`}
             >
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Monthly</p>
@@ -133,15 +129,15 @@ export function StepPayment({
           </div>
 
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-2.5">
+            <div className="rounded-[1rem] bg-black/16 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Operator</p>
               <p className="mt-1 text-sm text-white/84">{agentName}</p>
             </div>
-            <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-2.5">
+            <div className="rounded-[1rem] bg-black/16 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Mode</p>
               <p className="mt-1 text-sm text-white/84">{isFleet ? "Fleet" : "Single"}</p>
             </div>
-            <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-2.5">
+            <div className="rounded-[1rem] bg-black/16 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
               <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Bot</p>
               <p className="mt-1 text-sm text-white/84">
                 {botUsername ? `@${botUsername}` : "Customer-owned"}
@@ -157,7 +153,7 @@ export function StepPayment({
             ].map((feature) => (
               <div
                 key={feature}
-                className="flex items-center gap-2 rounded-[1rem] border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/78"
+                className="flex items-center gap-2 rounded-[1rem] bg-white/[0.04] px-3 py-2 text-sm text-white/78 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]"
               >
                 <Check className="h-4 w-4 text-emerald-300" />
                 {feature}
@@ -167,7 +163,7 @@ export function StepPayment({
         </div>
       </div>
 
-      <label className="mt-2.5 flex max-w-3xl cursor-pointer items-start gap-3 rounded-[1rem] border border-white/10 bg-white/[0.04] p-3">
+      <label className="mt-2.5 flex max-w-3xl cursor-pointer items-start gap-3 rounded-[1rem] bg-white/[0.04] p-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
         <input
           type="checkbox"
           checked={accepted}

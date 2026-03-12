@@ -348,6 +348,37 @@
     0 14px 34px rgba(0, 0, 0, 0.24);
 }
 
+.wizard-inline-surface {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.2rem;
+  background:
+    linear-gradient(180deg, rgba(18, 22, 36, 0.48), rgba(10, 13, 24, 0.38)),
+    radial-gradient(circle at top left, rgba(255, 170, 68, 0.05), transparent 34%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.wizard-choice-chip {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.wizard-choice-chip:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.wizard-choice-chip-active {
+  background: rgba(255, 170, 68, 0.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 170, 68, 0.18),
+    0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
 .wizard-stage-divider {
   height: 1px;
   width: 100%;

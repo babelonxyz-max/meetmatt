@@ -32,23 +32,20 @@ export function StepName({ onSubmit }: StepNameProps) {
       animate={{ opacity: 1, y: 0 }}
       className="mx-auto flex h-full w-full max-w-none flex-col"
     >
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="flex flex-wrap gap-2">
         {NAME_SUGGESTIONS.map((suggestion) => (
           <button
             key={suggestion.name}
             type="button"
             onClick={() => setName(suggestion.name)}
-            className={`wizard-option-card p-3.5 text-left ${
-              name === suggestion.name ? "border-[#ffaa44]/40" : ""
+            className={`wizard-choice-chip px-4 py-3 text-left ${
+              name === suggestion.name ? "wizard-choice-chip-active" : ""
             }`}
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-[0.85rem] border border-white/10 bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.14),rgba(255,170,68,0.1)_30%,rgba(17,19,28,0.96)_100%)] text-[1.1rem] font-medium text-[#ffd8b5]">
-              {suggestion.name.slice(0, 1)}
-            </div>
-            <p className="mt-2.5 text-[1.05rem] font-medium tracking-tight text-white sm:text-[1.2rem]">
+            <p className="text-[1rem] font-medium tracking-tight text-white sm:text-[1.08rem]">
               {suggestion.name}
             </p>
-            <p className="mt-0.5 text-xs leading-relaxed text-white/54">{suggestion.tone}</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-white/52">{suggestion.tone}</p>
           </button>
         ))}
       </div>
@@ -76,9 +73,9 @@ export function StepName({ onSubmit }: StepNameProps) {
         </button>
       </div>
 
-      <div className="wizard-preview-card mt-2.5 overflow-hidden">
-        <div className="grid gap-2.5 p-3 sm:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] sm:items-start">
-          <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-2.5">
+      <div className="wizard-inline-surface mt-2.5 overflow-hidden p-3">
+        <div className="grid gap-2.5 sm:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] sm:items-start">
+          <div className="rounded-[1rem] bg-black/16 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
             <p className="text-[11px] uppercase tracking-[0.16em] text-white/40">
               Telegram handle
             </p>
@@ -86,7 +83,7 @@ export function StepName({ onSubmit }: StepNameProps) {
               @your_operator
             </p>
           </div>
-          <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-2.5">
+          <div className="rounded-[1rem] bg-black/16 px-3 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
             <p className="text-[11px] uppercase tracking-[0.16em] text-white/40">
               First handoff
             </p>
