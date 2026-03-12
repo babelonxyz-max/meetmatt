@@ -17,7 +17,7 @@ type ActiveStep = "name" | "personality" | "demo" | "telegram" | "payment" | "de
 type Step = "idle" | ActiveStep;
 type DeployStatus = "deploying" | "completed" | "failed";
 type DeploymentMode = "assistant" | "fleet";
-type LaunchOffer = "paid" | "trial";
+type LaunchOffer = "monthly" | "day_pass";
 type TelegramBotProfile = {
   id: string;
   username: string | null;
@@ -57,8 +57,8 @@ const STEP_MESSAGES: Record<ActiveStep, string[]> = {
   ],
   payment: [
     "Stage 5 of 5.",
-    "Everything is configured. Confirm the launch shape and choose a paid launch or a 1-day trial.",
-    "Matt will provision the live runtime against your connected bot either way.",
+    "Everything is configured. Confirm the launch shape and choose monthly access or a paid 24-hour pass.",
+    "Matt will provision the live runtime against your connected bot right after payment confirmation.",
   ],
   deploy: [
     "Deployment in progress.",
@@ -110,7 +110,7 @@ export default function Home() {
   const [telegramBotError, setTelegramBotError] = useState<string | null>(null);
   const [isValidatingTelegramBot, setIsValidatingTelegramBot] = useState(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
-  const [launchOffer, setLaunchOffer] = useState<LaunchOffer>("paid");
+  const [launchOffer, setLaunchOffer] = useState<LaunchOffer>("monthly");
   const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false);
   const [config, setConfig] = useState({
     agentName: "",
@@ -247,15 +247,6 @@ export default function Home() {
     return data.id as string;
   };
 
-  const deletePendingAgent = async (agentId: string, token: string) => {
-    await fetch(`/api/agents/delete?id=${encodeURIComponent(agentId)}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }).catch(() => undefined);
-  };
-
   const handlePaymentContinue = async () => {
     try {
       setIsSubmittingLaunch(true);
@@ -274,36 +265,10 @@ export default function Home() {
       }
 
       let agentId = pendingAgentId;
-      let createdAgentId: string | null = null;
 
       if (!agentId) {
         agentId = await createPendingAgent(token);
-        createdAgentId = agentId;
         setPendingAgentId(agentId);
-      }
-
-      if (launchOffer === "trial") {
-        const trialResponse = await fetch("/api/agents/start-trial", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ agentId }),
-        });
-
-        const trialData = await trialResponse.json();
-        if (!trialResponse.ok) {
-          if (createdAgentId && trialResponse.status === 409) {
-            await deletePendingAgent(createdAgentId, token);
-            setPendingAgentId(null);
-          }
-          throw new Error(trialData.error || "Failed to start 1-day trial");
-        }
-
-        setStep("deploy");
-        pollAgentStatus(agentId);
-        return;
       }
 
       setShowPaymentModal(true);
@@ -680,6 +645,7 @@ export default function Home() {
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         config={config}
+        launchOffer={launchOffer}
         agentId={pendingAgentId}
         onSuccess={handlePaymentSuccess}
       />

@@ -68,8 +68,12 @@ const paymentStatusColors: Record<string, string> = {
 };
 
 function getPlanLabel(agent: BillingAgent): string {
+  if (agent.subscriptionType === "day_pass") {
+    return "24-hour pass ($5)";
+  }
+
   if (agent.subscriptionStatus === "trial") {
-    return "1-day trial";
+    return "Legacy trial";
   }
 
   return agent.subscriptionType === "annual"
@@ -154,9 +158,13 @@ export default function BillingPage() {
   if (!authenticated || !data) return null;
 
   const { agents, payments, stats } = data;
-  const totalMonthlySpend = agents
+  const totalActiveSpend = agents
     .filter((a) => a.subscriptionStatus === "active")
-    .reduce((sum, a) => sum + (a.subscriptionType === "annual" ? 83 : 150), 0);
+    .reduce((sum, a) => {
+      if (a.subscriptionType === "annual") return sum + 83;
+      if (a.subscriptionType === "day_pass") return sum + 5;
+      return sum + 150;
+    }, 0);
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -186,11 +194,11 @@ export default function BillingPage() {
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
           <SummaryCard label="Active Agents" value={String(stats.activeSubscriptions)} icon={Bot} color="green" />
-          <SummaryCard label="In Trial" value={String(stats.inTrial)} icon={Clock} color="amber" />
+          <SummaryCard label="1-Day Passes" value={String(stats.inTrial)} icon={Clock} color="amber" />
           <SummaryCard label="Expired" value={String(stats.expired)} icon={AlertCircle} color="red" />
           <SummaryCard
-            label="Monthly Spend"
-            value={totalMonthlySpend > 0 ? `~$${totalMonthlySpend}` : "$0"}
+            label="Active Spend"
+            value={totalActiveSpend > 0 ? `~$${totalActiveSpend}` : "$0"}
             icon={CreditCard}
             color="blue"
           />
@@ -265,7 +273,7 @@ export default function BillingPage() {
                             {periodEnd && (
                               <span className="flex items-center gap-1.5">
                                 <CalendarDays className="w-3.5 h-3.5" />
-                                {(isExpired ? "Expired" : agent.subscriptionStatus === "trial" ? "Ends" : "Renews")}{" "}
+                                {(isExpired || agent.subscriptionType === "day_pass" || agent.subscriptionStatus === "trial" ? "Ends" : "Renews")}{" "}
                                 {periodEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                               </span>
                             )}

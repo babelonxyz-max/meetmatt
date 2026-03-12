@@ -213,7 +213,7 @@ export async function GET(request: NextRequest) {
         totalAgents: agents.length,
         activeSubscriptions: agents.filter(a => a.subscriptionStatus === "active").length,
         expired: agents.filter(a => a.subscriptionStatus === "expired").length,
-        inTrial: agents.filter(a => a.subscriptionStatus === "trial").length,
+        inTrial: agents.filter(a => a.subscriptionStatus === "trial" || a.subscriptionType === "day_pass").length,
         openSupportTickets: openTickets.filter(ticket =>
           ticket.status === "open" ||
           ticket.status === "pending_user" ||

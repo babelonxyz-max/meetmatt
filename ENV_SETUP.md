@@ -60,6 +60,7 @@ MEETMATT_SESH_WEBHOOK_SECRET="shared_hmac_secret"
 DODO_PAYMENTS_API_KEY="your_dodo_api_key"
 DODO_PAYMENTS_WEBHOOK_SECRET="your_dodo_webhook_secret"
 DODO_PAYMENTS_MATT_PRODUCT_ID="prod_xxx"
+DODO_PAYMENTS_DAY_PASS_PRODUCT_ID="prod_xxx"
 # Optional: use test environment before going live
 # DODO_PAYMENTS_API_BASE_URL="https://test.dodopayments.com"
 ```
@@ -268,6 +269,7 @@ DODO_PAYMENTS_API_KEY=""
 DODO_PAYMENTS_WEBHOOK_SECRET=""
 DODO_PAYMENTS_API_BASE_URL=""
 DODO_PAYMENTS_MATT_PRODUCT_ID=""
+DODO_PAYMENTS_DAY_PASS_PRODUCT_ID=""
 
 # Crypto Payment Addresses (Your Wallets)
 EVM_PAYMENT_ADDRESS=""

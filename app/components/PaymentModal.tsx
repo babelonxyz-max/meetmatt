@@ -40,11 +40,13 @@ interface PaymentModalProps {
     contactMethod: string;
     telegramBotUsername?: string;
   };
+  launchOffer: "monthly" | "day_pass";
   agentId: string | null;
   onSuccess: () => void;
 }
 
-const PLAN_PRICE = 150;
+const MONTHLY_PLAN_PRICE = 150;
+const DAY_PASS_PRICE = 5;
 
 interface CryptoOption {
   code: string;
@@ -91,7 +93,14 @@ function getSecondsUntilExpiry(expiresAt?: string | Date | null): number {
   return Math.max(0, Math.floor((target - Date.now()) / 1000));
 }
 
-export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: PaymentModalProps) {
+export function PaymentModal({
+  isOpen,
+  onClose,
+  config,
+  launchOffer,
+  agentId,
+  onSuccess,
+}: PaymentModalProps) {
   const { getAccessToken } = usePrivy();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("card");
   const [selectedCurrency, setSelectedCurrency] = useState("usdt");
@@ -102,7 +111,8 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
   const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(3600);
 
-  const displayPrice = PLAN_PRICE;
+  const isDayPass = launchOffer === "day_pass";
+  const displayPrice = isDayPass ? DAY_PASS_PRICE : MONTHLY_PLAN_PRICE;
 
   useEffect(() => {
     if (isOpen) {
@@ -200,6 +210,7 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
           provider: selectedMethod === "card" ? "dodo" : "nowpayments",
           paymentMethod: selectedMethod,
           currency: selectedMethod === "crypto" ? selectedCurrency : undefined,
+          purchaseType: isDayPass ? "day_pass" : "subscription",
         }),
       });
 
@@ -232,7 +243,7 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
       setError(message);
       setStatus("error");
     }
-  }, [agentId, selectedCurrency, selectedMethod, getAccessToken, openCheckoutWindow]);
+  }, [agentId, isDayPass, selectedCurrency, selectedMethod, getAccessToken, openCheckoutWindow]);
 
   const copyAddress = useCallback(() => {
     if (payment?.address) {
@@ -283,7 +294,9 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-4xl font-bold text-[#ff8a53]">${displayPrice}</span>
                 </div>
-                <p className="text-xs text-[var(--muted)] mt-1">First month</p>
+                <p className="text-xs text-[var(--muted)] mt-1">
+                  {isDayPass ? "24-hour access" : "First month"}
+                </p>
               </div>
 
               <div className="brand-panel rounded-2xl p-3 text-sm space-y-1">
@@ -410,7 +423,7 @@ export function PaymentModal({ isOpen, onClose, config, agentId, onSuccess }: Pa
                       <span className="font-mono">${payment.amount.toFixed(2)} {payment.currency}</span>
                     </div>
                     <p className="text-sm text-[var(--muted)]">
-                      Complete the secure card checkout in the hosted Dodo page. The agent will start activating automatically after confirmation.
+                      Complete the secure card checkout in the hosted Dodo page. Matt will start activating automatically after confirmation.
                     </p>
                     {payment.checkoutUrl ? (
                       <Button

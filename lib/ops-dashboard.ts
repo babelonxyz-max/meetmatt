@@ -73,6 +73,12 @@ function readEnvChecks() {
       ready: Boolean(process.env.DODO_PAYMENTS_MATT_PRODUCT_ID?.trim()),
     },
     {
+      key: "DODO_PAYMENTS_DAY_PASS_PRODUCT_ID",
+      label: "Dodo day-pass product",
+      description: "Maps the $5 24-hour pass to a hosted Dodo checkout product.",
+      ready: Boolean(process.env.DODO_PAYMENTS_DAY_PASS_PRODUCT_ID?.trim()),
+    },
+    {
       key: "DEVIN_WEBHOOK_SECRET",
       label: "Devin webhook auth",
       description: "Required to trust deployment completion events.",

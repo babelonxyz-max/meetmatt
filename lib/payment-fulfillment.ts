@@ -22,6 +22,21 @@ function readLineItemString(
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
+function resolveSubscriptionPlan(payment: Payment): "monthly" | "annual" | "day_pass" {
+  if (
+    payment.paymentPurpose === "agent_day_pass" ||
+    readLineItemString(payment.lineItems, "billingPlan") === "day_pass"
+  ) {
+    return "day_pass";
+  }
+
+  if (readLineItemString(payment.lineItems, "billingPlan") === "annual") {
+    return "annual";
+  }
+
+  return "monthly";
+}
+
 export async function fulfillConfirmedPayment(params: {
   payment: Payment;
   requestUrl: string;
@@ -29,6 +44,7 @@ export async function fulfillConfirmedPayment(params: {
 }) {
   const logPrefix = params.logPrefix ?? "[Payment Fulfillment]";
   const { payment, requestUrl } = params;
+  const subscriptionPlan = resolveSubscriptionPlan(payment);
 
   const orderParts = payment.sessionId.split("_");
   const fallbackAgentId =
@@ -105,7 +121,7 @@ export async function fulfillConfirmedPayment(params: {
     agent.activationStatus === "activating";
 
   if (alreadyProvisionedRuntime) {
-    const subData = activateSubscription("monthly");
+    const subData = activateSubscription(subscriptionPlan);
     await prisma.agent.update({
       where: { id: agent.id },
       data: {
@@ -238,7 +254,7 @@ export async function fulfillConfirmedPayment(params: {
 
   console.log(`${logPrefix} Deploy triggered successfully for agent:`, agent.id);
 
-  const subData = activateSubscription("monthly");
+  const subData = activateSubscription(subscriptionPlan);
   await prisma.agent.update({
     where: { id: agent.id },
     data: subData,

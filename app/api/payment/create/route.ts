@@ -25,6 +25,7 @@ const ALLOWED_CURRENCIES = [
 
 type PaymentProvider = "nowpayments" | "dodo";
 type PaymentMethodType = "crypto" | "card";
+type PurchaseType = "subscription" | "day_pass" | "addon" | "topup";
 
 function readUsdPrice(
   value: Prisma.JsonValue | null,
@@ -66,11 +67,13 @@ export async function POST(req: NextRequest) {
       typeof body.currency === "string" && body.currency.trim().length > 0
         ? body.currency.trim().toLowerCase()
         : "usdt";
-    const purchaseType =
+    const purchaseType: PurchaseType =
       body.purchaseType === "addon"
         ? "addon"
         : body.purchaseType === "topup"
           ? "topup"
+          : body.purchaseType === "day_pass"
+            ? "day_pass"
           : "subscription";
 
     if (!agentId) {
@@ -101,7 +104,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
     }
 
-    if (purchaseType === "subscription") {
+    if (purchaseType === "subscription" || purchaseType === "day_pass") {
       const telegramLaunch = await ensurePrimaryTelegramIdentityForAgent(agent.id);
       if (
         !telegramLaunch?.botAssigned ||
@@ -118,20 +121,32 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let orderId = `matt_${agentId}_${Date.now()}`;
-    let priceAmount = 150;
-    let orderDescription = `Deploy AI agent: ${agent.name}`;
-    let paymentPurpose = "agent_subscription";
+    let orderId =
+      purchaseType === "day_pass"
+        ? `daypass_${agentId}_${Date.now()}`
+        : `matt_${agentId}_${Date.now()}`;
+    let priceAmount = purchaseType === "day_pass" ? 5 : 150;
+    let orderDescription =
+      purchaseType === "day_pass"
+        ? `24-hour pass for AI agent: ${agent.name}`
+        : `Deploy AI agent: ${agent.name}`;
+    let paymentPurpose =
+      purchaseType === "day_pass" ? "agent_day_pass" : "agent_subscription";
     let targetType: string | null = "agent";
     let targetId: string | null = agent.id;
     let lineItems: Prisma.InputJsonValue | undefined = {
       agentId: agent.id,
       agentName: agent.name,
+      billingPlan: purchaseType === "day_pass" ? "day_pass" : "monthly",
     } satisfies Prisma.InputJsonObject;
     let dodoProductId =
-      process.env.DODO_PAYMENTS_MATT_PRODUCT_ID?.trim() || null;
+      (
+        purchaseType === "day_pass"
+          ? process.env.DODO_PAYMENTS_DAY_PASS_PRODUCT_ID
+          : process.env.DODO_PAYMENTS_MATT_PRODUCT_ID
+      )?.trim() || null;
 
-    if (purchaseType !== "subscription") {
+    if (purchaseType === "addon" || purchaseType === "topup") {
       await syncCapabilityCommerceCatalog();
     }
 

@@ -23,7 +23,7 @@ export function addMonths(date: Date, months: number): Date {
  * Build Prisma update data for activating a subscription.
  * Returns a plain object suitable for `prisma.agent.update({ data: ... })`.
  */
-export function activateSubscription(paymentType: "monthly" | "annual"): {
+export function activateSubscription(paymentType: "monthly" | "annual" | "day_pass"): {
   subscriptionStatus: string;
   subscriptionType: string;
   currentPeriodStart: Date;
@@ -31,33 +31,19 @@ export function activateSubscription(paymentType: "monthly" | "annual"): {
   cancelAtPeriodEnd: boolean;
 } {
   const now = new Date();
-  const months = paymentType === "annual" ? 12 : 1;
+  const currentPeriodEnd =
+    paymentType === "annual"
+      ? addMonths(now, 12)
+      : paymentType === "monthly"
+        ? addMonths(now, 1)
+        : new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
   return {
     subscriptionStatus: "active",
     subscriptionType: paymentType,
     currentPeriodStart: now,
-    currentPeriodEnd: addMonths(now, months),
-    cancelAtPeriodEnd: false,
-  };
-}
-
-export function activateTrial(days: number = 1): {
-  subscriptionStatus: string;
-  subscriptionType: string;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-  cancelAtPeriodEnd: boolean;
-} {
-  const now = new Date();
-  const currentPeriodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-
-  return {
-    subscriptionStatus: "trial",
-    subscriptionType: "trial",
-    currentPeriodStart: now,
     currentPeriodEnd,
-    cancelAtPeriodEnd: true,
+    cancelAtPeriodEnd: paymentType === "day_pass",
   };
 }
 

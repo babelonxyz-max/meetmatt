@@ -155,8 +155,12 @@ function formatRelativeOrNever(value?: string | null) {
 }
 
 function getAgentPlanLabel(agent: Agent) {
+  if (agent.subscriptionType === "day_pass") {
+    return "24-hour pass";
+  }
+
   if (agent.subscriptionStatus === "trial") {
-    return "1-day trial";
+    return "Legacy trial";
   }
 
   return agent.subscriptionType === "annual" ? "Annual plan" : "Monthly plan";
@@ -266,7 +270,7 @@ export default function DashboardPage() {
               totalAgents: updatedAgents.length,
               activeSubscriptions: updatedAgents.filter((a) => a.subscriptionStatus === "active").length,
               expired: updatedAgents.filter((a) => a.subscriptionStatus === "expired").length,
-              inTrial: updatedAgents.filter((a) => a.subscriptionStatus === "trial").length,
+              inTrial: updatedAgents.filter((a) => a.subscriptionStatus === "trial" || a.subscriptionType === "day_pass").length,
             },
           };
         });
@@ -364,7 +368,7 @@ export default function DashboardPage() {
             color="green"
           />
           <StatCard 
-            label="In Trial" 
+            label="1-Day Passes" 
             value={stats.inTrial} 
             icon={Clock}
             color="amber"
@@ -450,7 +454,7 @@ export default function DashboardPage() {
                             <p className="text-base text-[var(--muted)]">
                               {getAgentPlanLabel(agent)}
                               {agent.currentPeriodEnd &&
-                                ` • ${agent.subscriptionStatus === "trial" ? "Ends" : "Renews"} ${new Date(agent.currentPeriodEnd).toLocaleDateString()}`}
+                                ` • ${agent.subscriptionType === "day_pass" || agent.subscriptionStatus === "trial" ? "Ends" : "Renews"} ${new Date(agent.currentPeriodEnd).toLocaleDateString()}`}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 ml-4">
@@ -595,15 +599,15 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 <div className="flex justify-between text-lg">
                   <span className="text-[var(--muted)]">Current Plan</span>
-                  <span className="font-medium">{stats.activeSubscriptions > 0 ? "Active" : stats.inTrial > 0 ? "Trial" : "No plan"}</span>
+                  <span className="font-medium">{stats.activeSubscriptions > 0 ? "Active" : stats.inTrial > 0 ? "24-hour pass" : "No plan"}</span>
                 </div>
                 <div className="flex justify-between text-lg">
-                  <span className="text-[var(--muted)]">Next billing</span>
+                  <span className="text-[var(--muted)]">{stats.activeSubscriptions > 0 ? "Next billing" : stats.inTrial > 0 ? "Pass ends" : "Next billing"}</span>
                   <span className="font-medium">{(() => {
                     const activeDates = agents
                       .filter(a => a.currentPeriodEnd)
                       .map(a => new Date(a.currentPeriodEnd!).getTime());
-                    if (activeDates.length === 0) return "No active subscription";
+                    if (activeDates.length === 0) return stats.inTrial > 0 ? "No active pass" : "No active subscription";
                     return new Date(Math.min(...activeDates)).toLocaleDateString();
                   })()}</span>
                 </div>

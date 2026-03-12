@@ -90,6 +90,7 @@ npm run backfill:workspaces
 |---|---|
 | `DODO_PAYMENTS_API_BASE_URL` | Override Dodo API base URL; use `https://test.dodopayments.com` for test mode |
 | `DODO_PAYMENTS_MATT_PRODUCT_ID` | Dodo product ID for the base Matt subscription checkout |
+| `DODO_PAYMENTS_DAY_PASS_PRODUCT_ID` | Dodo product ID for the $5 24-hour pass checkout |
 
 ### Optional Runtime/Queue Variables
 
