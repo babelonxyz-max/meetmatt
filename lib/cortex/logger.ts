@@ -2,14 +2,21 @@
 
 import type { InferenceLogEntry } from "./types";
 
-// Prisma client is loaded lazily to allow the gateway to run standalone
-let prismaClient: ReturnType<typeof getPrisma> | null = null;
+type PrismaClientLike = {
+  inferenceLog: {
+    create: (args: {
+      data: Record<string, unknown>;
+    }) => Promise<unknown>;
+  };
+};
 
-function getPrisma() {
+// Prisma client is loaded lazily to allow the gateway to run standalone
+let prismaClient: PrismaClientLike | null = null;
+
+async function getPrisma(): Promise<PrismaClientLike> {
   // Dynamic import to avoid build-time issues when running gateway standalone
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { prisma } = require("@/lib/prisma");
-  return prisma;
+  const { prisma } = await import("../prisma");
+  return prisma as unknown as PrismaClientLike;
 }
 
 /**
@@ -28,7 +35,7 @@ export async function logInference(entry: InferenceLogEntry): Promise<void> {
   // Write to database (best-effort)
   try {
     if (!prismaClient) {
-      prismaClient = getPrisma();
+      prismaClient = await getPrisma();
     }
     await prismaClient.inferenceLog.create({
       data: {

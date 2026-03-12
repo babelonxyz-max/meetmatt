@@ -12,12 +12,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Send,
-  MessageCircle,
   Copy,
   ExternalLink,
   RotateCcw,
   Trash2,
+  MessageSquare,
+  PlugZap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
@@ -29,6 +29,46 @@ interface DashboardData {
     walletAddress: string | null;
     name: string | null;
     createdAt: string;
+  };
+  workspace?: {
+    id: string;
+    name: string;
+    kind: string;
+    integrations?: {
+      whatsapp?: {
+        connected: boolean;
+        readiness?: "ready" | "degraded" | "not_configured";
+        provider?: string | null;
+        endpointUrl?: string | null;
+        phoneNumberId?: string | null;
+        webhookReady?: boolean;
+        inboundReady?: boolean;
+        outboundReady?: boolean;
+        lastInboundAt?: string | null;
+        lastOutboundAt?: string | null;
+        lastError?: string | null;
+        failedWebhookEvents24h?: number;
+        warnings?: string[];
+        blockingIssues?: string[];
+      };
+      composio?: {
+        enabled: boolean;
+        mode?: string | null;
+        sessionId?: string | null;
+        connectedProviderCount: number;
+        connectedProviders: string[];
+        readiness?: "ready" | "degraded" | "not_configured";
+        lastValidatedAt?: string | null;
+        lastError?: string | null;
+        lastProviderUsed?: string | null;
+        fallbackCount24h?: number;
+        warnings?: string[];
+        blockingIssues?: string[];
+      };
+      overallStatus?: "ready" | "degraded" | "not_configured";
+      warnings?: string[];
+      blockingIssues?: string[];
+    };
   };
   agents: Agent[];
   payments: Payment[];
@@ -42,6 +82,8 @@ interface DashboardData {
 
 interface Payment {
   id: string;
+  provider?: string;
+  paymentMethodType?: string | null;
   tier: string;
   amount: number;
   currency: string;
@@ -58,10 +100,12 @@ interface Agent {
   currentPeriodEnd?: string;
   devinUrl?: string;
   activationStatus: string;
+  botAssigned: boolean;
+  primaryTelegramIdentityId?: string | null;
+  botOwnershipType?: string | null;
+  telegramProvisioningMode?: string | null;
   botUsername?: string;
   telegramLink?: string;
-  authCode?: string;
-  verifiedAt?: string;
 }
 
 const statusConfig: Record<string, { color: string; icon: LucideIcon; label: string }> = {
@@ -74,18 +118,47 @@ const statusConfig: Record<string, { color: string; icon: LucideIcon; label: str
 const activationStatusConfig: Record<string, { color: string; icon: LucideIcon; label: string; action?: string }> = {
   pending: { color: "bg-gray-500", icon: Clock, label: "Pending Payment", action: "Pay Now" },
   activating: { color: "bg-amber-500", icon: Loader2, label: "Activating..." },
-  awaiting_verification: { color: "bg-purple-500", icon: MessageCircle, label: "Awaiting Verification", action: "Verify Now" },
+  awaiting_verification: { color: "bg-orange-500", icon: AlertCircle, label: "Awaiting Legacy Verification" },
   active: { color: "bg-green-500", icon: CheckCircle2, label: "Active" },
   failed: { color: "bg-red-500", icon: AlertCircle, label: "Failed", action: "Retry" },
 };
+
+const integrationTone: Record<
+  "ready" | "degraded" | "not_configured",
+  { label: string; className: string }
+> = {
+  ready: {
+    label: "Ready",
+    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+  },
+  degraded: {
+    label: "Degraded",
+    className: "border-amber-500/30 bg-amber-500/10 text-amber-100",
+  },
+  not_configured: {
+    label: "Not configured",
+    className: "border-white/10 bg-white/5 text-[var(--muted)]",
+  },
+};
+
+function formatRelativeOrNever(value?: string | null) {
+  if (!value) {
+    return "Never";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  return date.toLocaleString();
+}
 
 export default function DashboardPage() {
   const { authenticated, user, logout, getAccessToken } = usePrivy();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [verifyingAgent, setVerifyingAgent] = useState<string | null>(null);
-  const [authCode, setAuthCode] = useState("");
   const [retryingAgent, setRetryingAgent] = useState<string | null>(null);
   const [deletingAgent, setDeletingAgent] = useState<string | null>(null);
 
@@ -121,40 +194,6 @@ export default function DashboardPage() {
 
     fetchDashboard();
   }, [authenticated, user, getAccessToken]);
-
-  const handleVerify = async (agentId: string) => {
-    if (!authCode.trim()) return;
-
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        alert("Not authenticated. Please refresh the page.");
-        return;
-      }
-      const response = await fetch("/api/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          instanceId: agentId,
-          code: authCode,
-          telegramUserId: user?.id,
-        }),
-      });
-
-      if (response.ok) {
-        setVerifyingAgent(null);
-        setAuthCode("");
-        window.location.reload();
-      } else {
-        alert("Invalid auth code. Please try again.");
-      }
-    } catch {
-      alert("Error verifying code. Please try again.");
-    }
-  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -282,6 +321,7 @@ export default function DashboardPage() {
 
   const { payments, stats } = data;
   const agents = data.agents.filter((a) => a.status !== "deleted");
+  const workspaceIntegrations = data.workspace?.integrations;
 
   return (
     <div className="py-8 pt-20 sm:pt-24 pb-20">
@@ -339,7 +379,7 @@ export default function DashboardPage() {
               transition={{ delay: 0.2 }}
             >
               <Link href="/">
-                <div className="group relative overflow-hidden bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-2xl p-8 text-white cursor-pointer">
+                <div className="brand-panel group relative overflow-hidden rounded-2xl bg-[linear-gradient(135deg,rgba(255,107,53,0.9),rgba(255,170,68,0.88))] p-8 text-white cursor-pointer">
                   <div className="relative z-10 flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-2xl mb-1">Create New Agent</h3>
@@ -384,7 +424,6 @@ export default function DashboardPage() {
                     const activationStatus = activationStatusConfig[agent.activationStatus] || activationStatusConfig.pending;
                     const StatusIcon = status.icon;
                     const ActivationIcon = activationStatus.icon;
-                    const needsVerification = agent.activationStatus === "awaiting_verification";
                     
                     return (
                       <div 
@@ -447,81 +486,63 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {/* Bot Info (if available) */}
-                        {(agent.botUsername || agent.telegramLink) && (
-                          <div className="bg-[var(--background)] rounded-xl p-4 space-y-3">
-                            {agent.botUsername && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-base text-[var(--muted)]">Bot:</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg font-medium">@{agent.botUsername}</span>
-                                  <button
-                                    onClick={() => copyToClipboard(`@${agent.botUsername}`)}
-                                    className="p-2 hover:bg-[var(--card)] rounded-lg transition-colors"
-                                    title="Copy username"
-                                  >
-                                    <Copy className="w-5 h-5 text-[var(--muted)]" />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                            {agent.telegramLink && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-base text-[var(--muted)]">Link:</span>
-                                <a
-                                  href={agent.telegramLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1.5 text-base text-[var(--accent)] hover:underline"
-                                >
-                                  Open in Telegram
-                                  <ExternalLink className="w-4 h-4" />
-                                </a>
-                              </div>
-                            )}
+                        <div className="bg-[var(--background)] rounded-xl p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-base text-[var(--muted)]">Assignment:</span>
+                            <span className="text-base font-medium">
+                              {agent.botAssigned ? "Primary bot linked" : "Bot missing"}
+                            </span>
                           </div>
-                        )}
-
-                        {/* Verification Section */}
-                        {needsVerification && (
-                          <div className="mt-4 pt-4 border-t border-[var(--border)]">
-                            {verifyingAgent === agent.id ? (
-                              <div className="flex gap-3">
-                                <input
-                                  type="text"
-                                  value={authCode}
-                                  onChange={(e) => setAuthCode(e.target.value)}
-                                  placeholder="Enter auth code..."
-                                  className="flex-1 px-4 py-3 bg-[var(--background)] border border-[var(--border)] rounded-xl text-base focus:outline-none focus:border-[var(--accent)]"
-                                />
+                          {agent.botOwnershipType && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-base text-[var(--muted)]">Ownership:</span>
+                              <span className="text-base font-medium">
+                                {agent.botOwnershipType === "meetmatt_managed"
+                                  ? "MeetMatt-managed"
+                                  : "Customer-owned"}
+                              </span>
+                            </div>
+                          )}
+                          {agent.telegramProvisioningMode && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-base text-[var(--muted)]">Launch mode:</span>
+                              <span className="text-base font-medium">
+                                {agent.telegramProvisioningMode === "meetmatt_managed_bot"
+                                  ? "Managed bot"
+                                  : "Customer-provided bot"}
+                              </span>
+                            </div>
+                          )}
+                          {agent.botUsername && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-base text-[var(--muted)]">Bot:</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg font-medium">@{agent.botUsername}</span>
                                 <button
-                                  onClick={() => handleVerify(agent.id)}
-                                  disabled={!authCode.trim()}
-                                  className="px-6 py-3 bg-[var(--accent)] text-white text-base font-medium rounded-xl hover:opacity-90 disabled:opacity-50"
+                                  onClick={() => copyToClipboard(`@${agent.botUsername}`)}
+                                  className="p-2 hover:bg-[var(--card)] rounded-lg transition-colors"
+                                  title="Copy username"
                                 >
-                                  Verify
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setVerifyingAgent(null);
-                                    setAuthCode("");
-                                  }}
-                                  className="px-4 py-3 text-[var(--muted)] hover:text-[var(--foreground)] text-base"
-                                >
-                                  Cancel
+                                  <Copy className="w-5 h-5 text-[var(--muted)]" />
                                 </button>
                               </div>
-                            ) : (
-                              <button
-                                onClick={() => setVerifyingAgent(agent.id)}
-                                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-purple-500/10 text-purple-500 text-lg font-medium rounded-xl hover:bg-purple-500/20 transition-colors"
+                            </div>
+                          )}
+                          {agent.telegramLink && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-base text-[var(--muted)]">Link:</span>
+                              <a
+                                href={agent.telegramLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-base text-[var(--accent)] hover:underline"
                               >
-                                <Send className="w-5 h-5" />
-                                Enter Auth Code to Activate
-                              </button>
-                            )}
-                          </div>
-                        )}
+                                Open in Telegram
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
 
                         {/* Retry Deployment */}
                         {agent.activationStatus === "failed" && (
@@ -584,6 +605,105 @@ export default function DashboardPage() {
                   Manage Billing
                 </button>
               </Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45 }}
+              className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6"
+            >
+              <h3 className="font-semibold mb-5 text-xl flex items-center gap-3">
+                <PlugZap className="w-6 h-6 text-[var(--muted)]" />
+                Workspace Integrations
+              </h3>
+
+              <div className="space-y-5">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-lg font-medium">
+                      <MessageSquare className="w-5 h-5 text-emerald-500" />
+                      WhatsApp
+                    </div>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                        integrationTone[
+                          workspaceIntegrations?.whatsapp?.readiness ?? "not_configured"
+                        ].className
+                      }`}
+                    >
+                      {
+                        integrationTone[
+                          workspaceIntegrations?.whatsapp?.readiness ?? "not_configured"
+                        ].label
+                      }
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-sm text-[var(--muted)]">
+                    <div>
+                      {workspaceIntegrations?.whatsapp?.phoneNumberId
+                        ? `Phone ID ${workspaceIntegrations.whatsapp.phoneNumberId}`
+                        : "Sesh transport fallback"}
+                    </div>
+                    <div>
+                      Webhook{" "}
+                      {workspaceIntegrations?.whatsapp?.webhookReady ? "ready" : "not ready"} •
+                      inbound {workspaceIntegrations?.whatsapp?.inboundReady ? "seen" : "waiting"} •
+                      outbound {workspaceIntegrations?.whatsapp?.outboundReady ? "seen" : "waiting"}
+                    </div>
+                    <div>
+                      Last inbound {formatRelativeOrNever(workspaceIntegrations?.whatsapp?.lastInboundAt)} •
+                      last outbound {formatRelativeOrNever(workspaceIntegrations?.whatsapp?.lastOutboundAt)}
+                    </div>
+                    {workspaceIntegrations?.whatsapp?.lastError ? (
+                      <div className="text-red-300">
+                        Error: {workspaceIntegrations.whatsapp.lastError}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-lg font-medium">
+                      <PlugZap className="w-5 h-5 text-cyan-400" />
+                      Composio
+                    </div>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                        integrationTone[
+                          workspaceIntegrations?.composio?.readiness ?? "not_configured"
+                        ].className
+                      }`}
+                    >
+                      {
+                        integrationTone[
+                          workspaceIntegrations?.composio?.readiness ?? "not_configured"
+                        ].label
+                      }
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-sm text-[var(--muted)]">
+                    <div>
+                      {workspaceIntegrations?.composio?.connectedProviderCount
+                        ? `${workspaceIntegrations.composio.connectedProviderCount} providers connected`
+                        : "Main connector control plane for Matt"}
+                    </div>
+                    <div>
+                      Last provider {workspaceIntegrations?.composio?.lastProviderUsed ?? "none"} •
+                      fallback 24h {workspaceIntegrations?.composio?.fallbackCount24h ?? 0}
+                    </div>
+                    <div>
+                      Last validation {formatRelativeOrNever(workspaceIntegrations?.composio?.lastValidatedAt)}
+                    </div>
+                    {workspaceIntegrations?.composio?.lastError ? (
+                      <div className="text-red-300">
+                        Error: {workspaceIntegrations.composio.lastError}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
             </motion.div>
 
             {/* Recent Activity - BIGGER */}

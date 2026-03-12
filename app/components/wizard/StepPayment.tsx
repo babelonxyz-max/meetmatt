@@ -1,17 +1,26 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
 import { Check, Wallet } from "lucide-react";
+import { useState } from "react";
 
 interface StepPaymentProps {
   agentName: string;
   deploymentMode: "assistant" | "fleet";
+  botUsername?: string | null;
+  errorMessage?: string | null;
   onDeploymentModeChange: (mode: "assistant" | "fleet") => void;
   onContinue: () => void;
 }
 
-export function StepPayment({ agentName, deploymentMode, onDeploymentModeChange, onContinue }: StepPaymentProps) {
+export function StepPayment({
+  agentName,
+  deploymentMode,
+  botUsername,
+  errorMessage,
+  onDeploymentModeChange,
+  onContinue,
+}: StepPaymentProps) {
   const [accepted, setAccepted] = useState(false);
   const isFleet = deploymentMode === "fleet";
 
@@ -19,92 +28,122 @@ export function StepPayment({ agentName, deploymentMode, onDeploymentModeChange,
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mx-auto max-w-md"
+      className="mx-auto flex h-full w-full max-w-3xl flex-col"
     >
-      <div className="text-center mb-8">
-        <h2 className="mb-2 text-3xl font-bold text-white">Ready to deploy {agentName}?</h2>
-        <p className="text-white/65">Review and confirm</p>
-      </div>
+      {errorMessage ? (
+        <div className="mb-4 rounded-[1.25rem] border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          {errorMessage}
+        </div>
+      ) : null}
 
-      <div className="mb-4 rounded-xl border border-white/12 bg-white/[0.05] p-2 backdrop-blur-md">
-        <p className="mb-2 px-2 text-xs uppercase tracking-[0.14em] text-white/55">Deployment Mode</p>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)]">
+        <div className="space-y-3">
           <button
             type="button"
             onClick={() => onDeploymentModeChange("assistant")}
-            className={`rounded-lg px-3 py-2 text-sm transition-colors ${
-              !isFleet ? "bg-cyan-500/30 text-cyan-100 border border-cyan-300/40" : "bg-white/[0.04] text-white/70 border border-white/10"
+            className={`wizard-option-card w-full p-5 text-left ${
+              !isFleet ? "border-[#ffaa44]/40" : ""
             }`}
           >
-            Single
+            <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">Single</p>
+            <p className="mt-3 text-[1.65rem] font-medium tracking-tight text-white">
+              One operator thread
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-white/62">
+              Best when Matt is deploying a single assistant into one primary relationship flow.
+            </p>
           </button>
+
           <button
             type="button"
             onClick={() => onDeploymentModeChange("fleet")}
-            className={`rounded-lg px-3 py-2 text-sm transition-colors ${
-              isFleet ? "bg-violet-500/30 text-violet-100 border border-violet-300/40" : "bg-white/[0.04] text-white/70 border border-white/10"
+            className={`wizard-option-card w-full p-5 text-left ${
+              isFleet ? "border-[#ffaa44]/40" : ""
             }`}
           >
-            Fleet
+            <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">Fleet</p>
+            <p className="mt-3 text-[1.65rem] font-medium tracking-tight text-white">
+              Multi-agent rollout
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-white/62">
+              Prepares orchestration and a broader runtime shape after the first launch.
+            </p>
           </button>
         </div>
-        <p className="mt-2 px-2 text-xs text-white/55">
-          {isFleet
-            ? "Fleet mode prepares multi-agent orchestration setup after checkout."
-            : "Single mode deploys one assistant instance."}
-        </p>
-      </div>
 
-      {/* Pricing Card */}
-      <div className="mb-6 rounded-2xl border border-cyan-300/30 bg-gradient-to-br from-cyan-500/20 to-violet-500/20 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
-        <div className="text-center">
-          <span className="text-4xl font-bold">$150</span>
-          <span className="text-white/65"> first month</span>
-          <p className="mt-2 text-sm text-white/65">Includes setup • $150/month after</p>
+        <div className="wizard-preview-card p-5">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">
+                Starter launch
+              </p>
+              <div className="mt-3 flex items-end gap-2">
+                <span className="text-4xl font-semibold tracking-tight text-white">$150</span>
+                <span className="pb-1 text-sm text-white/58">first month</span>
+              </div>
+            </div>
+            <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/62">
+              Card or crypto
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-3">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Operator</p>
+              <p className="mt-1 text-sm text-white/84">{agentName}</p>
+            </div>
+            <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-3">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Mode</p>
+              <p className="mt-1 text-sm text-white/84">{isFleet ? "Fleet" : "Single"}</p>
+            </div>
+            <div className="rounded-[1rem] border border-white/10 bg-black/16 px-3 py-3">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Bot</p>
+              <p className="mt-1 text-sm text-white/84">
+                {botUsername ? `@${botUsername}` : "Customer-owned"}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2">
+            {[
+              "Unlimited messages",
+              botUsername ? `Uses @${botUsername}` : "Uses your connected Telegram bot",
+              isFleet ? "Fleet orchestration template" : "Managed operator runtime",
+            ].map((feature) => (
+              <div
+                key={feature}
+                className="flex items-center gap-2 rounded-[1rem] border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white/78"
+              >
+                <Check className="h-4 w-4 text-emerald-300" />
+                {feature}
+              </div>
+            ))}
+          </div>
         </div>
-        <ul className="mt-4 space-y-2 text-sm">
-          {[
-            "Unlimited messages",
-            "Telegram integration",
-            "Custom personality",
-            "24/7 availability",
-            isFleet ? "Fleet orchestration template" : "Devin-powered deployment",
-          ].map((feature) => (
-            <li key={feature} className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-400" />
-              <span className="text-white/85">{feature}</span>
-            </li>
-          ))}
-        </ul>
       </div>
 
-      {/* Terms */}
-      <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-xl border border-white/12 bg-white/[0.05] p-4 backdrop-blur-md">
-        <input 
-          type="checkbox" 
+      <label className="mt-4 flex max-w-3xl cursor-pointer items-start gap-3 rounded-[1.25rem] border border-white/10 bg-white/[0.04] p-4">
+        <input
+          type="checkbox"
           checked={accepted}
-          onChange={(e) => setAccepted(e.target.checked)}
+          onChange={(event) => setAccepted(event.target.checked)}
           className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent"
         />
-        <span className="text-sm text-white/70">
-          I understand this creates a Telegram bot via Devin AI. 
-          Setup takes 2-5 minutes.
+        <span className="text-sm leading-relaxed text-white/68">
+          I understand this starts the first live Telegram operator runtime and setup usually takes
+          2 to 5 minutes after payment confirmation.
         </span>
       </label>
 
-      {/* Continue Button */}
       <button
+        type="button"
         onClick={onContinue}
         disabled={!accepted}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-500 p-4 font-semibold text-white shadow-[0_10px_30px_rgba(59,130,246,0.45)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+        className="brand-button mt-5 flex w-full max-w-sm items-center justify-center gap-2 py-3 text-sm font-semibold uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-35"
       >
-        <Wallet className="w-5 h-5" />
+        <Wallet className="h-5 w-5" />
         Proceed to Payment
       </button>
-
-      <p className="mt-6 text-center text-sm text-white/50">
-        You&apos;ll complete payment on the next step
-      </p>
     </motion.div>
   );
 }

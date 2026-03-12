@@ -2,58 +2,56 @@
 
 import { motion } from "framer-motion";
 import { Loader2, Check, Bot, MessageSquare, Shield, AlertCircle } from "lucide-react";
+import { NexusOrb } from "../NexusOrb";
 
 interface StepDeployProps {
   agentName: string;
   status: "deploying" | "completed" | "failed";
   progress: number;
   telegramLink?: string;
-  authCode?: string;
+  botUsername?: string;
 }
 
 const steps = [
-  { icon: Bot, label: "Creating Telegram bot..." },
+  { icon: Bot, label: "Connecting Telegram bot..." },
   { icon: MessageSquare, label: "Configuring responses..." },
-  { icon: Shield, label: "Generating auth code..." },
+  { icon: Shield, label: "Preparing activation..." },
 ];
 
-export function StepDeploy({ agentName, status, progress, telegramLink, authCode }: StepDeployProps) {
+export function StepDeploy({ agentName, status, progress, telegramLink, botUsername }: StepDeployProps) {
   const currentStep = Math.min(Math.floor((progress / 100) * steps.length), steps.length - 1);
+  const deployOrbState = progress >= 70 ? "speaking" : progress >= 35 ? "thinking" : "listening";
+  const resolvedBotUsername = botUsername || telegramLink?.split("/").pop();
 
   if (status === "completed" && telegramLink) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mx-auto max-w-md text-center"
+        className="mx-auto flex h-full w-full max-w-md flex-col justify-start text-center"
       >
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
-          <Check className="h-8 w-8 text-green-400" />
-        </div>
-        <h2 className="mb-1 text-2xl font-bold text-white">{agentName} is ready!</h2>
-        <p className="mb-4 text-sm text-white/65">Your AI assistant has been deployed</p>
+        <div className="brand-panel-strong brand-noise rounded-[1.75rem] p-5">
+          <NexusOrb className="mx-auto mb-4" orbClassName="h-24 w-24" state="speaking" variant="plasma" showEyes={false} />
+          <p className="brand-kicker">Launch Confirmed</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">{agentName} is ready!</h2>
+          <p className="mt-1.5 text-sm text-white/65">Your AI assistant has been deployed and linked to your Telegram bot.</p>
 
-        <div className="mb-4 rounded-xl border border-white/12 bg-white/[0.05] p-4 backdrop-blur-md">
-          <p className="mb-1 text-xs text-white/65">Bot Username</p>
-          <p className="font-mono text-lg text-white">@{telegramLink.split("/").pop()}</p>
-        </div>
-
-        <a
-          href={telegramLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mb-3 block w-full rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(59,130,246,0.45)] transition-opacity hover:opacity-95"
-        >
-          Open in Telegram
-        </a>
-
-        {authCode && (
-          <div className="rounded-xl border border-white/12 bg-white/[0.05] p-3 backdrop-blur-md">
-            <p className="mb-1 text-xs text-white/65">Your auth code</p>
-            <p className="text-xl font-mono font-bold text-white">{authCode}</p>
-            <p className="mt-1 text-[11px] text-white/50">Send this to the bot to activate</p>
+          <div className="brand-panel mt-5 rounded-[1.5rem] p-4">
+            <p className="mb-1 text-xs uppercase tracking-[0.14em] text-white/55">Bot username</p>
+            <p className="font-mono text-lg text-white">
+              {resolvedBotUsername ? `@${resolvedBotUsername.replace(/^@+/, "")}` : "Connected"}
+            </p>
           </div>
-        )}
+
+          <a
+            href={telegramLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="brand-button mt-4 block w-full py-3 text-center text-sm font-semibold uppercase tracking-[0.14em]"
+          >
+            Open in Telegram
+          </a>
+        </div>
       </motion.div>
     );
   }
@@ -63,81 +61,99 @@ export function StepDeploy({ agentName, status, progress, telegramLink, authCode
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mx-auto max-w-md text-center"
+        className="mx-auto flex h-full w-full max-w-md flex-col justify-start text-center"
       >
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20">
-          <AlertCircle className="h-8 w-8 text-red-400" />
+        <div className="brand-panel-strong brand-noise rounded-[1.75rem] p-5">
+          <div className="relative mx-auto mb-4 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border border-red-400/20 bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.14),rgba(248,113,113,0.2)_30%,rgba(14,10,14,0.98)_100%)]">
+            <div className="absolute inset-[-20%] rounded-full bg-red-400/18 blur-xl" />
+            <AlertCircle className="relative z-10 h-8 w-8 text-red-300" />
+          </div>
+          <h2 className="text-2xl font-semibold text-white">Deployment failed</h2>
+          <p className="mt-2 text-sm text-white/65">
+            Something went wrong during setup. You can retry from the dashboard or contact support.
+          </p>
+          <a
+            href="/dashboard"
+            className="brand-button-secondary mt-5 inline-block px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
+          >
+            Go to Dashboard
+          </a>
         </div>
-        <h2 className="mb-1 text-2xl font-bold text-white">Deployment failed</h2>
-        <p className="mb-4 text-sm text-white/65">
-          Something went wrong during setup. You can retry from the dashboard or contact support.
-        </p>
-        <a
-          href="/dashboard"
-          className="inline-block rounded-xl border border-white/12 bg-white/[0.05] px-6 py-3 text-sm font-medium text-white backdrop-blur-md transition-colors hover:bg-white/10"
-        >
-          Go to Dashboard
-        </a>
       </motion.div>
     );
   }
 
   return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="mx-auto max-w-md text-center"
-      >
-      <div className="relative mx-auto mb-4 h-20 w-20">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-          <path
-            className="text-gray-800"
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-          />
-          <path
-            className="text-blue-500"
-            strokeDasharray={`${progress}, 100`}
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Loader2 className="h-7 w-7 animate-spin" />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="mx-auto flex h-full w-full max-w-md flex-col justify-start text-center"
+    >
+      <div className="brand-panel-strong brand-noise rounded-[1.75rem] p-4">
+        <div className="relative mx-auto mb-4 flex h-28 w-28 items-center justify-center">
+          <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,170,68,0.18),transparent_68%)] blur-2xl" />
+          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
+            <path
+              className="text-white/8"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            />
+            <path
+              className="text-[#ff8a53]"
+              strokeDasharray={`${progress}, 100`}
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            />
+          </svg>
+          <NexusOrb className="relative z-10" orbClassName="h-16 w-16" state={deployOrbState} variant="plasma" showEyes={false} />
+          <div className="pointer-events-none absolute bottom-0 rounded-full border border-white/10 bg-[#0f1422]/88 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white/65">
+            {progress}% synced
+          </div>
         </div>
-      </div>
 
-      <h2 className="mb-1 text-xl font-bold text-white">Deploying {agentName}...</h2>
-      <p className="mb-4 text-sm text-white/65">Usually takes around 2 minutes</p>
+        <p className="brand-kicker">Provisioning</p>
+        <h2 className="mt-2 text-xl font-semibold text-white">Deploying {agentName}...</h2>
+        <p className="mt-1.5 text-sm text-white/65">Usually takes around 2 minutes.</p>
 
-      <div className="space-y-2">
-        {steps.map((step, index) => {
-          const Icon = step.icon;
-          const isActive = index === currentStep;
-          const isComplete = index < currentStep;
+        <div className="mt-3 flex items-center justify-center gap-2 text-sm text-white/70">
+          <Loader2 className="h-4 w-4 animate-spin text-[#ffaa44]" />
+          Matt is connecting the runtime to your Telegram bot.
+        </div>
 
-          return (
-            <div
-              key={step.label}
-              className={`flex items-center gap-3 rounded-lg p-2.5 transition-colors ${
-                isActive ? "border border-cyan-300/30 bg-cyan-400/15" : isComplete ? "border border-emerald-300/25 bg-emerald-500/10" : "border border-white/10 bg-white/[0.05]"
-              }`}
-            >
-              <div className={`rounded-lg p-1.5 ${
-                isActive ? "bg-cyan-500" : isComplete ? "bg-emerald-500" : "bg-white/20"
-              }`}>
-                {isComplete ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+        <div className="mt-4 space-y-2">
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            const isActive = index === currentStep;
+            const isComplete = index < currentStep;
+
+            return (
+              <div
+                key={step.label}
+                className={`flex items-center gap-3 rounded-[1.15rem] p-3 transition-colors ${
+                  isActive
+                    ? "border border-[#ffaa44]/30 bg-[#ffaa44]/12"
+                    : isComplete
+                      ? "border border-emerald-300/25 bg-emerald-500/10"
+                      : "border border-white/10 bg-white/[0.05]"
+                }`}
+              >
+                <div className={`rounded-full p-2 ${
+                  isActive ? "bg-[#ff8a53]" : isComplete ? "bg-emerald-500" : "bg-white/14"
+                }`}>
+                  {isComplete ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+                </div>
+                <span className={`text-sm ${isActive ? "text-white" : isComplete ? "text-white/85" : "text-white/50"}`}>
+                  {step.label}
+                </span>
               </div>
-              <span className={`text-sm ${isActive ? "text-white" : isComplete ? "text-white/85" : "text-white/50"}`}>
-                {step.label}
-              </span>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </motion.div>
   );

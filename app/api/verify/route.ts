@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { userId } = await requireAuth(request);
+    const { userId, workspaceId } = await requireAuth(request);
     const body = await request.json();
     const { instanceId, code, telegramUserId } = body;
 
@@ -38,7 +38,13 @@ export async function POST(request: NextRequest) {
       where: { id: instanceId },
     });
 
-    if (!agent || agent.userId !== userId) {
+    if (
+      !agent ||
+      (
+        agent.workspaceId !== workspaceId &&
+        !(agent.workspaceId === null && agent.userId === userId)
+      )
+    ) {
       return NextResponse.json(
         { error: "Agent not found" },
         { status: 404 }

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" fill="none">
+  <defs>
+    <linearGradient id="brand-gradient" x1="22" y1="16" x2="70" y2="70" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF6B35"/>
+      <stop offset="1" stop-color="#FFAA44"/>
+    </linearGradient>
+  </defs>
+  <path d="M20 74V24c0-4.16 4.77-6.61 8.17-4.18L44 32.24l15.83-12.42C63.23 17.39 68 19.84 68 24v50" stroke="url(#brand-gradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M20 74V34l24 18.5L68 34v40" stroke="url(#brand-gradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="96" y="62" fill="#F0EEE8" font-size="46" font-weight="700" letter-spacing="-2.2" font-family="Inter, Arial, sans-serif">Meet Matt</text>
+</svg>

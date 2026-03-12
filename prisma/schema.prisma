@@ -7,22 +7,331 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum OwnerType {
+  customer
+  matt_internal
+}
+
+enum WorkspaceKind {
+  personal
+  company
+}
+
+enum WorkspaceMembershipRole {
+  owner
+  admin
+  member
+}
+
+enum AgentKind {
+  customer_agent
+  synthetic_employee
+  matt_account_manager
+  matt_support
+  internal_ops
+  fleet_worker
+}
+
+enum AgentTransportProvider {
+  telegram_bot_api
+  telethon
+  web
+  none
+}
+
+enum AgentBrainProvider {
+  devin
+  openclaw
+  cortex
+  manual
+}
+
+enum RelationshipRole {
+  account_manager
+  support
+}
+
+enum RelationshipStatus {
+  active
+  paused
+  escalated
+}
+
+enum ThreadChannel {
+  telegram
+  whatsapp
+  email
+  web
+  internal
+}
+
+enum TicketStatus {
+  open
+  pending_user
+  escalated
+  resolved
+  closed
+}
+
+enum FleetType {
+  internal_support
+  internal_account_management
+  internal_ops
+  customer
+}
+
+enum FleetTaskStatus {
+  queued
+  running
+  needs_approval
+  completed
+  failed
+  canceled
+}
+
+enum FleetTaskPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum FleetRunStatus {
+  pending
+  running
+  succeeded
+  failed
+  canceled
+}
+
+enum TelegramIdentityKind {
+  bot
+  user_agent
+}
+
+enum TelegramIdentityOwnershipType {
+  customer_owned
+  meetmatt_managed
+}
+
+enum TelegramIdentityStatus {
+  pending
+  active
+  suspended
+  revoked
+  error
+}
+
+enum TelegramBotPackTemplate {
+  planck_hq_17
+}
+
+enum TelegramBotPackStatus {
+  draft
+  ready
+  assigned
+  transfer_pending
+  transferred
+  retired
+}
+
+enum TelegramBotPackItemStatus {
+  stock
+  mapped
+  active
+  transfer_pending
+  transferred
+  retired
+}
+
+enum TelegramBotTransferStatus {
+  not_started
+  scheduled
+  in_progress
+  completed
+  failed
+  cancelled
+}
+
+enum TelegramThreadBindingType {
+  customer_support
+  matt_relationship
+  customer_employee
+  internal_ops
+}
+
+enum OutboundTransportMessageType {
+  send_message
+  edit_message
+  typing
+  mark_read
+}
+
+enum OutboundTransportMessageStatus {
+  queued
+  claimed
+  sent
+  failed
+  canceled
+}
+
+enum UseCaseTemplateItemInclusionType {
+  included
+  optional_addon
+  recommended
+}
+
+enum UseCaseTemplateProvisioningMode {
+  grant_on_create
+  grant_on_activate
+}
+
+enum CatalogItemType {
+  skill
+  connector
+  channel_upgrade
+  usage_pack
+  policy_upgrade
+  workflow_pack
+}
+
+enum CatalogScopeType {
+  agent
+  workspace
+  fleet
+}
+
+enum CatalogTrustTier {
+  first_party
+  reviewed
+  restricted
+  experimental
+}
+
+enum SkillCapabilityType {
+  communication
+  generation
+  search
+  monitoring
+  connector_action
+  workflow
+  memory
+}
+
+enum SkillExecutionMode {
+  interactive
+  autonomous
+  hybrid
+}
+
+enum SkillImplementationProviderKind {
+  native
+  api
+  openclaw_fork
+  openfang_fork
+  tool_adapter
+  telethon
+}
+
+enum SkillQualityTier {
+  free
+  cheap
+  premium
+}
+
+enum SkillRuntimeEngine {
+  interactive
+  autonomous
+  native
+}
+
+enum EntitlementGrantType {
+  included
+  subscription
+  consumable_topup
+  trial
+  promo
+}
+
+enum EntitlementResetPolicy {
+  billing_cycle
+  purchase_period
+  none
+}
+
+enum EntitlementGrantStatus {
+  active
+  expired
+  exhausted
+  revoked
+}
+
+enum LoadoutItemState {
+  enabled
+  disabled
+  suspended
+}
+
+enum UsageChargeMode {
+  included
+  topup
+  auto_charge
+  fallback_free
+  fallback_cheap
+  blocked
+}
+
+enum UsageResult {
+  succeeded
+  failed
+  partial
+}
+
+enum PaymentProvider {
+  nowpayments
+  dodo
+}
+
+enum PaymentMethodType {
+  crypto
+  card
+}
+
+enum WorkerTier {
+  standard
+  premium
+  specialist_coder
+  specialist_research
+  specialist_strategy
+  specialist_design
+}
+
 model Agent {
   id                 String    @id @default(cuid())
   sessionId          String?   @map("session_id")
   name               String
   purpose            String
   tier               String
+  ownerType          OwnerType @default(customer) @map("owner_type")
+  agentKind          AgentKind @default(customer_agent) @map("agent_kind")
+  productUseCase     String    @default("assistant") @map("product_use_case")
+  personalityPreset  String    @default("professional") @map("personality_preset")
   devinSessionId     String?   @map("devin_session_id")
   devinUrl           String?   @map("devin_url")
+  deploymentProvider String?   @map("deployment_provider")
   runtimeProvider    String?   @map("runtime_provider")
   runtimeAgentId     String?   @map("runtime_agent_id")
   runtimeSessionId   String?   @map("runtime_session_id")
   runtimeUrl         String?   @map("runtime_url")
+  transportProvider  AgentTransportProvider @default(telegram_bot_api) @map("transport_provider")
+  brainProvider      AgentBrainProvider     @default(devin) @map("brain_provider")
+  telegramBotTokenEncrypted String? @map("telegram_bot_token_encrypted")
+  telethonSession    String?   @map("telethon_session")
   deployState        String    @default("pending") @map("deploy_state")
   deployErrorCode    String?   @map("deploy_error_code")
   deployErrorMessage String?   @map("deploy_error_message")
   lastHeartbeatAt    DateTime? @map("last_heartbeat_at")
+  lastTransportHeartbeatAt DateTime? @map("last_transport_heartbeat_at")
   status             String    @default("pending")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
@@ -34,7 +343,9 @@ model Agent {
   slug               String    @unique
   features           String[]
   userId             String?   @map("user_id")
+  workspaceId        String?   @map("workspace_id")
   user               User?     @relation(fields: [userId], references: [id])
+  workspace          Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   subscriptionStatus String    @default("trial") @map("subscription_status")
   subscriptionType   String    @default("monthly") @map("subscription_type")
   currentPeriodStart DateTime? @map("current_period_start")
@@ -50,38 +361,75 @@ model Agent {
   verifiedAt       DateTime? @map("verified_at")
   telegramUserId   String?   @map("telegram_user_id")
   cortexId         String    @default("matt-consumer") @map("cortex_id")
+  useCaseTemplateId String?  @map("use_case_template_id")
+  loadoutVersion   Int       @default(1) @map("loadout_version")
+  autoTopupDefault Boolean   @default(false) @map("auto_topup_default")
+  workerTier       WorkerTier @default(standard) @map("worker_tier")
+  metadata         Json?
   deployJobs       DeployJob[]
+  customerRelationships CustomerRelationship[] @relation("RelationshipAgent")
+  assignedSupportTickets SupportTicket[] @relation("TicketAgent")
+  assignedFleetTasks FleetTask[] @relation("TaskAgent")
+  fleetMemberships FleetMembership[]
+  telegramIdentities AgentTelegramIdentity[]
+  telegramThreadBindings TelegramThreadBinding[] @relation("AgentThreadBinding")
+  outboundTransportMessages OutboundTransportMessage[]
+  useCaseTemplate  UseCaseTemplate? @relation(fields: [useCaseTemplateId], references: [id], onDelete: SetNull)
+  loadoutItems     AgentLoadoutItem[]
+  skillBindings    AgentSkillBinding[]
+  entitlementPackGrants EntitlementPackGrant[]
+  usageLedgerEntries UsageLedgerEntry[]
+  usageDecisionLogs UsageDecisionLog[]
 
   @@index([status])
   @@index([devinSessionId])
   @@index([payment_session_id])
   @@index([slug])
   @@index([userId])
+  @@index([workspaceId])
+  @@index([ownerType, agentKind])
   @@index([activationStatus])
   @@index([deployState])
   @@index([runtimeProvider])
   @@index([runtimeAgentId])
+  @@index([transportProvider])
+  @@index([brainProvider])
+  @@index([useCaseTemplateId])
+  @@index([workerTier])
   @@map("agents")
 }
 
 model Payment {
-  id          String    @id @default(cuid())
-  sessionId   String    @map("session_id")
-  tier        String
-  currency    String
-  amount      Float
-  address     String
-  status      String    @default("pending")
-  txHash      String?   @map("tx_hash")
-  confirmedAt DateTime? @map("confirmed_at")
-  expiresAt   DateTime  @map("expires_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  userId      String?   @map("user_id")
+  id                String             @id @default(cuid())
+  sessionId         String             @map("session_id")
+  provider          PaymentProvider    @default(nowpayments)
+  paymentMethodType PaymentMethodType? @map("payment_method_type")
+  externalPaymentId String?            @map("external_payment_id")
+  tier              String
+  currency          String
+  amount            Float
+  address           String?
+  checkoutUrl       String?            @map("checkout_url")
+  status            String             @default("pending")
+  txHash            String?            @map("tx_hash")
+  confirmedAt       DateTime?          @map("confirmed_at")
+  expiresAt         DateTime           @map("expires_at")
+  paymentPurpose    String             @default("agent_subscription") @map("payment_purpose")
+  targetType        String?            @map("target_type")
+  targetId          String?            @map("target_id")
+  lineItems         Json?
+  providerMetadata  Json?              @map("provider_metadata")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  userId            String?            @map("user_id")
+  workspaceId       String?            @map("workspace_id")
+  workspace         Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
 
   @@index([sessionId])
+  @@index([provider, externalPaymentId])
   @@index([address])
   @@index([status])
   @@index([userId])
+  @@index([workspaceId])
   @@map("payments")
 }
 
@@ -119,13 +467,493 @@ model User {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   lastLoginAt      DateTime? @map("last_login_at")
+  isBanned         Boolean   @default(false) @map("is_banned")
 
   // Relations
-  agents Agent[]
+  ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
+  workspaceMemberships WorkspaceMembership[]
+  agents             Agent[]
+  mattRelationships  CustomerRelationship[]
+  conversationThreads ConversationThread[]
+  supportTickets     SupportTicket[]
+  requestedFleetTasks FleetTask[] @relation("TaskRequester")
+  telegramIdentities TelegramIdentity[]
+  telegramThreadBindings TelegramThreadBinding[]
+  initiatedTelegramBotTransfers TelegramBotTransfer[] @relation("TelegramBotTransferInitiator")
+  entitlementPackGrants EntitlementPackGrant[]
+  usageLedgerEntries UsageLedgerEntry[]
 
   @@index([email])
+  @@index([isBanned])
   @@index([walletAddress])
   @@map("users")
+}
+
+// Legacy wallet inventory kept in schema to avoid destructive drops on the live DB.
+model WalletPool {
+  id                  String    @id @default(cuid())
+  address             String    @unique
+  encryptedPrivateKey String    @map("encrypted_private_key")
+  status              String    @default("available")
+  assignedToSession   String?   @map("assigned_to_session")
+  assignedAt          DateTime? @map("assigned_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  hyperBalance        String    @default("0") @map("hyper_balance")
+  pmApproved          Boolean   @default(false) @map("pm_approved")
+
+  @@index([status])
+  @@index([assignedToSession])
+  @@map("wallet_pool")
+}
+
+// Legacy CMS content kept in schema to avoid destructive drops on the live DB.
+model WebsiteContent {
+  id        String   @id @default(cuid())
+  section   String
+  key       String
+  value     String
+  type      String   @default("text")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
+
+  @@unique([section, key])
+  @@index([section])
+  @@map("website_content")
+}
+
+model Workspace {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  name        String
+  kind        WorkspaceKind @default(personal)
+  ownerUserId String?       @map("owner_user_id")
+  metadata    Json?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  ownerUser             User?                 @relation("WorkspaceOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  memberships           WorkspaceMembership[]
+  agents                Agent[]
+  payments              Payment[]
+  customerRelationships CustomerRelationship[]
+  conversationThreads   ConversationThread[]
+  supportTickets        SupportTicket[]
+  fleets                Fleet[]
+  telegramIdentities    TelegramIdentity[]
+  telegramThreadBindings TelegramThreadBinding[]
+  telegramBotPacks      TelegramBotPack[]
+  telegramBotTransfers  TelegramBotTransfer[]
+  entitlementPackGrants EntitlementPackGrant[]
+
+  @@index([ownerUserId, kind])
+  @@map("workspaces")
+}
+
+model WorkspaceMembership {
+  id          String                  @id @default(cuid())
+  workspaceId String                  @map("workspace_id")
+  userId      String                  @map("user_id")
+  role        WorkspaceMembershipRole @default(member)
+  isDefault   Boolean                 @default(false) @map("is_default")
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId, isDefault])
+  @@index([workspaceId, role])
+  @@map("workspace_memberships")
+}
+
+model UseCaseTemplate {
+  id                     String   @id @default(cuid())
+  slug                   String   @unique
+  name                   String
+  description            String?
+  category               String   @default("assistant")
+  agentKind              AgentKind @default(customer_agent) @map("agent_kind")
+  defaultExecutionMode   SkillExecutionMode @default(interactive) @map("default_execution_mode")
+  defaultWorkerTier      WorkerTier @default(standard) @map("default_worker_tier")
+  defaultTransportPolicy Json?    @map("default_transport_policy")
+  defaultBrainPolicy     Json?    @map("default_brain_policy")
+  templateSpec           Json?    @map("template_spec")
+  promptSpec             Json?    @map("prompt_spec")
+  guardrailSpec          Json?    @map("guardrail_spec")
+  scheduleSpec           Json?    @map("schedule_spec")
+  memorySpec             Json?    @map("memory_spec")
+  approvalSpec           Json?    @map("approval_spec")
+  status                 String   @default("active")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  agents                 Agent[]
+  items                  UseCaseTemplateItem[]
+  entitlements           UseCaseTemplateEntitlement[]
+
+  @@index([agentKind, status])
+  @@map("use_case_templates")
+}
+
+model UseCaseTemplateItem {
+  id                String                           @id @default(cuid())
+  useCaseTemplateId String                           @map("use_case_template_id")
+  catalogItemId     String                           @map("catalog_item_id")
+  inclusionType     UseCaseTemplateItemInclusionType @default(included) @map("inclusion_type")
+  defaultEnabled    Boolean                          @default(true) @map("default_enabled")
+  displayOrder      Int                              @default(0) @map("display_order")
+  createdAt         DateTime                         @default(now()) @map("created_at")
+  updatedAt         DateTime                         @updatedAt @map("updated_at")
+
+  useCaseTemplate UseCaseTemplate @relation(fields: [useCaseTemplateId], references: [id], onDelete: Cascade)
+  catalogItem     CatalogItem      @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  @@unique([useCaseTemplateId, catalogItemId, inclusionType])
+  @@index([catalogItemId, inclusionType])
+  @@map("use_case_template_items")
+}
+
+model UseCaseTemplateEntitlement {
+  id                String                         @id @default(cuid())
+  useCaseTemplateId String                         @map("use_case_template_id")
+  entitlementPackId String                         @map("entitlement_pack_id")
+  provisioningMode  UseCaseTemplateProvisioningMode @default(grant_on_create) @map("provisioning_mode")
+  displayOrder      Int                            @default(0) @map("display_order")
+  createdAt         DateTime                       @default(now()) @map("created_at")
+  updatedAt         DateTime                       @updatedAt @map("updated_at")
+
+  useCaseTemplate UseCaseTemplate @relation(fields: [useCaseTemplateId], references: [id], onDelete: Cascade)
+  entitlementPack EntitlementPack @relation(fields: [entitlementPackId], references: [id], onDelete: Cascade)
+
+  @@unique([useCaseTemplateId, entitlementPackId])
+  @@index([entitlementPackId, provisioningMode])
+  @@map("use_case_template_entitlements")
+}
+
+model CatalogItem {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  name        String
+  description String?
+  itemType    CatalogItemType  @map("item_type")
+  scopeType   CatalogScopeType @default(agent) @map("scope_type")
+  status      String           @default("active")
+  displayMeta Json?            @map("display_meta")
+  pricingMeta Json?            @map("pricing_meta")
+  origin      String           @default("matt_native")
+  trustTier   CatalogTrustTier @default(first_party) @map("trust_tier")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  templateItems UseCaseTemplateItem[]
+  skillLinks    CatalogItemSkill[]
+  entitlementLinks CatalogItemEntitlement[]
+  loadoutItems  AgentLoadoutItem[]
+
+  @@index([itemType, status])
+  @@index([scopeType, status])
+  @@map("catalog_items")
+}
+
+model SkillDefinition {
+  id              String             @id @default(cuid())
+  slug            String             @unique
+  name            String
+  description     String?
+  capabilityType  SkillCapabilityType @map("capability_type")
+  executionMode   SkillExecutionMode @map("execution_mode")
+  inputSchema     Json?              @map("input_schema")
+  outputSchema    Json?              @map("output_schema")
+  policySpec      Json?              @map("policy_spec")
+  status          String             @default("active")
+  fallbackPolicyId String?           @map("fallback_policy_id")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  fallbackPolicy     FallbackPolicy?      @relation(fields: [fallbackPolicyId], references: [id], onDelete: SetNull)
+  catalogItems       CatalogItemSkill[]
+  implementations    SkillImplementation[]
+  entitlementPackSkills EntitlementPackSkill[]
+  agentSkillBindings AgentSkillBinding[]
+  entitlementAllowances EntitlementAllowance[]
+  usageLedgerEntries UsageLedgerEntry[]
+  usageDecisionLogs  UsageDecisionLog[]
+
+  @@index([capabilityType, status])
+  @@map("skill_definitions")
+}
+
+model CatalogItemSkill {
+  id                String   @id @default(cuid())
+  catalogItemId     String   @map("catalog_item_id")
+  skillDefinitionId String   @map("skill_definition_id")
+  role              String   @default("primary")
+  required          Boolean  @default(true)
+  displayOrder      Int      @default(0) @map("display_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  catalogItem      CatalogItem     @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  skillDefinition  SkillDefinition @relation(fields: [skillDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([catalogItemId, skillDefinitionId])
+  @@index([skillDefinitionId, required])
+  @@map("catalog_item_skills")
+}
+
+model CatalogItemEntitlement {
+  id                String   @id @default(cuid())
+  catalogItemId     String   @map("catalog_item_id")
+  entitlementPackId String   @map("entitlement_pack_id")
+  grantOnAttach     Boolean  @default(true) @map("grant_on_attach")
+  displayOrder      Int      @default(0) @map("display_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  catalogItem      CatalogItem      @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  entitlementPack  EntitlementPack  @relation(fields: [entitlementPackId], references: [id], onDelete: Cascade)
+
+  @@unique([catalogItemId, entitlementPackId])
+  @@index([entitlementPackId, grantOnAttach])
+  @@map("catalog_item_entitlements")
+}
+
+model SkillImplementation {
+  id                String                       @id @default(cuid())
+  skillDefinitionId String                       @map("skill_definition_id")
+  implementationKey String                       @unique @map("implementation_key")
+  providerKind      SkillImplementationProviderKind @map("provider_kind")
+  costModel         Json?                        @map("cost_model")
+  qualityTier       SkillQualityTier             @default(free) @map("quality_tier")
+  runtimeEngine     SkillRuntimeEngine           @default(native) @map("runtime_engine")
+  availabilityStatus String                      @default("active") @map("availability_status")
+  requiresEntitlement Boolean                    @default(false) @map("requires_entitlement")
+  requiresApproval  Boolean                      @default(false) @map("requires_approval")
+  timeoutMs         Int                          @default(30000) @map("timeout_ms")
+  idempotencyMode   String                       @default("best_effort") @map("idempotency_mode")
+  priority          Int                          @default(0)
+  metadata          Json?
+  createdAt         DateTime                     @default(now()) @map("created_at")
+  updatedAt         DateTime                     @updatedAt @map("updated_at")
+
+  skillDefinition   SkillDefinition   @relation(fields: [skillDefinitionId], references: [id], onDelete: Cascade)
+  defaultForAgentBindings AgentSkillBinding[] @relation("DefaultSkillImplementation")
+  usageLedgerEntries UsageLedgerEntry[]
+  usageDecisionLogs UsageDecisionLog[]
+
+  @@index([skillDefinitionId, availabilityStatus, priority])
+  @@index([qualityTier, availabilityStatus])
+  @@map("skill_implementations")
+}
+
+model FallbackPolicy {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  steps       Json
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  skillDefinitions SkillDefinition[]
+  entitlementPacks EntitlementPack[]
+  agentSkillBindings AgentSkillBinding[]
+
+  @@map("fallback_policies")
+}
+
+model EntitlementPack {
+  id               String               @id @default(cuid())
+  slug             String               @unique
+  name             String
+  description      String?
+  scopeType        CatalogScopeType     @default(agent) @map("scope_type")
+  grantType        EntitlementGrantType @map("grant_type")
+  resetPolicy      EntitlementResetPolicy @map("reset_policy")
+  durationSpec     Json?                @map("duration_spec")
+  pricingSpec      Json?                @map("pricing_spec")
+  autoTopupEligible Boolean             @default(false) @map("auto_topup_eligible")
+  fallbackPolicyId String?              @map("fallback_policy_id")
+  status           String               @default("active")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  fallbackPolicy FallbackPolicy? @relation(fields: [fallbackPolicyId], references: [id], onDelete: SetNull)
+  useCaseTemplates UseCaseTemplateEntitlement[]
+  catalogItems    CatalogItemEntitlement[]
+  skillAllowances EntitlementPackSkill[]
+  grants         EntitlementPackGrant[]
+
+  @@index([scopeType, grantType, status])
+  @@map("entitlement_packs")
+}
+
+model EntitlementPackSkill {
+  id                String   @id @default(cuid())
+  entitlementPackId String   @map("entitlement_pack_id")
+  skillDefinitionId String   @map("skill_definition_id")
+  meterKey          String   @map("meter_key")
+  includedUnits     Int?     @map("included_units")
+  softLimit         Int?     @map("soft_limit")
+  hardLimit         Int?     @map("hard_limit")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  entitlementPack EntitlementPack @relation(fields: [entitlementPackId], references: [id], onDelete: Cascade)
+  skillDefinition SkillDefinition @relation(fields: [skillDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([entitlementPackId, skillDefinitionId, meterKey])
+  @@index([skillDefinitionId, meterKey])
+  @@map("entitlement_pack_skills")
+}
+
+model EntitlementPackGrant {
+  id                 String                 @id @default(cuid())
+  entitlementPackId  String                 @map("entitlement_pack_id")
+  scopeType          CatalogScopeType       @default(agent) @map("scope_type")
+  agentId            String?                @map("agent_id")
+  userId             String?                @map("user_id")
+  workspaceId        String?                @map("workspace_id")
+  paymentId          String?                @map("payment_id")
+  source             String
+  status             EntitlementGrantStatus @default(active)
+  startsAt           DateTime               @default(now()) @map("starts_at")
+  endsAt             DateTime?              @map("ends_at")
+  autoTopupEnabled   Boolean                @default(false) @map("auto_topup_enabled")
+  metadata           Json?
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+
+  entitlementPack EntitlementPack @relation(fields: [entitlementPackId], references: [id], onDelete: Cascade)
+  agent           Agent?          @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace       Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  allowances      EntitlementAllowance[]
+  usageLedgerEntries UsageLedgerEntry[]
+  usageDecisionLogs UsageDecisionLog[]
+
+  @@index([agentId, status])
+  @@index([userId, status])
+  @@index([workspaceId, status])
+  @@index([paymentId])
+  @@index([scopeType, status, endsAt])
+  @@unique([paymentId, entitlementPackId, agentId])
+  @@map("entitlement_pack_grants")
+}
+
+model EntitlementAllowance {
+  id                String   @id @default(cuid())
+  grantId           String   @map("grant_id")
+  skillDefinitionId String   @map("skill_definition_id")
+  meterKey          String   @map("meter_key")
+  includedUnits     Int?     @map("included_units")
+  consumedUnits     Int      @default(0) @map("consumed_units")
+  remainingUnits    Int?     @map("remaining_units")
+  softLimit         Int?     @map("soft_limit")
+  hardLimit         Int?     @map("hard_limit")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  grant            EntitlementPackGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  skillDefinition  SkillDefinition      @relation(fields: [skillDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([grantId, skillDefinitionId, meterKey])
+  @@index([skillDefinitionId, meterKey])
+  @@map("entitlement_allowances")
+}
+
+model AgentLoadoutItem {
+  id            String          @id @default(cuid())
+  agentId       String          @map("agent_id")
+  catalogItemId String          @map("catalog_item_id")
+  source        String
+  state         LoadoutItemState @default(enabled)
+  effectiveFrom DateTime        @default(now()) @map("effective_from")
+  effectiveTo   DateTime?       @map("effective_to")
+  metadata      Json?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  agent       Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  catalogItem CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, catalogItemId])
+  @@index([catalogItemId, state])
+  @@map("agent_loadout_items")
+}
+
+model AgentSkillBinding {
+  id                    String   @id @default(cuid())
+  agentId               String   @map("agent_id")
+  skillDefinitionId     String   @map("skill_definition_id")
+  defaultImplementationId String? @map("default_implementation_id")
+  fallbackPolicyId      String?  @map("fallback_policy_id")
+  policyOverrideSpec    Json?    @map("policy_override_spec")
+  status                String   @default("active")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  agent                Agent               @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  skillDefinition      SkillDefinition     @relation(fields: [skillDefinitionId], references: [id], onDelete: Cascade)
+  defaultImplementation SkillImplementation? @relation("DefaultSkillImplementation", fields: [defaultImplementationId], references: [id], onDelete: SetNull)
+  fallbackPolicy       FallbackPolicy?     @relation(fields: [fallbackPolicyId], references: [id], onDelete: SetNull)
+
+  @@unique([agentId, skillDefinitionId])
+  @@index([skillDefinitionId, status])
+  @@map("agent_skill_bindings")
+}
+
+model UsageLedgerEntry {
+  id                    String          @id @default(cuid())
+  agentId               String          @map("agent_id")
+  userId                String?         @map("user_id")
+  runId                 String?         @map("run_id")
+  skillDefinitionId     String          @map("skill_definition_id")
+  skillImplementationId String          @map("skill_implementation_id")
+  entitlementGrantId    String?         @map("entitlement_grant_id")
+  meterKey              String          @map("meter_key")
+  units                 Int             @default(1)
+  unitType              String          @default("unit") @map("unit_type")
+  costBasis             Json?           @map("cost_basis")
+  chargeMode            UsageChargeMode @map("charge_mode")
+  result                UsageResult     @default(succeeded)
+  createdAt             DateTime        @default(now()) @map("created_at")
+
+  agent               Agent                @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  user                User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  skillDefinition     SkillDefinition      @relation(fields: [skillDefinitionId], references: [id], onDelete: Cascade)
+  skillImplementation SkillImplementation  @relation(fields: [skillImplementationId], references: [id], onDelete: Cascade)
+  entitlementGrant    EntitlementPackGrant? @relation(fields: [entitlementGrantId], references: [id], onDelete: SetNull)
+
+  @@index([agentId, createdAt])
+  @@index([skillDefinitionId, createdAt])
+  @@index([entitlementGrantId, createdAt])
+  @@map("usage_ledger_entries")
+}
+
+model UsageDecisionLog {
+  id                         String   @id @default(cuid())
+  runId                      String?  @map("run_id")
+  agentId                    String   @map("agent_id")
+  skillDefinitionId          String   @map("skill_definition_id")
+  selectedImplementationId   String?  @map("selected_implementation_id")
+  selectedEntitlementGrantId String?  @map("selected_entitlement_grant_id")
+  decisionReason             String   @map("decision_reason")
+  fallbackTriggered          Boolean  @default(false) @map("fallback_triggered")
+  approvalTriggered          Boolean  @default(false) @map("approval_triggered")
+  customerNoticeRequired     Boolean  @default(false) @map("customer_notice_required")
+  metadata                   Json?
+  createdAt                  DateTime @default(now()) @map("created_at")
+
+  agent                 Agent                @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  skillDefinition       SkillDefinition      @relation(fields: [skillDefinitionId], references: [id], onDelete: Cascade)
+  selectedImplementation SkillImplementation? @relation(fields: [selectedImplementationId], references: [id], onDelete: SetNull)
+  selectedEntitlementGrant EntitlementPackGrant? @relation(fields: [selectedEntitlementGrantId], references: [id], onDelete: SetNull)
+
+  @@index([agentId, createdAt])
+  @@index([skillDefinitionId, createdAt])
+  @@map("usage_decision_logs")
 }
 
 model InferenceLog {
@@ -168,4 +996,381 @@ model InferenceLog {
   @@index([cortexId, createdAt])
   @@index([createdAt])
   @@map("inference_logs")
+}
+
+model CustomerRelationship {
+  id              String             @id @default(cuid())
+  userId          String             @map("user_id")
+  workspaceId     String?            @map("workspace_id")
+  role            RelationshipRole
+  status          RelationshipStatus @default(active)
+  assignedAgentId String             @map("assigned_agent_id")
+  assignedHumanId String?            @map("assigned_human_id")
+  primaryChannel  ThreadChannel      @default(telegram) @map("primary_channel")
+  slaTier         String             @default("standard") @map("sla_tier")
+  notes           String?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace          Workspace?           @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  assignedAgent      Agent                @relation("RelationshipAgent", fields: [assignedAgentId], references: [id], onDelete: Cascade)
+  conversationThreads ConversationThread[]
+  supportTickets     SupportTicket[]
+  telegramThreadBindings TelegramThreadBinding[]
+
+  @@unique([workspaceId, userId, role])
+  @@index([workspaceId, status])
+  @@index([assignedAgentId, status])
+  @@map("customer_relationships")
+}
+
+model ConversationThread {
+  id               String         @id @default(cuid())
+  userId           String         @map("user_id")
+  workspaceId      String?        @map("workspace_id")
+  relationshipId   String?        @map("relationship_id")
+  channel          ThreadChannel
+  threadKey        String         @unique @map("thread_key")
+  externalThreadId String         @map("external_thread_id")
+  externalUserId   String?        @map("external_user_id")
+  title            String?
+  lastInboundAt    DateTime?      @map("last_inbound_at")
+  lastOutboundAt   DateTime?      @map("last_outbound_at")
+  lastMessageAt    DateTime?      @map("last_message_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace      Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  relationship   CustomerRelationship? @relation(fields: [relationshipId], references: [id], onDelete: SetNull)
+  supportTickets SupportTicket[]
+  fleetTasks     FleetTask[]
+  telegramThreadBindings TelegramThreadBinding[]
+  outboundTransportMessages OutboundTransportMessage[]
+
+  @@index([userId, channel])
+  @@index([workspaceId, channel, updatedAt])
+  @@index([channel, externalThreadId])
+  @@map("conversation_threads")
+}
+
+model SupportTicket {
+  id                   String            @id @default(cuid())
+  userId               String            @map("user_id")
+  workspaceId          String?           @map("workspace_id")
+  relationshipId       String?           @map("relationship_id")
+  conversationThreadId String?           @map("conversation_thread_id")
+  assignedAgentId      String?           @map("assigned_agent_id")
+  status               TicketStatus      @default(open)
+  priority             FleetTaskPriority @default(normal)
+  subject              String
+  summary              String?
+  sourceChannel        ThreadChannel     @default(telegram) @map("source_channel")
+  resolvedAt           DateTime?         @map("resolved_at")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+
+  requester          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace          Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  relationship       CustomerRelationship? @relation(fields: [relationshipId], references: [id], onDelete: SetNull)
+  conversationThread ConversationThread?   @relation(fields: [conversationThreadId], references: [id], onDelete: SetNull)
+  assignedAgent      Agent?                @relation("TicketAgent", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  fleetTask          FleetTask?
+
+  @@index([userId, status, createdAt])
+  @@index([workspaceId, status, createdAt])
+  @@index([assignedAgentId, status])
+  @@map("support_tickets")
+}
+
+model Fleet {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  description String?
+  type        FleetType
+  status      String    @default("active")
+  ownerType   OwnerType @default(matt_internal) @map("owner_type")
+  workspaceId String?   @map("workspace_id")
+  cortexId    String?   @map("cortex_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  memberships FleetMembership[]
+  tasks       FleetTask[]
+  runs        FleetRun[]
+
+  @@index([type, status])
+  @@index([workspaceId, ownerType])
+  @@map("fleets")
+}
+
+model FleetMembership {
+  id             String   @id @default(cuid())
+  fleetId        String   @map("fleet_id")
+  agentId        String   @map("agent_id")
+  role           String   @default("worker")
+  status         String   @default("active")
+  capacityWeight Int      @default(1) @map("capacity_weight")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  fleet Fleet @relation(fields: [fleetId], references: [id], onDelete: Cascade)
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([fleetId, agentId])
+  @@index([agentId, status])
+  @@map("fleet_memberships")
+}
+
+model FleetRun {
+  id          String         @id @default(cuid())
+  fleetId     String         @map("fleet_id")
+  status      FleetRunStatus @default(pending)
+  trigger     String
+  summary     String?
+  metadata    Json?
+  startedAt   DateTime?      @map("started_at")
+  completedAt DateTime?      @map("completed_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  fleet Fleet      @relation(fields: [fleetId], references: [id], onDelete: Cascade)
+  tasks FleetTask[]
+
+  @@index([fleetId, status, createdAt])
+  @@map("fleet_runs")
+}
+
+model FleetTask {
+  id              String            @id @default(cuid())
+  fleetId         String            @map("fleet_id")
+  runId           String?           @map("run_id")
+  assignedAgentId String?           @map("assigned_agent_id")
+  requesterUserId String?           @map("requester_user_id")
+  ticketId        String?           @unique @map("ticket_id")
+  conversationThreadId String?      @map("conversation_thread_id")
+  type            String
+  status          FleetTaskStatus   @default(queued)
+  priority        FleetTaskPriority @default(normal)
+  title           String
+  payload         Json?
+  result          Json?
+  requestedAt     DateTime          @default(now()) @map("requested_at")
+  startedAt       DateTime?         @map("started_at")
+  completedAt     DateTime?         @map("completed_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  fleet         Fleet       @relation(fields: [fleetId], references: [id], onDelete: Cascade)
+  run           FleetRun?   @relation(fields: [runId], references: [id], onDelete: SetNull)
+  assignedAgent Agent?      @relation("TaskAgent", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  requester     User?       @relation("TaskRequester", fields: [requesterUserId], references: [id], onDelete: SetNull)
+  conversationThread ConversationThread? @relation(fields: [conversationThreadId], references: [id], onDelete: SetNull)
+  ticket        SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  outboundTransportMessages OutboundTransportMessage[]
+
+  @@index([fleetId, status, priority])
+  @@index([assignedAgentId, status])
+  @@index([conversationThreadId])
+  @@map("fleet_tasks")
+}
+
+model TelegramIdentity {
+  id                       String                         @id @default(cuid())
+  kind                     TelegramIdentityKind
+  ownershipType            TelegramIdentityOwnershipType @default(customer_owned) @map("ownership_type")
+  status                   TelegramIdentityStatus        @default(pending)
+  transportProvider        AgentTransportProvider        @default(telethon) @map("transport_provider")
+  userId                   String?                       @map("user_id")
+  workspaceId              String?                       @map("workspace_id")
+  displayName              String?                       @map("display_name")
+  externalTelegramUserId   String?                       @map("external_telegram_user_id")
+  externalTelegramUsername String?                       @map("external_telegram_username")
+  externalPhone            String?                       @map("external_phone")
+  botTokenEncrypted        String?                       @map("bot_token_encrypted")
+  sessionEncrypted         String?                       @map("session_encrypted")
+  sessionVersion           Int                           @default(1) @map("session_version")
+  runtimeLabel             String?                       @map("runtime_label")
+  metadata                 Json?
+  lastHeartbeatAt          DateTime?                     @map("last_heartbeat_at")
+  lastSeenAt               DateTime?                     @map("last_seen_at")
+  createdAt                DateTime                      @default(now()) @map("created_at")
+  updatedAt                DateTime                      @updatedAt @map("updated_at")
+
+  user              User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace         Workspace?             @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  agentLinks        AgentTelegramIdentity[]
+  threadBindings    TelegramThreadBinding[]
+  outboundMessages  OutboundTransportMessage[]
+  botPackItem       TelegramBotPackItem?
+  botTransfers      TelegramBotTransfer[]
+
+  @@index([status, transportProvider])
+  @@index([userId, ownershipType])
+  @@index([workspaceId, ownershipType])
+  @@index([externalTelegramUserId])
+  @@index([externalTelegramUsername])
+  @@map("telegram_identities")
+}
+
+model TelegramBotPack {
+  id            String                        @id @default(cuid())
+  slug          String                        @unique
+  template      TelegramBotPackTemplate       @default(planck_hq_17)
+  status        TelegramBotPackStatus         @default(draft)
+  ownershipMode TelegramIdentityOwnershipType @default(meetmatt_managed) @map("ownership_mode")
+  workspaceId   String?                       @map("workspace_id")
+  assignedAt    DateTime?                     @map("assigned_at")
+  transferredAt DateTime?                     @map("transferred_at")
+  notes         String?
+  metadata      Json?
+  createdAt     DateTime                      @default(now()) @map("created_at")
+  updatedAt     DateTime                      @updatedAt @map("updated_at")
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  items     TelegramBotPackItem[]
+  transfers TelegramBotTransfer[]
+
+  @@index([status, template])
+  @@index([workspaceId, status])
+  @@map("telegram_bot_packs")
+}
+
+model TelegramBotPackItem {
+  id                        String                    @id @default(cuid())
+  packId                    String                    @map("pack_id")
+  telegramIdentityId        String                    @unique @map("telegram_identity_id")
+  seatTemplateId            String                    @map("seat_template_id")
+  seatOrder                 Int                       @map("seat_order")
+  genericLabel              String                    @map("generic_label")
+  partnerFacingDisplayName  String?                   @map("partner_facing_display_name")
+  partnerFacingUsername     String?                   @map("partner_facing_username")
+  brandingStatus            String                    @default("pending") @map("branding_status")
+  assignedSeatId            String?                   @map("assigned_seat_id")
+  assignmentStatus          TelegramBotPackItemStatus @default(stock) @map("assignment_status")
+  transferredAt             DateTime?                 @map("transferred_at")
+  metadata                  Json?
+  createdAt                 DateTime                  @default(now()) @map("created_at")
+  updatedAt                 DateTime                  @updatedAt @map("updated_at")
+
+  pack             TelegramBotPack   @relation(fields: [packId], references: [id], onDelete: Cascade)
+  telegramIdentity TelegramIdentity  @relation(fields: [telegramIdentityId], references: [id], onDelete: Cascade)
+  transfers        TelegramBotTransfer[]
+
+  @@unique([packId, seatTemplateId])
+  @@index([packId, assignmentStatus])
+  @@map("telegram_bot_pack_items")
+}
+
+model AgentTelegramIdentity {
+  id                 String   @id @default(cuid())
+  agentId            String   @map("agent_id")
+  telegramIdentityId String   @map("telegram_identity_id")
+  role               String   @default("primary")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  agent            Agent            @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  telegramIdentity TelegramIdentity @relation(fields: [telegramIdentityId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, telegramIdentityId])
+  @@index([telegramIdentityId, role])
+  @@map("agent_telegram_identities")
+}
+
+model TelegramBotTransfer {
+  id                 String                    @id @default(cuid())
+  packId             String                    @map("pack_id")
+  packItemId         String                    @unique @map("pack_item_id")
+  telegramIdentityId String                    @map("telegram_identity_id")
+  workspaceId        String                    @map("workspace_id")
+  transferStatus     TelegramBotTransferStatus @default(not_started) @map("transfer_status")
+  initiatedAt        DateTime?                 @map("initiated_at")
+  completedAt        DateTime?                 @map("completed_at")
+  initiatedByUserId  String?                   @map("initiated_by_user_id")
+  notes              String?
+  metadata           Json?
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+
+  pack             TelegramBotPack   @relation(fields: [packId], references: [id], onDelete: Cascade)
+  packItem         TelegramBotPackItem @relation(fields: [packItemId], references: [id], onDelete: Cascade)
+  telegramIdentity TelegramIdentity  @relation(fields: [telegramIdentityId], references: [id], onDelete: Cascade)
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  initiatedByUser  User?             @relation("TelegramBotTransferInitiator", fields: [initiatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([packId, transferStatus])
+  @@index([workspaceId, transferStatus])
+  @@index([telegramIdentityId, transferStatus])
+  @@map("telegram_bot_transfers")
+}
+
+model TelegramThreadBinding {
+  id                 String                    @id @default(cuid())
+  telegramIdentityId String                    @map("telegram_identity_id")
+  externalChatId     String                    @map("external_chat_id")
+  externalPeerId     String?                   @map("external_peer_id")
+  userId             String?                   @map("user_id")
+  workspaceId        String?                   @map("workspace_id")
+  agentId            String?                   @map("agent_id")
+  relationshipId     String?                   @map("relationship_id")
+  conversationThreadId String?                 @map("conversation_thread_id")
+  bindingType        TelegramThreadBindingType @default(matt_relationship) @map("binding_type")
+  status             String                    @default("active")
+  metadata           Json?
+  lastInboundAt      DateTime?                 @map("last_inbound_at")
+  lastOutboundAt     DateTime?                 @map("last_outbound_at")
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+
+  telegramIdentity  TelegramIdentity      @relation(fields: [telegramIdentityId], references: [id], onDelete: Cascade)
+  user              User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace         Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  agent             Agent?                @relation("AgentThreadBinding", fields: [agentId], references: [id], onDelete: SetNull)
+  relationship      CustomerRelationship? @relation(fields: [relationshipId], references: [id], onDelete: SetNull)
+  conversationThread ConversationThread?  @relation(fields: [conversationThreadId], references: [id], onDelete: SetNull)
+
+  @@unique([telegramIdentityId, externalChatId])
+  @@index([userId, status])
+  @@index([workspaceId, status])
+  @@index([agentId, status])
+  @@index([relationshipId, status])
+  @@map("telegram_thread_bindings")
+}
+
+model OutboundTransportMessage {
+  id                       String                       @id @default(cuid())
+  agentId                  String                       @map("agent_id")
+  telegramIdentityId       String                       @map("telegram_identity_id")
+  conversationThreadId     String?                      @map("conversation_thread_id")
+  fleetTaskId              String?                      @map("fleet_task_id")
+  type                     OutboundTransportMessageType
+  status                   OutboundTransportMessageStatus @default(queued)
+  payload                  Json
+  externalChatId           String                       @map("external_chat_id")
+  externalMessageId        String?                      @map("external_message_id")
+  responseExternalMessageId String?                     @map("response_external_message_id")
+  attempts                 Int                          @default(0)
+  maxAttempts              Int                          @default(5) @map("max_attempts")
+  nextRunAt                DateTime                     @default(now()) @map("next_run_at")
+  claimedAt                DateTime?                    @map("claimed_at")
+  claimedBy                String?                      @map("claimed_by")
+  completedAt              DateTime?                    @map("completed_at")
+  errorCode                String?                      @map("error_code")
+  errorMessage             String?                      @map("error_message")
+  createdAt                DateTime                     @default(now()) @map("created_at")
+  updatedAt                DateTime                     @updatedAt @map("updated_at")
+
+  agent             Agent             @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  telegramIdentity  TelegramIdentity  @relation(fields: [telegramIdentityId], references: [id], onDelete: Cascade)
+  conversationThread ConversationThread? @relation(fields: [conversationThreadId], references: [id], onDelete: SetNull)
+  fleetTask         FleetTask?        @relation(fields: [fleetTaskId], references: [id], onDelete: SetNull)
+
+  @@index([status, nextRunAt])
+  @@index([telegramIdentityId, status, nextRunAt])
+  @@index([agentId, status, nextRunAt])
+  @@map("outbound_transport_messages")
 }

@@ -11,20 +11,27 @@ const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
 
 type MockCreateArgs = { data?: Record<string, unknown> };
 type MockRecord = Record<string, unknown>;
+type MockUpdateManyArgs = { where?: Record<string, unknown>; data?: Record<string, unknown> };
+type MockFindFirstArgs = { where?: Record<string, unknown> };
+type MockCountArgs = { where?: Record<string, unknown> };
 
 interface MockModel {
-  findMany: () => Promise<MockRecord[]>;
-  findUnique: () => Promise<MockRecord | null>;
+  findMany: (args?: Record<string, unknown>) => Promise<MockRecord[]>;
+  findUnique: (args?: Record<string, unknown>) => Promise<MockRecord | null>;
+  findFirst: (args?: MockFindFirstArgs) => Promise<MockRecord | null>;
   create: (args: MockCreateArgs) => Promise<MockRecord>;
-  update: () => Promise<MockRecord>;
-  delete: () => Promise<MockRecord>;
+  update: (args?: Record<string, unknown>) => Promise<MockRecord>;
+  updateMany: (args?: MockUpdateManyArgs) => Promise<{ count: number }>;
+  delete: (args?: Record<string, unknown>) => Promise<MockRecord>;
+  count: (args?: MockCountArgs) => Promise<number>;
 }
 
 interface MockDbClient {
-  user: MockModel & { count: () => Promise<number> };
+  user: MockModel;
   agent: MockModel;
   payment: MockModel;
-  walletPool: MockModel & { findFirst: () => Promise<MockRecord | null>; count: () => Promise<number> };
+  deployJob: MockModel;
+  walletPool: MockModel;
   $connect: () => Promise<void>;
   $disconnect: () => Promise<void>;
   $transaction: <T>(fn: (db: MockDbClient) => T | Promise<T>) => Promise<T>;
@@ -36,24 +43,42 @@ const mockDb: MockDbClient = {
   user: {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
+    findFirst: () => Promise.resolve(null),
     create: (args: MockCreateArgs) => Promise.resolve({ id: "mock-" + Date.now(), ...(args.data ?? {}) }),
     update: () => Promise.resolve({}),
+    updateMany: () => Promise.resolve({ count: 0 }),
     delete: () => Promise.resolve({}),
     count: () => Promise.resolve(0),
   },
   agent: {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
+    findFirst: () => Promise.resolve(null),
     create: (args: MockCreateArgs) => Promise.resolve({ id: "mock-" + Date.now(), ...(args.data ?? {}) }),
     update: () => Promise.resolve({}),
+    updateMany: () => Promise.resolve({ count: 0 }),
     delete: () => Promise.resolve({}),
+    count: () => Promise.resolve(0),
   },
   payment: {
     findMany: () => Promise.resolve([]),
     findUnique: () => Promise.resolve(null),
+    findFirst: () => Promise.resolve(null),
     create: (args: MockCreateArgs) => Promise.resolve({ id: "pay-" + Date.now(), address: "0x" + "1".repeat(40), ...(args.data ?? {}) }),
     update: () => Promise.resolve({}),
+    updateMany: () => Promise.resolve({ count: 0 }),
     delete: () => Promise.resolve({}),
+    count: () => Promise.resolve(0),
+  },
+  deployJob: {
+    findMany: () => Promise.resolve([]),
+    findUnique: () => Promise.resolve(null),
+    findFirst: () => Promise.resolve(null),
+    create: (args: MockCreateArgs) => Promise.resolve({ id: "deploy-job-" + Date.now(), ...(args.data ?? {}) }),
+    update: () => Promise.resolve({}),
+    updateMany: () => Promise.resolve({ count: 0 }),
+    delete: () => Promise.resolve({}),
+    count: () => Promise.resolve(0),
   },
   walletPool: {
     findMany: () => Promise.resolve([]),
@@ -61,6 +86,7 @@ const mockDb: MockDbClient = {
     findFirst: () => Promise.resolve(null),
     create: (args: MockCreateArgs) => Promise.resolve({ id: "wallet-" + Date.now(), address: "0x" + "1".repeat(40), ...(args.data ?? {}) }),
     update: () => Promise.resolve({}),
+    updateMany: () => Promise.resolve({ count: 0 }),
     delete: () => Promise.resolve({}),
     count: () => Promise.resolve(0),
   },

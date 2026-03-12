@@ -5,7 +5,7 @@ import { getErrorMessage, getStatusError } from "@/lib/http-error";
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await requireAuth(req);
+    const { userId, workspaceId } = await requireAuth(req);
     const body = await req.json();
     const { agentId } = body;
 
@@ -17,7 +17,13 @@ export async function POST(req: NextRequest) {
       where: { id: agentId },
     });
 
-    if (!agent || agent.userId !== userId) {
+    if (
+      !agent ||
+      (
+        agent.workspaceId !== workspaceId &&
+        !(agent.workspaceId === null && agent.userId === userId)
+      )
+    ) {
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
     }
 
@@ -35,6 +41,9 @@ export async function POST(req: NextRequest) {
       data: {
         status: "pending",
         activationStatus: "activating",
+        deployState: "pending",
+        deployErrorCode: null,
+        deployErrorMessage: null,
       },
     });
 
@@ -43,7 +52,13 @@ export async function POST(req: NextRequest) {
       console.error("[Retry] INTERNAL_WEBHOOK_SECRET not set, cannot trigger deploy");
       await prisma.agent.update({
         where: { id: agentId },
-        data: { activationStatus: "failed", status: "error" },
+        data: {
+          activationStatus: "failed",
+          status: "error",
+          deployState: "failed",
+          deployErrorCode: "CONFIG_MISSING",
+          deployErrorMessage: "INTERNAL_WEBHOOK_SECRET not set",
+        },
       });
       return NextResponse.json(
         { error: "Deployment service not configured" },
@@ -66,13 +81,28 @@ export async function POST(req: NextRequest) {
       console.error("[Retry] Deploy trigger failed:", triggerResponse.status, errorText);
       await prisma.agent.update({
         where: { id: agentId },
-        data: { activationStatus: "failed", status: "error" },
+        data: {
+          activationStatus: "failed",
+          status: "error",
+          deployState: "failed",
+          deployErrorCode: `HTTP_${triggerResponse.status}`,
+          deployErrorMessage: errorText.slice(0, 500),
+        },
       });
       return NextResponse.json(
         { error: "Failed to trigger deployment" },
         { status: 502 }
       );
     }
+
+    const payload = await triggerResponse.json().catch(() => ({} as Record<string, unknown>));
+    const queued = payload["queued"] === true;
+    await prisma.agent.update({
+      where: { id: agentId },
+      data: {
+        deployState: queued ? "queued" : "provisioning",
+      },
+    });
 
     console.log("[Retry] Deploy triggered successfully for agent:", agentId);
 

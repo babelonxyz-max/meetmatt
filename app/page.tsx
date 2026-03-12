@@ -1,51 +1,107 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePrivy } from "@privy-io/react-auth";
+import { ArrowLeft } from "lucide-react";
 import { StepName } from "./components/wizard/StepName";
 import { StepPersonality } from "./components/wizard/StepPersonality";
 import { StepDemo } from "./components/wizard/StepDemo";
+import { StepTelegram } from "./components/wizard/StepTelegram";
 import { StepPayment } from "./components/wizard/StepPayment";
 import { StepDeploy } from "./components/wizard/StepDeploy";
 import { PaymentModal } from "./components/PaymentModal";
 import { NexusOrb } from "./components/NexusOrb";
 
-type ActiveStep = "name" | "personality" | "demo" | "payment" | "deploy";
+type ActiveStep = "name" | "personality" | "demo" | "telegram" | "payment" | "deploy";
 type Step = "idle" | ActiveStep;
 type DeployStatus = "deploying" | "completed" | "failed";
 type DeploymentMode = "assistant" | "fleet";
-
-interface NarrativeMessage {
+type TelegramBotProfile = {
   id: string;
-  role: "matt" | "you";
-  text: string;
-}
+  username: string | null;
+  firstName: string | null;
+  telegramLink: string | null;
+};
 
 const FLOW_STEPS: Array<{ id: ActiveStep; label: string; hint: string }> = [
-  { id: "name", label: "Name", hint: "Give your assistant an identity" },
-  { id: "personality", label: "Style", hint: "Choose interaction style" },
-  { id: "demo", label: "Demo", hint: "Try a short conversation" },
-  { id: "payment", label: "Payment", hint: "Confirm deployment plan" },
-  { id: "deploy", label: "Launch", hint: "Provisioning in progress" },
+  { id: "name", label: "Name", hint: "Give your operator an identity" },
+  { id: "personality", label: "Tone", hint: "Choose how it should sound" },
+  { id: "demo", label: "Preview", hint: "Run a short live test" },
+  { id: "telegram", label: "Bot", hint: "Connect your Telegram bot" },
+  { id: "payment", label: "Launch", hint: "Confirm setup and checkout" },
+  { id: "deploy", label: "Deploy", hint: "Provisioning in progress" },
 ];
 
 const STEP_PROMPTS: Record<Step, string> = {
-  idle: "Create AI-superpowered Assistant in minutes. Ready to start?",
-  name: "Hi, I'm Matt. Let's name your assistant first.",
-  personality: "Great start. What personality should your assistant have?",
-  demo: "Try a few messages and see how it responds.",
-  payment: "Looks good. Confirm payment and I'll deploy it.",
-  deploy: "Deployment is running. I'll keep you updated until it is live.",
+  idle: "Deploy AI agents in minutes. Ready to start?",
+  name: "Give your operator a clear name before it joins the thread.",
+  personality: "Choose the tone people will feel when the operator replies.",
+  demo: "Run a short live preview before you launch it for real.",
+  telegram: "Connect the BotFather token for the Telegram bot this operator should use.",
+  payment: "Confirm the deployment setup and continue to checkout.",
+  deploy: "Matt is provisioning everything now and will finish the handoff.",
 };
 
-function formatPersonality(personality: string): string {
-  if (!personality) return "";
+const STEP_MESSAGES: Record<ActiveStep, string[]> = {
+  name: [
+    "Welcome. Let's start with stage 1 of 5.",
+    "Choose a clear name for your operator before it joins the thread.",
+    "I'll use this name in the first handoff and on the deployed Telegram bot.",
+  ],
+  personality: [
+    "Stage 2 of 5.",
+    "Now pick the tone people should feel when your operator replies.",
+    "This becomes the voice Matt hands into the conversation.",
+  ],
+  demo: [
+    "Stage 3 of 5.",
+    "Run a short simulated thread before launch.",
+    "Use the preview to confirm the tone feels right before going live.",
+  ],
+  telegram: [
+    "Stage 4 of 5.",
+    "Automatic bot creation is not live yet, so connect your existing BotFather token.",
+    "Matt will deploy against that exact Telegram bot, not mint a new one.",
+  ],
+  payment: [
+    "Stage 5 of 5.",
+    "Everything is configured. Confirm the launch shape and continue to payment.",
+    "After checkout, Matt provisions the live runtime against your connected bot.",
+  ],
+  deploy: [
+    "Deployment in progress.",
+    "Matt is wiring the runtime, reply logic, and bot handoff now.",
+    "Stay here for the live status or open the dashboard later if needed.",
+  ],
+};
+
+const IDLE_HIGHLIGHTS = [
+  { label: "Deployment", value: "15 min launch" },
+  { label: "Payments", value: "Card or crypto" },
+  { label: "Continuity", value: "Matt stays on thread" },
+];
+
+function formatPersonality(personality: string) {
+  if (!personality) return "Not set";
   return personality.charAt(0).toUpperCase() + personality.slice(1);
 }
 
-function createNarrativeId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+function getStepHeading(step: Step, agentName: string) {
+  if (step === "name") return "Name your operator";
+  if (step === "personality") return "Choose the tone";
+  if (step === "demo") return agentName ? `Preview ${agentName}` : "Preview the operator";
+  if (step === "telegram") return "Connect Telegram bot";
+  if (step === "payment") return "Confirm deployment";
+  if (step === "deploy") return agentName ? `Launching ${agentName}` : "Launching";
+  return "Deploy AI agents";
+}
+
+function getOrbState(step: Step) {
+  if (step === "payment" || step === "telegram") return "listening";
+  if (step === "deploy") return "speaking";
+  if (step === "demo") return "thinking";
+  return "idle";
 }
 
 export default function Home() {
@@ -57,21 +113,43 @@ export default function Home() {
   const [deployStatus, setDeployStatus] = useState<DeployStatus>("deploying");
   const [deployProgress, setDeployProgress] = useState(0);
   const [telegramLink, setTelegramLink] = useState("");
-  const [authCode, setAuthCode] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [telegramBotToken, setTelegramBotToken] = useState("");
+  const [telegramBot, setTelegramBot] = useState<TelegramBotProfile | null>(null);
+  const [telegramBotError, setTelegramBotError] = useState<string | null>(null);
+  const [isValidatingTelegramBot, setIsValidatingTelegramBot] = useState(false);
+  const [launchError, setLaunchError] = useState<string | null>(null);
   const [config, setConfig] = useState({
     agentName: "",
     useCase: "assistant" as DeploymentMode,
     scope: "",
     contactMethod: "telegram",
+    telegramBotUsername: "",
   });
-  const [narrativeMessages, setNarrativeMessages] = useState<NarrativeMessage[]>([]);
-  const narrativeStepRef = useRef<Step>("idle");
-  const narrativeTimersRef = useRef<number[]>([]);
+
+  const pollCleanupRef = useRef<(() => void) | null>(null);
 
   const handleWake = () => {
     if (step !== "idle") return;
     setStep("name");
+  };
+
+  const handleBack = () => {
+    if (step === "personality") {
+      setStep("name");
+      return;
+    }
+    if (step === "demo") {
+      setStep("personality");
+      return;
+    }
+    if (step === "telegram") {
+      setStep("demo");
+      return;
+    }
+    if (step === "payment") {
+      setStep("telegram");
+    }
   };
 
   const handleNameSubmit = (name: string) => {
@@ -91,64 +169,114 @@ export default function Home() {
       login();
       return;
     }
-    setStep("payment");
+    setStep("telegram");
   };
 
-  const handlePaymentContinue = async () => {
-    // Create agent before opening payment modal
+  const handleTelegramTokenChange = (value: string) => {
+    setTelegramBotToken(value);
+    setTelegramBot(null);
+    setTelegramBotError(null);
+    setLaunchError(null);
+    setConfig((prev) => ({ ...prev, telegramBotUsername: "" }));
+  };
+
+  const handleTelegramContinue = async () => {
     try {
+      setIsValidatingTelegramBot(true);
+      setTelegramBotError(null);
+      setLaunchError(null);
+
       const token = await getAccessToken();
       if (!token) {
         login();
         return;
       }
+
+      const response = await fetch("/api/telegram/bot/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          telegramBotToken,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to validate Telegram bot");
+      }
+
+      const validatedBot = data.bot as TelegramBotProfile;
+      setTelegramBot(validatedBot);
+      setConfig((prev) => ({
+        ...prev,
+        telegramBotUsername: validatedBot.username || "",
+      }));
+      setStep("payment");
+    } catch (error) {
+      setTelegramBotError(
+        error instanceof Error ? error.message : "Failed to validate Telegram bot",
+      );
+    } finally {
+      setIsValidatingTelegramBot(false);
+    }
+  };
+
+  const handlePaymentContinue = async () => {
+    try {
+      setLaunchError(null);
+
+      if (!telegramBotToken.trim()) {
+        setStep("telegram");
+        setTelegramBotError("Connect a Telegram bot before checkout.");
+        return;
+      }
+
+      const token = await getAccessToken();
+      if (!token) {
+        login();
+        return;
+      }
+
       const response = await fetch("/api/agents", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           agentName,
           personality,
           useCase: config.useCase,
+          telegramBotToken,
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to create agent");
-
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create agent");
+      }
+
       setPendingAgentId(data.id);
       setShowPaymentModal(true);
     } catch (error) {
       console.error("Agent creation error:", error);
+      setLaunchError(
+        error instanceof Error ? error.message : "Failed to create agent",
+      );
     }
   };
-
-  const handlePaymentSuccess = async () => {
-    setShowPaymentModal(false);
-    setStep("deploy");
-
-    // Agent already created — payment webhook triggers deployment.
-    // Just poll for status updates.
-    if (pendingAgentId) {
-      pollAgentStatus(pendingAgentId);
-    } else {
-      setDeployStatus("failed");
-    }
-  };
-
-  const pollCleanupRef = useRef<(() => void) | null>(null);
 
   const pollAgentStatus = useCallback((id: string) => {
-    // Clean up any previous polling
     pollCleanupRef.current?.();
 
     const interval = setInterval(async () => {
       try {
         const token = await getAccessToken();
         const response = await fetch(`/api/agents/status?agentId=${id}`, {
-          headers: token ? { "Authorization": `Bearer ${token}` } : {},
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!response.ok) return;
 
@@ -161,15 +289,17 @@ export default function Home() {
         } else if (agent.status === "active") {
           setDeployProgress(100);
           setDeployStatus("completed");
-          setTelegramLink(agent.telegramLink || `https://t.me/${agent.name.toLowerCase()}_bot`);
-          setAuthCode(agent.authCode || "");
+          setTelegramLink(
+            agent.telegramLink ||
+              (agent.botUsername ? `https://t.me/${agent.botUsername}` : ""),
+          );
           cleanup();
         } else if (agent.status === "error") {
           setDeployStatus("failed");
           cleanup();
         }
-      } catch (e) {
-        console.error("Poll error:", e);
+      } catch (error) {
+        console.error("Poll error:", error);
       }
     }, 3000);
 
@@ -187,264 +317,334 @@ export default function Home() {
     pollCleanupRef.current = cleanup;
   }, [getAccessToken]);
 
+  const handlePaymentSuccess = async () => {
+    setShowPaymentModal(false);
+    setStep("deploy");
+
+    if (pendingAgentId) {
+      pollAgentStatus(pendingAgentId);
+    } else {
+      setDeployStatus("failed");
+    }
+  };
+
   const isWizardActive = step !== "idle";
+  const activeStep = step === "idle" ? "name" : step;
   const currentStepIndex = isWizardActive ? FLOW_STEPS.findIndex((entry) => entry.id === step) : 0;
   const safeStepIndex = currentStepIndex >= 0 ? currentStepIndex : 0;
-  const progressPercent = isWizardActive ? (safeStepIndex / (FLOW_STEPS.length - 1)) * 100 : 0;
-  const activeStep = FLOW_STEPS[safeStepIndex];
   const mattPrompt = STEP_PROMPTS[step];
-
-  const userNarrative =
-    !isWizardActive || step === "name"
-      ? null
-      : step === "personality"
-        ? agentName
-          ? `Call it ${agentName}.`
-          : null
-        : step === "demo"
-          ? personality
-            ? `Use a ${formatPersonality(personality)} tone.`
-            : null
-          : step === "payment"
-            ? config.useCase === "fleet"
-              ? `Looks right. Let's deploy the ${agentName || "assistant"} fleet.`
-              : `Looks right. Let's deploy ${agentName || "it"}.`
-            : "Launch now.";
-
-  const pushNarrativeMessage = useCallback((role: NarrativeMessage["role"], text: string) => {
-    setNarrativeMessages((prev) => [...prev, { id: createNarrativeId(), role, text }].slice(-8));
-  }, []);
+  const canGoBack =
+    step === "personality" ||
+    step === "demo" ||
+    step === "telegram" ||
+    step === "payment";
+  const idleOrbSizeClass = "h-[clamp(12.75rem,25vh,16.5rem)] w-[clamp(12.75rem,25vh,16.5rem)]";
 
   useEffect(() => {
-    narrativeTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-    narrativeTimersRef.current = [];
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflowY;
+    const previousBodyOverflow = body.style.overflowY;
 
-    if (!isWizardActive) {
-      setNarrativeMessages([]);
-      narrativeStepRef.current = "idle";
-      return;
-    }
-
-    if (narrativeStepRef.current === step) return;
-    narrativeStepRef.current = step;
-
-    const mattTimer = window.setTimeout(() => {
-      pushNarrativeMessage("matt", mattPrompt);
-    }, 120);
-    narrativeTimersRef.current.push(mattTimer);
-
-    if (userNarrative) {
-      const userTimer = window.setTimeout(() => {
-        pushNarrativeMessage("you", userNarrative);
-      }, 520);
-      narrativeTimersRef.current.push(userTimer);
-    }
+    html.style.overflowY = "hidden";
+    body.style.overflowY = "hidden";
 
     return () => {
-      narrativeTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-      narrativeTimersRef.current = [];
+      html.style.overflowY = previousHtmlOverflow;
+      body.style.overflowY = previousBodyOverflow;
     };
-  }, [isWizardActive, step, mattPrompt, userNarrative, pushNarrativeMessage]);
-
-  const visibleNarrativeMessages = narrativeMessages.slice(-5);
+  }, []);
 
   return (
-    <div data-home-shell="true" className="fixed inset-x-0 top-16 bottom-16 overflow-hidden bg-[#03050b] sm:top-20">
+    <div data-home-shell="true" className="brand-shell fixed inset-x-0 top-16 bottom-14 overflow-hidden">
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 h-[30rem] w-[40rem] rounded-full bg-purple-900/20 blur-[120px] mix-blend-screen" />
-        <div className="absolute bottom-1/4 right-1/4 h-[40rem] w-[50rem] rounded-full bg-blue-900/20 blur-[150px] mix-blend-screen" />
+        <div className="brand-dot-grid absolute inset-x-[4%] top-10 bottom-20 opacity-25 [mask-image:radial-gradient(circle_at_center,black,transparent_76%)]" />
+        <div className="absolute left-[8%] top-[18%] h-[24rem] w-[24rem] rounded-full bg-[#ff6b35]/20 blur-[110px] mix-blend-screen" />
+        <div className="absolute right-[6%] top-[10%] h-[20rem] w-[20rem] rounded-full bg-[#ffaa44]/12 blur-[110px] mix-blend-screen" />
+        <div className="absolute bottom-[8%] right-[12%] h-[24rem] w-[26rem] rounded-full bg-[#ff875a]/12 blur-[130px] mix-blend-screen" />
         <div
-          className="absolute inset-0 opacity-25"
+          className="absolute inset-0 opacity-40"
           style={{
-            backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)",
-            backgroundSize: "100px 100px",
+            backgroundImage:
+              "linear-gradient(180deg, rgba(255,255,255,0.03), transparent 18%, transparent 82%, rgba(255,170,68,0.05))",
           }}
         />
       </div>
 
-      <main className="relative z-10 flex h-full w-full items-center justify-center px-4 py-3 md:px-10">
+      <main className="relative z-10 flex h-full w-full items-center justify-center px-4 py-2 md:px-8">
         <motion.div
-          className={`flex h-full w-full max-w-6xl items-center justify-center transition-all duration-700 ${
-            isWizardActive ? "flex-col gap-6 lg:flex-row lg:gap-10" : "flex-col gap-6"
-          }`}
+          className={
+            isWizardActive
+              ? "grid h-full max-h-full w-full max-w-[92rem] grid-cols-1 gap-4 overflow-hidden transition-all duration-700 lg:grid-cols-[9rem_minmax(20rem,34rem)_minmax(0,42rem)] lg:items-stretch lg:gap-7"
+              : "flex h-full max-h-full w-full max-w-6xl flex-col items-center justify-center gap-4 overflow-hidden transition-all duration-700"
+          }
         >
-          <div className="flex shrink-0 flex-col items-center">
-            {!isWizardActive ? (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-6 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-200 shadow-lg backdrop-blur-md"
-              >
-                Hi! I&apos;m Matt!
+          {!isWizardActive ? (
+            <div className="relative flex shrink-0 flex-col items-center justify-center">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="brand-pill mb-4">
+                <span className="brand-kicker">Matt relationship layer</span>
               </motion.div>
-            ) : null}
 
-            <NexusOrb
-              state={step === "payment" ? "listening" : step === "deploy" ? "speaking" : step === "demo" ? "thinking" : "idle"}
-              variant="plasma"
-              onClick={handleWake}
-              className="h-56 w-56 md:h-64 md:w-64"
-            />
+              <NexusOrb
+                state={getOrbState(step)}
+                variant="plasma"
+                onClick={handleWake}
+                className="mb-5 md:mb-6"
+                orbClassName={idleOrbSizeClass}
+                showEyes={false}
+              />
 
-            {!isWizardActive ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8 text-center">
-                <h1 className="mb-3 text-4xl font-bold tracking-tight text-white md:text-5xl">
-                  Create <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">AI-superpowered</span> Assistant
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex max-w-4xl flex-col items-center text-center">
+                <h1 className="max-w-[11ch] text-[clamp(2rem,4.7vw,3.75rem)] font-bold leading-[0.92] tracking-tight text-white">
+                  Deploy AI agents <span className="gradient-text">in minutes.</span>
                 </h1>
-                <p className="text-sm tracking-wide text-gray-400 md:text-base">in minutes.</p>
-              </motion.div>
-            ) : (
-              <div className="mt-6 flex flex-wrap justify-center gap-1.5">
-                {FLOW_STEPS.map((entry, index) => {
-                  const isCurrent = index === safeStepIndex;
-                  const isDone = index < safeStepIndex;
-
-                  return (
-                    <span
-                      key={entry.id}
-                      className={`rounded-md border px-2 py-1 text-[10px] uppercase tracking-[0.14em] ${
-                        isCurrent
-                          ? "border-cyan-300/60 bg-cyan-300/15 text-cyan-100"
-                          : isDone
-                            ? "border-emerald-300/40 bg-emerald-300/10 text-emerald-100"
-                            : "border-white/12 bg-white/[0.03] text-white/55"
-                      }`}
+                <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed tracking-wide text-white/68 md:text-[15px]">
+                  Matt handles onboarding, payment, activation, and follow-through so the relationship doesn&apos;t end at deployment.
+                </p>
+                <div className="mt-5 flex w-full max-w-4xl flex-wrap justify-center gap-2.5">
+                  {IDLE_HIGHLIGHTS.map((item) => (
+                    <div
+                      key={item.label}
+                      className="brand-panel brand-noise min-w-[11rem] rounded-full px-4 py-2.5 text-left shadow-[0_18px_60px_rgba(0,0,0,0.36)]"
                     >
-                      {entry.label}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <AnimatePresence mode="wait">
-            {isWizardActive ? (
-              <motion.section
-                key="wizard"
-                initial={{ opacity: 0, x: 50, filter: "blur(10px)" }}
-                animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, x: 20, filter: "blur(8px)" }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                className="relative z-20 mt-3 flex h-full min-h-0 w-full max-w-[30rem] flex-col overflow-hidden lg:mt-0"
-              >
-                <div className="pointer-events-none absolute inset-0">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(34,211,238,0.11),transparent_38%),radial-gradient(circle_at_78%_80%,rgba(168,85,247,0.1),transparent_42%)]" />
-                </div>
-                <div className="px-2 py-2">
-                  <div className="rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-3 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-                    <div className="flex items-end justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-200/90">Conversation With Matt</p>
-                        <p className="mt-1 text-xs text-white/70">{activeStep.hint}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-[0.14em] text-white/55">Stage</p>
-                        <p className="text-xs font-medium text-white">{safeStepIndex + 1}/{FLOW_STEPS.length}</p>
-                      </div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffd3a7]/85">{item.label}</p>
+                      <p className="mt-1 text-sm font-medium leading-none text-white/90">{item.value}</p>
                     </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10 shadow-inner">
-                      <motion.div
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-blue-500 to-violet-400 shadow-[0_0_18px_rgba(34,211,238,0.6)]"
-                        initial={{ width: "0%" }}
-                        animate={{ width: `${progressPercent}%` }}
-                        transition={{ duration: 0.35 }}
-                      />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleWake}
+                  className="brand-button mt-5 px-7 py-3 text-sm font-semibold uppercase tracking-[0.18em]"
+                >
+                  Start With Matt
+                </button>
+              </motion.div>
+            </div>
+          ) : (
+            <>
+              <aside className="order-2 flex min-h-0 flex-col justify-between lg:order-1">
+                <div className="wizard-step-column">
+                  {FLOW_STEPS.map((entry, index) => {
+                    const isCurrent = index === safeStepIndex;
+                    const isDone = index < safeStepIndex;
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className={`wizard-rail-item relative ml-0 flex items-center gap-3 px-3 py-3 ${
+                          isCurrent ? "wizard-rail-item-active" : ""
+                        }`}
+                      >
+                        <span
+                          className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+                            isCurrent
+                              ? "bg-[#ffaa44] text-[#1d120a]"
+                              : isDone
+                                ? "bg-emerald-300 text-[#07140b]"
+                                : "bg-white/8 text-white/42"
+                          }`}
+                        >
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className={`text-base leading-none ${isCurrent ? "text-white" : isDone ? "text-white/78" : "text-white/42"}`}>
+                            {entry.label}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="hidden pb-4 pl-1 lg:block">
+                  <div className="wizard-spec-list">
+                    <div className="wizard-spec-item">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/32">Operator</p>
+                      <p className="text-[1.9rem] font-medium tracking-tight text-white">
+                        {agentName || "Unnamed"}
+                      </p>
+                    </div>
+                    <div className="wizard-spec-item">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/32">Tone</p>
+                      <p className="text-lg text-white/72">{formatPersonality(personality)}</p>
+                    </div>
+                    <div className="wizard-spec-item">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/32">Mode</p>
+                      <p className="text-lg text-white/72">
+                        {config.useCase === "fleet" ? "Fleet" : "Single"}
+                      </p>
                     </div>
                   </div>
                 </div>
+              </aside>
 
-                <div className="relative flex min-h-0 flex-1 flex-col px-2 py-2">
-                  <div className="relative h-52 overflow-hidden">
-                    <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-[rgba(8,8,20,0.95)] to-transparent" />
-                    <div className="flex h-full flex-col justify-end gap-2">
-                      <AnimatePresence initial={false}>
-                        {visibleNarrativeMessages.map((message, index) => {
-                          const age = (index + 1) / visibleNarrativeMessages.length;
-                          const bubbleOpacity = 0.32 + age * 0.68;
+              <div className="order-1 flex min-h-0 flex-col lg:order-2">
+                <div className="wizard-matt-stage">
+                  <div className="wizard-matt-base" />
+                  <div className="wizard-matt-pedestal" />
+                  <NexusOrb
+                    state={getOrbState(step)}
+                    variant="plasma"
+                    className="relative z-10"
+                    orbClassName="h-[clamp(18rem,34vw,29rem)] w-[clamp(18rem,34vw,29rem)]"
+                    showEyes={false}
+                  />
+                </div>
+                <div className="wizard-preview-card w-full max-w-[22rem] self-center rounded-[1.65rem] p-4 lg:hidden">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-[1rem] border border-white/10 bg-black/16 px-2 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-white/34">Operator</p>
+                      <p className="mt-1 text-xs text-white/82">{agentName || "Unset"}</p>
+                    </div>
+                    <div className="rounded-[1rem] border border-white/10 bg-black/16 px-2 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-white/34">Tone</p>
+                      <p className="mt-1 text-xs text-white/82">{formatPersonality(personality)}</p>
+                    </div>
+                    <div className="rounded-[1rem] border border-white/10 bg-black/16 px-2 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-white/34">Bot</p>
+                      <p className="mt-1 text-xs text-white/82">
+                        {telegramBot?.username ? `@${telegramBot.username}` : "Pending"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                          return (
-                            <motion.div
-                              key={message.id}
-                              layout
-                              initial={{ opacity: 0, y: 14, scale: 0.98 }}
-                              animate={{ opacity: bubbleOpacity, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: -14 }}
-                              transition={{ duration: 0.24, ease: "easeOut" }}
-                              className={`max-w-[92%] rounded-2xl px-4 py-2.5 backdrop-blur-xl ${
-                                message.role === "matt"
-                                  ? "border border-cyan-300/40 bg-[linear-gradient(135deg,rgba(34,211,238,0.2),rgba(14,116,144,0.15))] text-cyan-50/95 shadow-[0_10px_30px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)]"
-                                  : "ml-auto border border-white/25 bg-[linear-gradient(135deg,rgba(168,85,247,0.16),rgba(59,130,246,0.12))] text-white/92 shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.12)]"
-                              }`}
-                            >
-                              <p className={`text-[10px] uppercase tracking-[0.16em] ${message.role === "matt" ? "text-cyan-100/90" : "text-white/70"}`}>
-                                {message.role === "matt" ? "Matt" : "You"}
-                              </p>
-                              <p className="mt-1 text-sm leading-relaxed">{message.text}</p>
-                            </motion.div>
-                          );
-                        })}
+              <AnimatePresence mode="wait">
+                <motion.section
+                  key="wizard"
+                  initial={{ opacity: 0, x: 50, filter: "blur(10px)" }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, x: 20, filter: "blur(8px)" }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className="order-3 relative z-20 flex min-h-0 w-full flex-col overflow-hidden pt-3"
+                >
+                  <div className="wizard-stage-divider" />
+
+                  <div className="wizard-chat-stack mt-4">
+                    {STEP_MESSAGES[activeStep].map((message, index) => (
+                      <div
+                        key={`${activeStep}-${index}`}
+                        className={`wizard-chat-bubble text-left text-[clamp(1.05rem,1.7vw,1.2rem)] font-medium leading-[1.12] text-white/92 ${
+                          index === 0 ? "wizard-chat-bubble-accent" : ""
+                        }`}
+                      >
+                        {message}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 wizard-content-shell flex h-full min-h-0 flex-col p-4 md:p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        {canGoBack ? (
+                          <button
+                            type="button"
+                            onClick={handleBack}
+                            className="brand-button-secondary inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm text-white/80 transition-colors hover:text-white"
+                          >
+                            <ArrowLeft className="h-4 w-4" />
+                            Back
+                          </button>
+                        ) : null}
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.22em] text-white/34">
+                            Chat wizard
+                          </p>
+                          <h2 className="mt-1 text-[1.2rem] font-semibold tracking-tight text-white">
+                            {getStepHeading(step, agentName)}
+                          </h2>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-white/62">
+                          Stage {safeStepIndex + 1} / {FLOW_STEPS.length}
+                        </span>
+                        {agentName ? (
+                          <span className="rounded-full border border-[#ffb075]/18 bg-[#ffaa44]/10 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-[#ffe3c5]">
+                            {agentName}
+                          </span>
+                        ) : null}
+                        {personality ? (
+                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-white/62">
+                            {formatPersonality(personality)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 h-[1px] bg-white/8" />
+
+                    <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/52">
+                      {mattPrompt}
+                    </p>
+
+                    <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                      <AnimatePresence mode="wait">
+                        {step === "name" ? (
+                          <motion.div key="name" className="h-full min-h-0" exit={{ opacity: 0, x: -20 }}>
+                            <StepName onSubmit={handleNameSubmit} />
+                          </motion.div>
+                        ) : null}
+
+                        {step === "personality" ? (
+                          <motion.div key="personality" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                            <StepPersonality onSelect={handlePersonalitySelect} />
+                          </motion.div>
+                        ) : null}
+
+                        {step === "demo" ? (
+                          <motion.div key="demo" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                            <StepDemo agentName={agentName} personality={personality} onContinue={handleDemoComplete} />
+                          </motion.div>
+                        ) : null}
+
+                        {step === "telegram" ? (
+                          <motion.div key="telegram" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                            <StepTelegram
+                              token={telegramBotToken}
+                              bot={telegramBot}
+                              isValidating={isValidatingTelegramBot}
+                              errorMessage={telegramBotError}
+                              onTokenChange={handleTelegramTokenChange}
+                              onContinue={handleTelegramContinue}
+                            />
+                          </motion.div>
+                        ) : null}
+
+                        {step === "payment" ? (
+                          <motion.div key="payment" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                            <StepPayment
+                              agentName={agentName}
+                              deploymentMode={config.useCase}
+                              botUsername={telegramBot?.username}
+                              errorMessage={launchError}
+                              onDeploymentModeChange={(mode) => setConfig((prev) => ({ ...prev, useCase: mode }))}
+                              onContinue={handlePaymentContinue}
+                            />
+                          </motion.div>
+                        ) : null}
+
+                        {step === "deploy" ? (
+                          <motion.div key="deploy" className="h-full min-h-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                            <StepDeploy
+                              agentName={agentName}
+                              status={deployStatus}
+                              progress={deployProgress}
+                              telegramLink={telegramLink}
+                              botUsername={telegramBot?.username || undefined}
+                            />
+                          </motion.div>
+                        ) : null}
                       </AnimatePresence>
                     </div>
                   </div>
-
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-3 py-1.5 text-[11px] text-white/80 shadow-[0_0_20px_rgba(34,211,238,0.18)] backdrop-blur-md">
-                    <span>Matt is listening</span>
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/90" />
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/75 [animation-delay:120ms]" />
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300/60 [animation-delay:240ms]" />
-                    </span>
-                  </div>
-
-                  <div className="mt-1 min-h-0 flex-1 p-1">
-                    <AnimatePresence mode="wait">
-                      {step === "name" ? (
-                        <motion.div key="name" className="h-full" exit={{ opacity: 0, x: -20 }}>
-                          <StepName onSubmit={handleNameSubmit} />
-                        </motion.div>
-                      ) : null}
-
-                      {step === "personality" ? (
-                        <motion.div key="personality" className="h-full" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                          <StepPersonality onSelect={handlePersonalitySelect} />
-                        </motion.div>
-                      ) : null}
-
-                      {step === "demo" ? (
-                        <motion.div key="demo" className="h-full" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                          <StepDemo agentName={agentName} personality={personality} onContinue={handleDemoComplete} />
-                        </motion.div>
-                      ) : null}
-
-                      {step === "payment" ? (
-                        <motion.div key="payment" className="h-full" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                          <StepPayment
-                            agentName={agentName}
-                            deploymentMode={config.useCase}
-                            onDeploymentModeChange={(mode) => setConfig((prev) => ({ ...prev, useCase: mode }))}
-                            onContinue={handlePaymentContinue}
-                          />
-                        </motion.div>
-                      ) : null}
-
-                      {step === "deploy" ? (
-                        <motion.div key="deploy" className="h-full" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                          <StepDeploy
-                            agentName={agentName}
-                            status={deployStatus}
-                            progress={deployProgress}
-                            telegramLink={telegramLink}
-                            authCode={authCode}
-                          />
-                        </motion.div>
-                      ) : null}
-                    </AnimatePresence>
-                  </div>
-                </div>
-              </motion.section>
-            ) : null}
-          </AnimatePresence>
+                </motion.section>
+              </AnimatePresence>
+            </>
+          )}
         </motion.div>
       </main>
 

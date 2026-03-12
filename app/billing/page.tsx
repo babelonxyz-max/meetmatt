@@ -355,14 +355,14 @@ export default function BillingPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold">Payment Methods</h2>
-                  <p className="text-sm text-[var(--muted)]">Cryptocurrency payments via NowPayments</p>
+                  <p className="text-sm text-[var(--muted)]">Cards via Dodo Payments, crypto via NowPayments</p>
                 </div>
               </div>
 
               <div className="p-4 border border-[var(--border)] rounded-xl">
                 <p className="text-sm text-[var(--muted)]">
-                  Payments are processed per-agent at deployment time using USDT, USDC, and other supported
-                  cryptocurrencies. No saved payment methods required.
+                  Payments are processed per-agent at deployment time using hosted card checkout or supported
+                  crypto rails including USDT and USDC. No saved payment method is required on our side.
                 </p>
               </div>
             </div>

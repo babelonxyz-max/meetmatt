@@ -5,7 +5,7 @@ import { getStatusError } from "@/lib/http-error";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await requireAuth(req);
+    const { userId, workspaceId } = await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const paymentId = searchParams.get("paymentId");
 
@@ -17,17 +17,27 @@ export async function GET(req: NextRequest) {
       where: { id: paymentId },
     });
 
-    if (!payment || payment.userId !== userId) {
+    if (
+      !payment ||
+      (
+        payment.workspaceId !== workspaceId &&
+        !(payment.workspaceId === null && payment.userId === userId)
+      )
+    ) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
     return NextResponse.json({
       id: payment.id,
+      provider: payment.provider,
+      paymentMethodType: payment.paymentMethodType,
       status: payment.status,
       amount: payment.amount,
       currency: payment.currency,
       address: payment.address,
+      checkoutUrl: payment.checkoutUrl,
       confirmedAt: payment.confirmedAt,
+      expiresAt: payment.expiresAt,
     });
 
   } catch (error: unknown) {

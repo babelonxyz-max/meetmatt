@@ -44,21 +44,28 @@ export async function POST(req: NextRequest) {
       // Parse Devin output for bot details
       // Expected format from Devin:
       // - Bot Username: @botname
-      // - Auth Code: XXXXX
       // - Telegram Link: https://t.me/botname
       
       const botUsername = extractFromOutput(output, "Bot Username");
-      const authCode = extractFromOutput(output, "Auth Code");
       const telegramLink = extractFromOutput(output, "Telegram Link");
 
       await prisma.agent.update({
         where: { id: agent.id },
         data: {
           status: "active",
-          activationStatus: "awaiting_verification",
-          botUsername: botUsername?.replace("@", ""),
-          telegramLink: telegramLink,
-          authCode: authCode,
+          activationStatus: "active",
+          deployState: "active",
+          deployErrorCode: null,
+          deployErrorMessage: null,
+          runtimeProvider: "devin",
+          runtimeAgentId: session_id,
+          runtimeSessionId: session_id,
+          runtimeUrl: agent.devinUrl,
+          deployed_at: new Date(),
+          lastHeartbeatAt: new Date(),
+          botUsername: botUsername?.replace("@", "") || agent.botUsername,
+          telegramLink: telegramLink || agent.telegramLink,
+          authCode: null,
         },
       });
 
@@ -75,6 +82,9 @@ export async function POST(req: NextRequest) {
         data: {
           status: "error",
           activationStatus: "failed",
+          deployState: "failed",
+          deployErrorCode: "DEVIN_FAILED",
+          deployErrorMessage: typeof error === "string" ? error.slice(0, 500) : "Devin deployment failed",
         },
       });
 

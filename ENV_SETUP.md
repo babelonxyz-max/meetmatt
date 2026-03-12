@@ -30,9 +30,39 @@ DATABASE_URL="postgresql://user:password@host:port/database?sslmode=require"
 - Supabase: https://supabase.com
 - Railway: https://railway.app
 
+### Secret Encryption (Required for Telegram credentials)
+```env
+# 32-byte base64 or 64-char hex key
+MEETMATT_SECRET_ENCRYPTION_KEY="replace_with_generated_key"
+```
+
+### Matt Connector Plane
+```env
+# Primary connector plane for Matt
+COMPOSIO_API_KEY="replace_with_composio_key"
+# Optional
+COMPOSIO_BASE_URL="https://backend.composio.dev"
+```
+
+### Sesh Fallback + WhatsApp Fallback Transport
+```env
+SESH_BASE_URL="https://sesh.example.com"
+SESH_ADMIN_KEY="replace_with_sesh_admin_key"
+MEETMATT_SESH_WEBHOOK_SECRET="shared_hmac_secret"
+```
+
 ---
 
 ## 2. Payment Processing
+
+### Dodo Payments (Card Checkout)
+```env
+DODO_PAYMENTS_API_KEY="your_dodo_api_key"
+DODO_PAYMENTS_WEBHOOK_SECRET="your_dodo_webhook_secret"
+DODO_PAYMENTS_MATT_PRODUCT_ID="prod_xxx"
+# Optional: use test environment before going live
+# DODO_PAYMENTS_API_BASE_URL="https://test.dodopayments.com"
+```
 
 ### NOWPayments (Crypto Payment Gateway)
 ```env
@@ -232,6 +262,12 @@ NEXT_PUBLIC_POSTHOG_HOST=""
 # NOWPayments (Crypto Payment Gateway)
 NOWPAYMENTS_API_KEY=""
 NEXT_PUBLIC_NOWPAYMENTS_PUBLIC_KEY=""
+
+# Dodo Payments (Cards)
+DODO_PAYMENTS_API_KEY=""
+DODO_PAYMENTS_WEBHOOK_SECRET=""
+DODO_PAYMENTS_API_BASE_URL=""
+DODO_PAYMENTS_MATT_PRODUCT_ID=""
 
 # Crypto Payment Addresses (Your Wallets)
 EVM_PAYMENT_ADDRESS=""

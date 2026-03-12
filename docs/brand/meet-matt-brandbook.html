@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Meet Matt Brandbook</title>
+    <style>
+      :root {
+        --bg: #07080f;
+        --panel: #111424;
+        --panel-soft: rgba(255, 255, 255, 0.06);
+        --border: rgba(255, 255, 255, 0.14);
+        --text: #f0eee8;
+        --muted: #a8a8b8;
+        --coral: #ff6b35;
+        --amber: #ffaa44;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      @page {
+        size: A4;
+        margin: 16mm;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+
+      .page {
+        min-height: calc(297mm - 32mm);
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      .cover {
+        position: relative;
+        overflow: hidden;
+        border-radius: 28px;
+        padding: 36px;
+        background:
+          radial-gradient(circle at 18% 22%, rgba(255, 107, 53, 0.24), transparent 22rem),
+          radial-gradient(circle at 84% 12%, rgba(255, 170, 68, 0.16), transparent 18rem),
+          linear-gradient(135deg, #06070d 0%, #101321 42%, #14192a 68%, #07080f 100%);
+        border: 1px solid var(--border);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+      }
+
+      .cover::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1.2px);
+        background-size: 24px 24px;
+        opacity: 0.15;
+        mask-image: radial-gradient(circle at center, black, transparent 72%);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: #ffd6b2;
+      }
+
+      .title {
+        margin-top: 14px;
+        font-size: 58px;
+        line-height: 0.96;
+        letter-spacing: -0.08em;
+        font-weight: 700;
+      }
+
+      .subtitle {
+        margin-top: 18px;
+        max-width: 560px;
+        font-size: 18px;
+        line-height: 1.5;
+        color: rgba(240, 238, 232, 0.72);
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .brand-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 10px 16px;
+        backdrop-filter: blur(16px);
+      }
+
+      .brand-chip img {
+        width: 32px;
+        height: 32px;
+      }
+
+      .metric-grid {
+        margin-top: 28px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .metric-card,
+      .panel {
+        border-radius: 22px;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+        padding: 18px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+      }
+
+      .metric-card h3,
+      .panel h3 {
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(255, 214, 178, 0.84);
+      }
+
+      .metric-card p,
+      .panel p,
+      li {
+        margin-top: 10px;
+        font-size: 15px;
+        line-height: 1.5;
+        color: rgba(240, 238, 232, 0.8);
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 18px;
+        align-items: start;
+      }
+
+      .asset-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .asset-grid img,
+      .board img,
+      .full-bleed {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        background: #0a0a0f;
+      }
+
+      .logo-showcase {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .logo-card {
+        border-radius: 22px;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+        padding: 20px;
+      }
+
+      .logo-card.light {
+        background: #f0eee8;
+        color: #111424;
+      }
+
+      .logo-card img {
+        max-width: 100%;
+        max-height: 84px;
+        display: block;
+      }
+
+      .logo-card .badge {
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+
+      .palette {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .swatch {
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+
+      .swatch-color {
+        height: 72px;
+      }
+
+      .swatch-label {
+        padding: 10px 12px 12px;
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .swatch-label strong {
+        display: block;
+        font-size: 12px;
+        color: var(--text);
+      }
+
+      .swatch-label span {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      ul {
+        padding-left: 18px;
+      }
+
+      .section-title {
+        margin-bottom: 16px;
+        font-size: 28px;
+        letter-spacing: -0.05em;
+      }
+
+      .section-copy {
+        max-width: 680px;
+        font-size: 15px;
+        line-height: 1.6;
+        color: rgba(240, 238, 232, 0.72);
+      }
+
+      .board {
+        margin-top: 18px;
+      }
+
+      .board p {
+        margin-top: 10px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .asset-list {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 18px;
+      }
+
+      .asset-list code {
+        font-size: 11px;
+        color: #ffd6b2;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page cover">
+      <div class="brand-chip">
+        <img src="file:///Users/mark/meetmatt/public/brand/meet-matt-monogram.svg" alt="Meet Matt monogram" />
+        <div>
+          <div style="font-size:18px;font-weight:700;letter-spacing:-0.04em;">Meet Matt</div>
+          <div class="eyebrow" style="margin-top:4px;">Brandbook · March 2026</div>
+        </div>
+      </div>
+
+      <h1 class="title">Deploy AI agents in minutes.</h1>
+      <p class="subtitle">
+        A working brand system for Matt: coral-amber glow, dark glass surfaces, operator-grade
+        typography, monogram-first identity, and asset usage across web, social, and product touchpoints.
+      </p>
+
+      <div class="metric-grid">
+        <div class="metric-card">
+          <h3>Brand Role</h3>
+          <p>Matt is the named operator relationship layer, not a generic AI wrapper.</p>
+        </div>
+        <div class="metric-card">
+          <h3>Visual System</h3>
+          <p>Dark navy field, frosted glass cards, coral-amber gradients, dot grids, and halo glows.</p>
+        </div>
+        <div class="metric-card">
+          <h3>Deliverables</h3>
+          <p>Logo exports, favicon/app icon, Apple icon, social previews, branded UI direction, and email styling.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="two-col">
+        <div class="panel">
+          <h2 class="section-title">Brand Core</h2>
+          <p class="section-copy">
+            Matt should feel like a premium operator already in the thread: direct, calm, accountable, and responsive.
+            The brand needs to signal continuity and execution, not chatbot novelty.
+          </p>
+          <ul>
+            <li>Primary brand: <strong>Meet Matt</strong></li>
+            <li>Public-facing short form: <strong>Matt</strong></li>
+            <li>Specialist roles: <strong>Matt Support</strong>, <strong>Matt Engineer</strong>, <strong>Matt Account Manager</strong></li>
+            <li>Infrastructure vendors stay invisible to the customer</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">Tone</h2>
+          <ul>
+            <li>Clear, competent, and slightly protective</li>
+            <li>Premium without luxury fluff</li>
+            <li>Operational, short-form copy</li>
+            <li>Reassurance through follow-through, not hype</li>
+          </ul>
+          <p style="margin-top:16px;font-size:14px;color:var(--muted);">
+            Sample lines: “I’m on it.” “Here’s what happened.” “I’ve queued the fix.”
+          </p>
+        </div>
+      </div>
+
+      <div class="palette">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#0A0A0F;"></div>
+          <div class="swatch-label"><strong>Deep Ink</strong><span>#0A0A0F</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#111424;"></div>
+          <div class="swatch-label"><strong>Midnight Slate</strong><span>#111424</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#A8A8B8;"></div>
+          <div class="swatch-label"><strong>Steel Mist</strong><span>#A8A8B8</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#F0EEE8;"></div>
+          <div class="swatch-label"><strong>Cloud</strong><span>#F0EEE8</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:linear-gradient(135deg,#FF6B35,#FFAA44);"></div>
+          <div class="swatch-label"><strong>Coral → Amber</strong><span>#FF6B35 → #FFAA44</span></div>
+        </div>
+      </div>
+
+      <div class="asset-grid">
+        <div class="panel">
+          <h3>Typography</h3>
+          <p>Current web implementation stays on the existing runtime stack, but the target tone is Satoshi-like: clean, assertive, wide numerals, and tight display tracking.</p>
+        </div>
+        <div class="panel">
+          <h3>Texture Language</h3>
+          <p>Dot grids, frosted noise, circuit traces, and warm radial bloom. The background should feel like a quiet mission control, not a generic startup gradient.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2 class="section-title">Production Logo System</h2>
+      <p class="section-copy">
+        These are the current export-ready logo assets created for the app and marketing surfaces.
+      </p>
+
+      <div class="logo-showcase">
+        <div class="logo-card">
+          <div class="badge">Monogram</div>
+          <img src="file:///Users/mark/meetmatt/public/brand/meet-matt-monogram.svg" alt="Meet Matt monogram" />
+        </div>
+        <div class="logo-card">
+          <div class="badge">Horizontal Wordmark</div>
+          <img src="file:///Users/mark/meetmatt/public/brand/meet-matt-wordmark-horizontal.svg" alt="Meet Matt horizontal wordmark" />
+        </div>
+        <div class="logo-card">
+          <div class="badge">Stacked Wordmark</div>
+          <img src="file:///Users/mark/meetmatt/public/brand/meet-matt-wordmark-stacked.svg" alt="Meet Matt stacked wordmark" />
+        </div>
+        <div class="logo-card light">
+          <div class="badge" style="color:#5d6170;">Badge</div>
+          <img src="file:///Users/mark/meetmatt/public/brand/meet-matt-badge.svg" alt="Meet Matt badge" />
+        </div>
+      </div>
+
+      <div class="asset-list">
+        <code>/Users/mark/meetmatt/public/brand/meet-matt-monogram.svg</code>
+        <code>/Users/mark/meetmatt/public/brand/meet-matt-wordmark-horizontal.svg</code>
+        <code>/Users/mark/meetmatt/public/brand/meet-matt-wordmark-stacked.svg</code>
+        <code>/Users/mark/meetmatt/public/brand/meet-matt-badge.svg</code>
+        <code>/Users/mark/meetmatt/public/favicon.svg</code>
+        <code>/Users/mark/meetmatt/public/icon.svg</code>
+        <code>/Users/mark/meetmatt/public/apple-touch-icon.png</code>
+        <code>/Users/mark/meetmatt/app/opengraph-image.tsx</code>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2 class="section-title">Reference Boards</h2>
+      <p class="section-copy">
+        Source pack delivered in Downloads. These boards drive the visual direction now reflected in the site theme, icons, social images, and logo exports.
+      </p>
+      <div class="asset-grid">
+        <img src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_3_Variant_One-Pagers__001_The_image_showcases_a_brand_identity_design_for_pBUfS5ck.png" alt="Variant one-pager 1" />
+        <img src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_3_Variant_One-Pagers__002_This_is_a_brand_style_guide_showcasing_a_logo_iwnNufZc.png" alt="Variant one-pager 2" />
+        <img src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_3_Variant_One-Pagers__003_In_a_futuristic_digital_art_style_the_-suH153H.png" alt="Variant one-pager 3" />
+        <img src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Logo_System__001_The_image_displays_various_logo_lockups_for_Meet_D5ipbcIS.png" alt="Expanded logo system 1" />
+      </div>
+    </section>
+
+    <section class="page">
+      <h2 class="section-title">Logo Boards</h2>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Logo_System__001_The_image_displays_various_logo_lockups_for_Meet_D5ipbcIS.png" alt="Expanded logo system" />
+        <p>Expanded Logo System · Lockups</p>
+      </div>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Logo_System__002_A_guide_displays_logo_usage_and_clearspace_KI229GMH.png" alt="Expanded logo guide" />
+        <p>Expanded Logo System · Usage / Clearspace</p>
+      </div>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Logo_System__003_In_a_graphic_design_presentation_style_various_kNcL5pO0.png" alt="Expanded logo presentation" />
+        <p>Expanded Logo System · Presentation Variant</p>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2 class="section-title">Typography & Color Boards</h2>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Typography_Color__001_In_a_dark_sleek_digital_interface_sections_evawf4SC.png" alt="Typography and color 1" />
+        <p>Typography & Color · System Board</p>
+      </div>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Typography_Color__002_This_is_a_digital_display_of_a_color_system_0MAk4bmM.png" alt="Typography and color 2" />
+        <p>Typography & Color · Palette Board</p>
+      </div>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Typography_Color__003_In_a_dark_futuristic_UI_style_a_digital_kGdl-5th.png" alt="Typography and color 3" />
+        <p>Typography & Color · Interface Board</p>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2 class="section-title">Pattern / Icon / Illustration Boards</h2>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Brand_Assets_Patterns_Icons_Illustrations___001_A_collection_of_eight_seamless_patterns_is_8BLRSu2A.png" alt="Patterns board" />
+        <p>Brand Assets · Patterns</p>
+      </div>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Brand_Assets_Patterns_Icons_Illustrations___002_A_collection_of_24_digital_icons_are_displayed_in_gUzQypvr.png" alt="Icons board" />
+        <p>Brand Assets · Icons</p>
+      </div>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Brand_Assets_Patterns_Icons_Illustrations___003_A_collection_of_graphic_illustrations_and_icons_3_17-L83.png" alt="Illustrations board" />
+        <p>Brand Assets · Illustrations</p>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2 class="section-title">Visual Language & Mockups</h2>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Visual_Language_Mockups__001_This_graphic_displays_a_collection_of_UI_2I3clzSQ.png" alt="Visual language 1" />
+        <p>Visual Language & Mockups · UI System</p>
+      </div>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Visual_Language_Mockups__002_In_a_dark_mode_UI_design_style_this_collection_1kAT0qQL.png" alt="Visual language 2" />
+        <p>Visual Language & Mockups · UI Collection</p>
+      </div>
+      <div class="board">
+        <img class="full-bleed" src="file:///Users/mark/meetmatt/docs/brand/render-assets/Meet_Matt_Expanded_Visual_Language_Mockups__003_In_a_dark_moody_style_a_collection_of_branded_yWukHuhD.png" alt="Visual language 3" />
+        <p>Visual Language & Mockups · Branded Mockups</p>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2 class="section-title">Asset Inventory</h2>
+      <p class="section-copy">
+        This PDF combines the downloadable reference boards in <code>/Users/mark/Downloads/Folder</code> with the current production-ready logo exports and icon/social assets generated in the MeetMatt repo.
+      </p>
+      <div class="asset-list">
+        <code>/Users/mark/Downloads/Folder/Meet Matt — 3 Variant One-Pagers/*</code>
+        <code>/Users/mark/Downloads/Folder/Meet Matt — Expanded Logo System/*</code>
+        <code>/Users/mark/Downloads/Folder/Meet Matt — Expanded Typography & Color/*</code>
+        <code>/Users/mark/Downloads/Folder/Meet Matt — Brand Assets (Patterns, Icons, Illustrations)/*</code>
+        <code>/Users/mark/Downloads/Folder/Meet Matt — Expanded Visual Language & Mockups/*</code>
+        <code>/Users/mark/meetmatt/public/brand/*</code>
+        <code>/Users/mark/meetmatt/public/favicon.svg</code>
+        <code>/Users/mark/meetmatt/public/icon.svg</code>
+        <code>/Users/mark/meetmatt/public/apple-touch-icon.png</code>
+        <code>/Users/mark/meetmatt/app/opengraph-image.tsx</code>
+        <code>/Users/mark/meetmatt/app/twitter-image.tsx</code>
+        <code>/Users/mark/meetmatt/lib/email.ts</code>
+      </div>
+    </section>
+  </body>
+</html>

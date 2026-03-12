@@ -4,14 +4,30 @@ import { requireAuth } from "@/lib/auth";
 import { safeCompare } from "@/lib/crypto-utils";
 import { sanitizeAgentName, sanitizeText } from "@/lib/sanitize";
 import { getStatusError } from "@/lib/http-error";
+import {
+  buildCustomerAgentDefaults,
+  OWNER_TYPE,
+} from "@/lib/agent-blueprint";
+import { provisionCustomerProvidedTelegramBotForAgent } from "@/lib/agent-telegram";
+import { provisionAgentUseCaseBundle } from "@/lib/capability-commerce/provisioning";
+import { fetchTelegramBotProfile } from "@/lib/telegram-bot-api";
 
 // GET /api/agents - Get authenticated user's agents
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await requireAuth(req);
+    const { userId, workspaceId } = await requireAuth(req);
 
     const agents = await prisma.agent.findMany({
-      where: { userId },
+      where: {
+        ownerType: OWNER_TYPE.customer,
+        OR: [
+          { workspaceId },
+          {
+            workspaceId: null,
+            userId,
+          },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -19,6 +35,9 @@ export async function GET(req: NextRequest) {
         slug: true,
         status: true,
         tier: true,
+        ownerType: true,
+        agentKind: true,
+        productUseCase: true,
         activationStatus: true,
         botUsername: true,
         telegramLink: true,
@@ -26,6 +45,17 @@ export async function GET(req: NextRequest) {
         subscriptionType: true,
         currentPeriodEnd: true,
         cancelAtPeriodEnd: true,
+        deployState: true,
+        transportProvider: true,
+        brainProvider: true,
+        deploymentProvider: true,
+        runtimeProvider: true,
+        runtimeUrl: true,
+        useCaseTemplateId: true,
+        workerTier: true,
+        loadoutVersion: true,
+        deployErrorCode: true,
+        deployErrorMessage: true,
         devinUrl: true,
         createdAt: true,
         updatedAt: true,
@@ -46,17 +76,31 @@ export async function GET(req: NextRequest) {
 // POST /api/agents - Create new agent (auth required)
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await requireAuth(req);
+    const { userId, workspaceId } = await requireAuth(req);
     const body = await req.json();
     const { agentName, personality, useCase } = body;
+    const telegramBotToken =
+      typeof body.telegramBotToken === "string" ? body.telegramBotToken : "";
     const normalizedUseCase = useCase === "fleet" ? "fleet" : "assistant";
+    const explicitUseCaseTemplateSlug =
+      typeof body.useCaseSlug === "string" && body.useCaseSlug.trim().length > 0
+        ? body.useCaseSlug.trim()
+        : null;
 
     if (!agentName || !personality) {
       return NextResponse.json({ error: "agentName and personality required" }, { status: 400 });
     }
 
+    if (!telegramBotToken.trim()) {
+      return NextResponse.json(
+        { error: "telegramBotToken required until automatic bot creation is live" },
+        { status: 400 },
+      );
+    }
+
     const sanitizedName = sanitizeAgentName(agentName);
     const sanitizedPersonality = sanitizeText(personality, 500);
+    const botProfile = await fetchTelegramBotProfile(telegramBotToken);
 
     if (!sanitizedName || !sanitizedPersonality) {
       return NextResponse.json({ error: "agentName and personality required" }, { status: 400 });
@@ -66,6 +110,10 @@ export async function POST(req: NextRequest) {
     const baseSlug = sanitizedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
     const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    const defaults = buildCustomerAgentDefaults({
+      personality: sanitizedPersonality,
+      useCase: normalizedUseCase,
+    });
 
     // Create agent with pending status — deployment triggers from payment webhook
     const agent = await prisma.agent.create({
@@ -78,9 +126,54 @@ export async function POST(req: NextRequest) {
         tier: "matt",
         status: "pending",
         userId,
+        workspaceId,
+        ownerType: defaults.ownerType,
+        agentKind: defaults.agentKind,
+        productUseCase: defaults.productUseCase,
+        personalityPreset: defaults.personalityPreset,
+        transportProvider: defaults.transportProvider,
+        brainProvider: defaults.brainProvider,
+        deploymentProvider: defaults.deploymentProvider,
+        cortexId: defaults.cortexId,
+        botUsername: botProfile.username,
+        telegramLink: botProfile.telegramLink,
         activationStatus: "pending",
+        metadata: {
+          telegramLaunch: {
+            provisioningMode: "customer_provided_bot",
+          },
+          customerProvidedTelegramBot: {
+            id: botProfile.id,
+            username: botProfile.username,
+            firstName: botProfile.firstName,
+            connectedAt: new Date().toISOString(),
+          },
+        },
       },
     });
+
+    try {
+      await provisionAgentUseCaseBundle({
+        agentId: agent.id,
+        useCaseTemplateSlug: explicitUseCaseTemplateSlug,
+      });
+
+      await provisionCustomerProvidedTelegramBotForAgent({
+        agentId: agent.id,
+        userId,
+        workspaceId,
+        agentName: sanitizedName,
+        botId: botProfile.id,
+        botUsername: botProfile.username,
+        botFirstName: botProfile.firstName,
+        botToken: telegramBotToken,
+      });
+    } catch (provisionError) {
+      await prisma.agent.delete({
+        where: { id: agent.id },
+      }).catch(() => undefined);
+      throw provisionError;
+    }
 
     return NextResponse.json(agent);
   } catch (error: unknown) {
@@ -108,10 +201,19 @@ export async function PATCH(req: NextRequest) {
     const isInternalCall = !!process.env.INTERNAL_WEBHOOK_SECRET && safeCompare(internalSecret ?? "", process.env.INTERNAL_WEBHOOK_SECRET);
 
     if (!isInternalCall) {
-      const { userId } = await requireAuth(req);
+      const { userId, workspaceId } = await requireAuth(req);
       // Verify ownership
-      const existing = await prisma.agent.findUnique({ where: { id: agentId }, select: { userId: true } });
-      if (!existing || existing.userId !== userId) {
+      const existing = await prisma.agent.findUnique({
+        where: { id: agentId },
+        select: { workspaceId: true, userId: true },
+      });
+      if (
+        !existing ||
+        !(
+          existing.workspaceId === workspaceId ||
+          (!existing.workspaceId && existing.userId === userId)
+        )
+      ) {
         return NextResponse.json({ error: "Agent not found" }, { status: 404 });
       }
     }

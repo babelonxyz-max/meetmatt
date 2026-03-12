@@ -17,6 +17,8 @@ interface DevinConfig {
   useCase: string;
   scope: string;
   contactMethod: string;
+  telegramBotToken?: string;
+  telegramBotUsername?: string;
 }
 
 interface DevinSession {
@@ -150,18 +152,41 @@ async function createTemplateDeployment(config: DevinConfig): Promise<DevinSessi
  * Build the prompt for Devin based on agent configuration
  */
 function buildDevinPrompt(config: DevinConfig): string {
+  const telegramBotBlock = config.telegramBotToken
+    ? `
+**Existing Telegram Bot**
+- Use the customer's existing BotFather bot instead of creating a new one.
+- Bot token: ${config.telegramBotToken}
+- Bot username: ${config.telegramBotUsername ? `@${config.telegramBotUsername}` : "not provided"}
+
+Important:
+1. Do not create a replacement Telegram bot.
+2. Configure this exact bot for the deployment.
+3. Keep the existing username unchanged.
+`
+    : `
+**Telegram Setup**
+- Automatic BotFather bot creation is not available in this environment.
+- If Telegram access is required, use the supplied credentials or stop and report the blocker.
+`;
+
   return `Create an AI agent named "${config.name}" with the following specifications:
 
 **Use Case:** ${config.useCase}
 **Scope:** ${config.scope}
 **Contact Method:** ${config.contactMethod}
+${telegramBotBlock}
 
 Please:
 1. Set up the project structure
 2. Implement the core functionality for: ${config.scope}
-3. Add ${config.contactMethod} integration for communication
+3. Add ${config.contactMethod} integration for communication using the connected Telegram bot
 4. Create documentation
 5. Deploy to a working endpoint
+
+When you finish, include these exact output lines:
+- Bot Username: ...
+- Telegram Link: ...
 
 The agent should be production-ready and handle the described use case effectively.`;
 }

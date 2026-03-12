@@ -1,5 +1,5 @@
 # MeetMatt Project State
-**Last Updated:** 2026-03-04 (whitelabel toolkit)
+**Last Updated:** 2026-03-07 (Workspace/company tenancy foundation + Dodo card payments)
 **Branch:** main
 **Deployment:** https://meetmatt.xyz (Vercel)
 **Repo:** https://github.com/babelonxyz-max/meetmatt
@@ -8,24 +8,167 @@
 
 ## Architecture
 
-Next.js 16 monolith (App Router), deployed on Vercel. No microservices.
+Next.js 16 monolith (App Router), deployed on Vercel. OpenClaw wrapper for AI agents.
 
 - **Auth**: Privy (email, social, embedded wallets) — server-side verification via `verifyAuthToken()`
-- **Database**: PostgreSQL + Prisma 7.3
-- **Payments**: NowPayments (USDT, USDC, and other crypto via IPN webhooks)
-- **Agent Deployment**: Devin AI (creates Telegram bots)
+- **Database**: PostgreSQL + Prisma 6.19.2
+- **Payments**: Dodo Payments (cards) + NowPayments (USDT, USDC, and other crypto via IPN webhooks)
+- **Agent Deployment**: Devin AI (default customer bot creation) + OpenClaw (runtime / fleet / internal workers)
+- **Telegram Transport**: Bot API by default, Telethon as optional extra layer for internal user agents and future beta synthetic employees
+- **Inference**: Cortex gateway — smart 3-tier model routing with budget controls
 - **UI**: Tailwind 4, Framer Motion, Lucide icons, Tone.js (audio feedback)
+- **Pricing**: $5/day (monthly) or $3/day (annual) per Matt agent
 
 ---
 
 ## What's Working
 
-### Latest Update (2026-03-04)
+### Latest Update (2026-03-07): Dodo Card Payments
+- [x] Card checkout added via Dodo Payments hosted checkout
+- [x] Existing NowPayments crypto flow preserved
+- [x] `/api/payment/create` now creates either Dodo card checkouts or NowPayments crypto invoices
+- [x] Dodo webhook route added:
+  - `/api/webhooks/dodo`
+- [x] Shared post-confirmation fulfillment path now handles both providers
+- [x] Payment model expanded to store provider, method type, checkout URL, and external provider IDs
+- [x] Payment modal now supports card vs crypto selection
+- [ ] Production Dodo API key, webhook secret, and Matt product ID still need to be set
+
+### Latest Update (2026-03-07): Workspace / Company Tenancy Foundation
+- [x] Real multi-workspace foundation added:
+  - `Workspace`
+  - `WorkspaceMembership`
+  - `WorkspaceKind`
+  - `WorkspaceMembershipRole`
+- [x] Core ownership records now support `workspaceId`:
+  - `Agent`
+  - `Payment`
+  - `EntitlementPackGrant`
+  - `CustomerRelationship`
+  - `ConversationThread`
+  - `SupportTicket`
+  - `Fleet`
+  - `TelegramIdentity`
+  - `TelegramThreadBinding`
+- [x] Auth now resolves a default personal workspace and returns workspace context
+- [x] Customer agent/payment/profile APIs now authorize by workspace with legacy `userId` fallback for pre-backfill rows
+- [x] Matt relationships and Telethon bindings now persist workspace context
+- [x] Internal workspace management APIs added:
+  - `/api/internal/workspaces`
+  - `/api/internal/workspaces/[workspaceId]/members`
+- [x] Workspace backfill script added:
+  - `npm run backfill:workspaces -- --dry-run`
+  - `npm run backfill:workspaces`
+- [x] Current isolation is application-enforced workspace tenancy
+- [ ] Database-enforced tenant isolation / RLS not implemented yet
+- [ ] Production schema push + data backfill still pending
+
+### Latest Update (2026-03-06): Agent Capability Commerce Foundation
+- [x] Use-case bundle / item / entitlement / loadout schema foundation implemented
+- [x] New commerce/domain models:
+  - `UseCaseTemplate`
+  - `UseCaseTemplateItem`
+  - `UseCaseTemplateEntitlement`
+  - `CatalogItem`
+  - `CatalogItemSkill`
+  - `CatalogItemEntitlement`
+  - `SkillDefinition`
+  - `SkillImplementation`
+  - `FallbackPolicy`
+  - `EntitlementPack`
+  - `EntitlementPackSkill`
+  - `EntitlementPackGrant`
+  - `EntitlementAllowance`
+  - `AgentLoadoutItem`
+  - `AgentSkillBinding`
+  - `UsageLedgerEntry`
+  - `UsageDecisionLog`
+- [x] `workerTier` support added for standard vs premium specialist routing
+- [x] Code-defined catalog/bootstrap registry added in `lib/capability-commerce/registry.ts`
+- [x] Provisioning/loadout/entitlement helpers added in:
+  - `lib/capability-commerce/provisioning.ts`
+  - `lib/capability-commerce/usage.ts`
+- [x] New internal capability-commerce APIs added:
+  - `/api/internal/use-cases`
+  - `/api/internal/use-cases/[slug]/provision`
+  - `/api/internal/catalog/items`
+  - `/api/internal/catalog/items/[slug]/attach`
+  - `/api/internal/agents/[id]/loadout`
+  - `/api/internal/skills/resolve`
+  - `/api/internal/usage/record`
+  - `/api/internal/entitlements/[scope]/[ownerId]`
+- [x] New agents now provision into a default use-case template at creation time
+- [x] Telethon/internal relationship agents now provision against internal use-case templates
+- [x] Payment flow extended to support future add-on and top-up purchases via the same NowPayments path
+- [x] Payment webhook now activates `grant_on_activate` entitlements after base subscription confirmation
+- [x] Entitlement grant renewal/idempotency corrected:
+  - billing-cycle grants can refresh on later payments
+  - top-ups/add-ons are keyed per payment + pack/agent
+  - expired grants are no longer treated as active capacity
+- [x] Reservation/finalization path now supports explicit multi-unit usage, not only implicit `1`
+- [x] Public pricing/landing story intentionally unchanged
+
+### Latest Update (2026-03-06): Metered Cortex Execution Path
+- [x] Cortex gateway now supports optional capability metering metadata:
+  - `x-matt-skill-slug`
+  - `x-matt-skill-units`
+  - `x-matt-run-id`
+  - `x-matt-user-id`
+- [x] Gateway now reserves capability entitlement usage before provider execution
+- [x] Gateway now finalizes usage on success and refunds reserved usage on failure
+- [x] Capability metering is opt-in and does not change old gateway behavior when no skill metadata is provided
+- [x] Shared Cortex client helper added in `lib/cortex/client.ts`
+- [x] Internal metered chat route added:
+  - `/api/internal/cortex/chat`
+- [x] Internal route can now exercise one real end-to-end path:
+  - agent id
+  - optional skill slug + units
+  - request forwarded to gateway
+  - entitlement reservation/finalization handled by gateway
+
+### Latest Update (2026-03-06): Optional Telethon Transport Foundation
+- [x] Telethon is modeled as an extra transport layer, not the default customer deployment path
+- [x] Foundation is implemented in repo, but not live until DB push + runner deployment + first identity provisioning
+- [x] New transport/domain models:
+  - `TelegramIdentity`
+  - `AgentTelegramIdentity`
+  - `TelegramThreadBinding`
+  - `OutboundTransportMessage`
+- [x] New `synthetic_employee` agent kind added for future beta employee-style agents
+- [x] Internal Telethon APIs added:
+  - `/api/internal/telethon/agents`
+  - `/api/internal/telethon/identities`
+  - `/api/internal/telethon/bindings`
+  - `/api/internal/telethon/outbound`
+  - `/api/internal/telethon/outbound/ack`
+  - `/api/internal/telethon/heartbeat`
+- [x] Existing Telethon inbound/dispatch/health routes upgraded to use explicit identity + thread bindings
+- [x] Multi-identity Telethon runner scaffold now supports:
+  - identity refresh from app
+  - inbound event forwarding
+  - outbound poll/send/ack loop
+  - per-identity heartbeat
+- [x] Runtime selection bug fixed: deployment now respects explicit deployment provider, not only `useCase`
+- [x] Public wizard / pricing / landing copy intentionally unchanged
+
+### Latest Update (2026-03-06): Cortex Inference Gateway
+- [x] 3-tier smart routing: easy (GPT-4.1-nano) → medium (GPT-4.1-mini) → hard (GPT-4.1/Sonnet 4.6)
+- [x] Heuristic classifier: 4-dimension scoring (tokens, keywords, tools, depth)
+- [x] Redis budget tracker: $1.50/day per-agent cap, fail-safe to cheap if Redis down
+- [x] Provider adapters: OpenAI, Google (Gemini), DeepSeek, Anthropic
+- [x] Circuit breaker: per-provider, 60s window, 40% failure threshold, auto-recovery
+- [x] Context compression: sliding window, summarize, hierarchical strategies
+- [x] Gateway server: Express on port 8200, OpenAI-compatible `/v1/chat/completions`
+- [x] InferenceLog model + cost dashboard API (`/api/cortex/dashboard`)
+- [x] Gateway status proxy (`/api/cortex/status`)
+- [x] Design doc: `docs/plans/2026-03-05-cortex-inference-engine-design.md`
+- [x] 16 files, 3,854 LOC, committed (`06fc4c6`)
+
+### Update (2026-03-04)
 - [x] Matt Whitelabeling Toolkit shipped (`/whitelabel`)
 - [x] Brand preset configurator (Agency/SaaS/Creator)
 - [x] Export tools: `*.brand.json`, `*.theme.css`, `*.launch.md`
 - [x] Toolkit navigation links added to Navbar and Footer
-- [x] Changes pushed to `main` (commit `fbe41f0`)
 
 ### Core Flow
 - [x] Home page with NexusOrb + 5-step wizard (Name → Personality → Demo → Payment → Deploy)
@@ -145,10 +288,22 @@ External audit found broken payment-to-deployment flow, Prisma mock DB fallback,
 | `/api/admin/users` | GET | Admin token | List all users (admin only) |
 | `/api/webhooks/payment` | POST | IPN signature | NowPayments IPN (idempotent, agentId-aware) |
 | `/api/webhooks/devin` | POST | Webhook secret | Devin completion (idempotent, fail-closed) |
+| `/api/cortex/dashboard` | GET | Admin token | Cortex cost dashboard (aggregated spend data) |
+| `/api/cortex/status` | GET | Admin token | Gateway health proxy (budget states, circuit breakers) |
+| `/api/internal/cortex/chat` | POST | Admin/Internal | Forward chat-completions to Cortex gateway with optional skill metering |
+| `/api/internal/telethon/agents` | GET/POST | Admin/Internal | Create/list Telethon-capable internal or beta agents |
+| `/api/internal/telethon/identities` | GET/POST | Admin/Internal | Provision/list Telegram identities for Telethon |
+| `/api/internal/telethon/bindings` | GET/POST | Admin/Internal | Manage Telegram thread-to-account/agent bindings |
+| `/api/internal/telethon/inbound` | POST | Internal secret | Normalize inbound Telethon events into threads/tasks |
+| `/api/internal/telethon/outbound` | GET/POST | Internal secret | Claim or enqueue outbound transport work |
+| `/api/internal/telethon/outbound/ack` | POST | Internal secret | Ack transport delivery results |
+| `/api/internal/telethon/heartbeat` | POST | Internal secret | Update Telethon identity/runtime health |
+| `/api/internal/telethon/dispatch` | POST | Internal secret | Record business-task completion and optionally queue reply |
+| `/api/internal/telethon/health` | GET | Admin/Internal | Telethon fleet/identity/outbound health summary |
 
 ---
 
-## Environment Variables (Vercel)
+## Environment Variables (Vercel + Workers)
 
 ### Set
 - `DATABASE_URL` — PostgreSQL connection
@@ -164,6 +319,12 @@ External audit found broken payment-to-deployment flow, Prisma mock DB fallback,
 ### Still Needed
 - [ ] `DEVIN_WEBHOOK_SECRET` — Devin webhook verification
 - [ ] `NEXT_PUBLIC_APP_URL` — Public URL (https://meetmatt.xyz)
+- [ ] `CORTEX_GATEWAY_URL` — Base URL for internal gateway-backed chat and status proxy
+- [ ] `TELETHON_API_ID` — Telegram API id for Telethon runner
+- [ ] `TELETHON_API_HASH` — Telegram API hash for Telethon runner
+- [ ] `MEETMATT_INTERNAL_SECRET` or `TELETHON_INTERNAL_SECRET` — runner-to-app auth
+- [ ] `MEETMATT_API_BASE_URL` — app base URL for Telethon runner
+- [ ] First real Telethon session/token material for internal Matt/support identities
 
 ---
 
@@ -172,8 +333,32 @@ External audit found broken payment-to-deployment flow, Prisma mock DB fallback,
 | Model | Purpose |
 |---|---|
 | `User` | Privy-integrated user accounts |
-| `Agent` | AI agents with deployment/subscription tracking |
+| `Agent` | AI agents with deployment/subscription tracking (+ owner/kind/transport/brain/cortex fields) |
 | `Payment` | Payment transaction records |
+| `DeployJob` | Async deployment queue with retry logic |
+| `InferenceLog` | Per-request inference logging (tier, model, cost, latency, budget %) |
+| `CustomerRelationship` | Per-user Matt account-manager/support assignments |
+| `ConversationThread` | Durable inbound/outbound thread tracking across channels |
+| `SupportTicket` | Support issue state linked to threads/relationships |
+| `Fleet` | Internal or customer fleet grouping |
+| `FleetMembership` | Agent-to-fleet membership |
+| `FleetRun` | Fleet execution run record |
+| `FleetTask` | Durable fleet task queue / assignment record |
+| `TelegramIdentity` | Telethon-capable Telegram bot or user-agent identity/session record |
+| `AgentTelegramIdentity` | Join table from agent to Telegram identity |
+| `TelegramThreadBinding` | Deterministic mapping from Telegram chat to user/agent/relationship/thread |
+| `OutboundTransportMessage` | Transport delivery queue for Telethon send/edit/typing actions |
+| `UseCaseTemplate` | Sellable agent bundle / use-case definition |
+| `CatalogItem` | Customer-facing item/capability model |
+| `SkillDefinition` | Canonical runtime capability |
+| `SkillImplementation` | Concrete provider/backend execution path |
+| `EntitlementPack` | Paid or included allowance/access pack |
+| `EntitlementPackGrant` | Agent/workspace entitlement grant state |
+| `EntitlementAllowance` | Remaining allowance per skill/meter key |
+| `AgentLoadoutItem` | Item equipped on a specific agent |
+| `AgentSkillBinding` | Resolved skill binding on an agent |
+| `UsageLedgerEntry` | Immutable usage metering record |
+| `UsageDecisionLog` | Resolution/fallback decision trail |
 
 **Removed (2026-03-02):** WalletPool (unused), User.stripeCustomerId (Stripe removed)
 
@@ -212,26 +397,43 @@ External audit found broken payment-to-deployment flow, Prisma mock DB fallback,
 ## Backlog
 
 ### High Priority
-1. [ ] Set `DEVIN_WEBHOOK_SECRET` and `NEXT_PUBLIC_APP_URL` in Vercel
-2. [ ] Test full payment→deployment flow end-to-end in production (CRITICAL — flow was broken before, now fixed)
-3. [ ] Run Prisma migration to drop WalletPool table and stripeCustomerId column
-4. [ ] Test real Devin API deployment (currently falls back to template)
-5. [ ] Rotate ALL production secrets from .env.production (especially wallet key)
+1. [ ] Deploy Cortex gateway to Contabo, run 1-week test with 15 agents (~$33-43 test cost)
+2. [ ] Apply latest Prisma schema to DB (`npx prisma db push`) for Telethon + relationship/fleet models
+3. [ ] Set env vars: `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY` on Contabo
+4. [ ] Set `DEVIN_WEBHOOK_SECRET`, `NEXT_PUBLIC_APP_URL`, and `CORTEX_GATEWAY_URL` in Vercel/workers
+5. [ ] Run first metered gateway smoke test through `/api/internal/cortex/chat`
+6. [ ] Wire first real runtime caller to pass `skillSlug`/`units` into Cortex gateway
+7. [ ] Test full payment→deployment flow end-to-end in production
+8. [ ] Rotate ALL production secrets from .env.production (especially wallet key)
+9. [ ] Provision first real Telethon identity for internal Matt/support
+10. [ ] Deploy Telethon runner on persistent worker (not Vercel)
+11. [ ] Create first real Telegram thread binding and run inbound→task→outbound smoke test
+12. [ ] Define first 3 Planck/ops agents and required backoffice actions
 
 ### Medium Priority
-6. [ ] Add email notifications (Resend) for payment confirmations and deployment completions
-7. [ ] Wire up billing page plan switching (currently Coming Soon)
-8. [ ] Persist whitelabel toolkit configs (tenant model + storage) instead of local-only export
-9. [ ] Add proper error pages (currently generic 404)
-10. [ ] Replace QR code service with client-side qrcode.react
-11. [ ] Upgrade to Redis/edge-config rate limiting for production-grade protection
+13. [ ] Add email notifications (Resend) for payment confirmations and deployment completions
+14. [ ] Wire up billing page plan switching (currently Coming Soon)
+15. [ ] Persist whitelabel toolkit configs (tenant model + storage) instead of local-only export
+16. [ ] Add proper error pages (currently generic 404)
+17. [ ] Replace QR code service with client-side qrcode.react
+18. [ ] Upgrade to Redis/edge-config rate limiting for production-grade protection
+19. [ ] Add internal backoffice UI for Telethon identities, thread bindings, outbound queue, and capability loadouts
 
 ### Low Priority
-12. [ ] Fix pre-existing lint errors (41 `no-explicit-any`, `set-state-in-effect`)
-13. [ ] Add monitoring/logging (Sentry or similar)
-14. [ ] Add analytics
-15. [ ] Consider annual plan implementation
-16. [ ] Run `npm audit fix` for transitive dependency vulnerabilities
+20. [ ] Fix pre-existing lint errors (41 `no-explicit-any`, `set-state-in-effect`)
+21. [ ] Add monitoring/logging (Sentry or similar)
+22. [ ] Add analytics
+23. [ ] Consider annual plan implementation
+24. [ ] Run `npm audit fix` for transitive dependency vulnerabilities
+
+### Future: Cortex Phase 2+
+25. [ ] Add local Qwen (Qwen3-30B-A3B via SGLang) as easy-tier primary — near-zero marginal cost
+26. [ ] 626 supervisor integration: watchdog + QA agent + recovery workflows
+27. [ ] Trained classifier (RouteLLM matrix factorization) to replace heuristics
+28. [ ] Streaming support in provider adapters
+29. [ ] Planck-employee + fleet-swarm Cortex profiles
+30. [ ] MeetMatt as Planck partner (back-office integration)
+31. [ ] Customer beta for Telethon-based synthetic employees
 
 ---
 
@@ -264,5 +466,9 @@ npx prisma studio
 | https://meetmatt.xyz/billing | Billing & settings |
 | https://meetmatt.xyz/pricing | Pricing page |
 | https://meetmatt.xyz/whitelabel | Matt Whitelabeling Toolkit |
+| `http://<telethon-runner>:8787/healthz` | Telethon runner health |
+| `http://<contabo>:8200` | Cortex inference gateway (OpenAI-compatible) |
+| `http://<contabo>:8200/health` | Gateway health check |
+| `http://<contabo>:8200/status` | Budget states + circuit breaker stats |
 | https://meetmatt.xyz/terms | Terms of service |
 | https://meetmatt.xyz/privacy | Privacy policy |

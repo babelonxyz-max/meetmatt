@@ -9,10 +9,10 @@
 //   GET  /status               — budget states + circuit breaker stats
 
 import express from "express";
+import { fileURLToPath } from "node:url";
 import type {
   ChatCompletionRequest,
   InferenceLogEntry,
-  Tier,
 } from "./types";
 import { getCortex, getDefaultCortexId } from "./config";
 import { createBudgetTracker } from "./budget";
@@ -21,6 +21,22 @@ import { routeRequest, BudgetExhaustedError, AllModelsExhaustedError } from "./r
 import { compressContext, enforceInputLimit } from "./context";
 import { getAdapter, calculateCost } from "./providers/base";
 import { logInference } from "./logger";
+
+type CapabilityUsageModule = Pick<
+  typeof import("../capability-commerce/usage"),
+  "reserveSkillUsageForAgent" | "finalizeReservedSkillUsage"
+>;
+
+type CapabilityUsageContext = {
+  skillSlug: string;
+  units: number;
+  runId: string | null;
+  userId: string | null;
+};
+
+type CapabilityUsageReservation = Awaited<
+  ReturnType<CapabilityUsageModule["reserveSkillUsageForAgent"]>
+>;
 
 // ---------------------------------------------------------------------------
 // Singleton state
@@ -38,6 +54,21 @@ const circuitBreaker = new CircuitBreaker(cortex.failover.circuitBreaker);
 
 const app = express();
 app.use(express.json({ limit: "4mb" }));
+
+let capabilityUsageModule: CapabilityUsageModule | null = null;
+
+async function getCapabilityUsageModule(): Promise<CapabilityUsageModule> {
+  if (capabilityUsageModule) {
+    return capabilityUsageModule;
+  }
+
+  const usageModule = await import("../capability-commerce/usage");
+  capabilityUsageModule = {
+    reserveSkillUsageForAgent: usageModule.reserveSkillUsageForAgent,
+    finalizeReservedSkillUsage: usageModule.finalizeReservedSkillUsage,
+  };
+  return capabilityUsageModule;
+}
 
 // --- Health check ---
 app.get("/health", (_req, res) => {
@@ -59,7 +90,7 @@ app.get("/status", async (_req, res) => {
       globalSpend,
       circuitBreakers: cbStates,
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Status check failed" });
   }
 });
@@ -67,7 +98,8 @@ app.get("/status", async (_req, res) => {
 // --- Main proxy endpoint ---
 app.post("/v1/chat/completions", async (req, res) => {
   const start = Date.now();
-  const request = req.body as ChatCompletionRequest;
+  const rawRequest = req.body as ChatCompletionRequest & Record<string, unknown>;
+  const request = stripCapabilityUsageFields(rawRequest);
 
   // Extract agent ID from API key header or custom header
   // Convention: API key format is "cortex-{agentId}" or custom header
@@ -80,8 +112,29 @@ app.post("/v1/chat/completions", async (req, res) => {
 
   const cortexId = cortex.id;
   let contextCompressed = false;
+  const capabilityUsage = extractCapabilityUsage(req.headers, rawRequest);
+  let capabilityReservation: CapabilityUsageReservation | null = null;
 
   try {
+    if (capabilityUsage && agentId === "unknown") {
+      return res.status(400).json({
+        error: {
+          message: "Capability metering requires a valid agent id",
+          type: "invalid_request_error",
+          code: "missing_agent_id",
+        },
+      });
+    }
+
+    if (capabilityUsage) {
+      const usageModule = await getCapabilityUsageModule();
+      capabilityReservation = await usageModule.reserveSkillUsageForAgent({
+        agentId,
+        skillSlug: capabilityUsage.skillSlug,
+        units: capabilityUsage.units,
+      });
+    }
+
     // 1. Route request
     const decision = await routeRequest(
       request,
@@ -181,10 +234,62 @@ app.post("/v1/chat/completions", async (req, res) => {
     };
     logInference(logEntry).catch(() => {}); // fire and forget
 
+    if (capabilityReservation && capabilityUsage) {
+      const usageModule = await getCapabilityUsageModule();
+      await usageModule.finalizeReservedSkillUsage({
+        reservation: capabilityReservation,
+        agentId,
+        userId: capabilityUsage.userId,
+        runId: capabilityUsage.runId,
+        units: capabilityUsage.units,
+        unitType: "request",
+        costBasis: {
+          estimatedCostUsd: estimatedCost,
+          actualCostUsd: actualCost,
+          provider: result.provider,
+          model: result.model,
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+          cachedInputTokens: result.cachedInputTokens,
+          latencyMs: result.latencyMs,
+          ttftMs: result.ttftMs,
+          cortexId,
+          classifiedTier: decision.originalTier,
+          actualTier: decision.actualTier,
+        },
+        result: "succeeded",
+        refundOnFailure: false,
+      }).catch((finalizeError: unknown) => {
+        console.error("[Cortex/Gateway] Failed to finalize capability usage:", finalizeError);
+      });
+    }
+
     // 10. Return response
     res.json(result.response);
   } catch (err) {
     const latencyMs = Date.now() - start;
+    const capabilityErrorCode = getCapabilityErrorCode(err);
+
+    if (capabilityReservation && capabilityUsage) {
+      const usageModule = await getCapabilityUsageModule();
+      await usageModule.finalizeReservedSkillUsage({
+        reservation: capabilityReservation,
+        agentId,
+        userId: capabilityUsage.userId,
+        runId: capabilityUsage.runId,
+        units: capabilityUsage.units,
+        unitType: "request",
+        costBasis: {
+          errorCode: capabilityErrorCode,
+          latencyMs,
+          cortexId,
+        },
+        result: "failed",
+        refundOnFailure: true,
+      }).catch((finalizeError: unknown) => {
+        console.error("[Cortex/Gateway] Failed to finalize capability usage:", finalizeError);
+      });
+    }
 
     if (err instanceof BudgetExhaustedError) {
       const logEntry: InferenceLogEntry = {
@@ -277,19 +382,113 @@ function extractAgentId(authHeader: string): string | null {
   return token || null;
 }
 
+function readHeaderValue(
+  value: string | string[] | undefined,
+): string | null {
+  if (Array.isArray(value)) {
+    return readHeaderValue(value[0]);
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function readBodyString(
+  body: Record<string, unknown>,
+  key: string,
+): string | null {
+  const value = body[key];
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+function normalizeUnits(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return Math.floor(value);
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return 1;
+}
+
+function extractCapabilityUsage(
+  headers: express.Request["headers"],
+  body: Record<string, unknown>,
+): CapabilityUsageContext | null {
+  const skillSlug =
+    readHeaderValue(headers["x-matt-skill-slug"]) ||
+    readBodyString(body, "matt_skill_slug");
+
+  if (!skillSlug) {
+    return null;
+  }
+
+  return {
+    skillSlug,
+    units:
+      normalizeUnits(readHeaderValue(headers["x-matt-skill-units"]) ?? body["matt_skill_units"]),
+    runId:
+      readHeaderValue(headers["x-matt-run-id"]) ||
+      readBodyString(body, "matt_run_id"),
+    userId:
+      readHeaderValue(headers["x-matt-user-id"]) ||
+      readBodyString(body, "matt_user_id"),
+  };
+}
+
+function getCapabilityErrorCode(error: unknown): string {
+  if (error instanceof BudgetExhaustedError) {
+    return "BUDGET_EXHAUSTED";
+  }
+  if (error instanceof AllModelsExhaustedError) {
+    return "ALL_MODELS_EXHAUSTED";
+  }
+  return "INTERNAL_ERROR";
+}
+
+function stripCapabilityUsageFields(
+  request: ChatCompletionRequest & Record<string, unknown>,
+): ChatCompletionRequest {
+  const sanitized = { ...request };
+  delete sanitized.matt_skill_slug;
+  delete sanitized.matt_skill_units;
+  delete sanitized.matt_run_id;
+  delete sanitized.matt_user_id;
+  return sanitized;
+}
+
 // ---------------------------------------------------------------------------
 // Start server
 // ---------------------------------------------------------------------------
 
 const PORT = parseInt(process.env.CORTEX_GATEWAY_PORT ?? "8200", 10);
 
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`[Cortex] Gateway listening on port ${PORT}`);
+export function startCortexGateway(port = PORT) {
+  return app.listen(port, () => {
+    console.log(`[Cortex] Gateway listening on port ${port}`);
     console.log(`[Cortex] Cortex: ${cortex.id}`);
     console.log(`[Cortex] Redis: ${process.env.UPSTASH_REDIS_REST_URL ? "connected" : "in-memory fallback"}`);
-    console.log(`[Cortex] Models: easy=${cortex.models.easy.map(m => m.model).join(",")}, medium=${cortex.models.medium.map(m => m.model).join(",")}, hard=${cortex.models.hard.map(m => m.model).join(",")}`);
+    console.log(`[Cortex] Models: easy=${cortex.models.easy.map((m) => m.model).join(",")}, medium=${cortex.models.medium.map((m) => m.model).join(",")}, hard=${cortex.models.hard.map((m) => m.model).join(",")}`);
   });
+}
+
+function isDirectExecution(): boolean {
+  const entrypoint = process.argv[1];
+  return Boolean(entrypoint) && fileURLToPath(import.meta.url) === entrypoint;
+}
+
+if (isDirectExecution()) {
+  startCortexGateway();
 }
 
 export { app };

@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
 import { privyClient } from "@/lib/privy";
 import { prisma } from "@/lib/prisma";
+import { ensureMattRelationshipPack } from "@/lib/matt-relationships";
+import { ensurePersonalWorkspaceForUser, resolveWorkspaceAccessForUser } from "@/lib/workspaces";
 
 interface AuthResult {
   userId: string;
   privyId: string;
+  workspaceId: string;
+  workspaceRole: "owner" | "admin" | "member";
 }
 
 /**
@@ -43,7 +47,27 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
       },
       select: { id: true },
     });
+
+    const workspace = await ensurePersonalWorkspaceForUser(user.id);
+    await ensureMattRelationshipPack({
+      userId: user.id,
+      workspaceId: workspace.workspaceId,
+    });
   }
 
-  return { userId: user.id, privyId };
+  const requestedWorkspaceId =
+    request.headers.get("x-workspace-id") ||
+    new URL(request.url).searchParams.get("workspaceId");
+
+  const workspaceAccess = await resolveWorkspaceAccessForUser({
+    userId: user.id,
+    requestedWorkspaceId,
+  });
+
+  return {
+    userId: user.id,
+    privyId,
+    workspaceId: workspaceAccess.workspaceId,
+    workspaceRole: workspaceAccess.workspaceRole,
+  };
 }

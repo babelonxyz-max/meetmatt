@@ -1,13 +1,14 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Check, Zap, Sparkles, Clock, TrendingDown, Users, Award, Bot } from "lucide-react";
+import { ArrowRight, Check, Zap, Clock, TrendingDown, Users, Award, Bot } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { BrandMonogram } from "../components/BrandMark";
 
 const features = [
   "Live Build Viewing",
-  "AI Powered", 
+  "AI Powered",
   "Deploy Anywhere",
   "1 Month Included",
 ];
@@ -46,20 +47,18 @@ const trustBadges = [
 
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
-  
+
   const monthlyPrice = 150;
   const annualPrice = 1000;
 
   return (
-    <main className="min-h-[calc(100vh-64px)] sm:min-h-[calc(100vh-80px)] bg-[var(--background)] text-[var(--foreground)] overflow-x-hidden">
-      {/* Hero Pricing Section */}
-      <section className="py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+    <main className="min-h-[calc(100vh-64px)] overflow-x-hidden bg-[var(--background)] text-[var(--foreground)] sm:min-h-[calc(100vh-80px)]">
+      <section className="px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
         <div className="text-center mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">Simple, Transparent Pricing</h1>
           <p className="text-xl text-[var(--muted)]">Deploy AI agents for less than a cup of coffee per day</p>
         </div>
         <div className="max-w-6xl mx-auto">
-          {/* Billing Toggle - Fixed Width */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -70,8 +69,8 @@ export default function PricingPage() {
               <button
                 onClick={() => setIsAnnual(false)}
                 className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 min-w-[90px] ${
-                  !isAnnual 
-                    ? "bg-gradient-to-r from-[var(--accent)] to-[#6366f1] text-white shadow-lg" 
+                  !isAnnual
+                    ? "bg-gradient-to-r from-[#ff6b35] to-[#ffaa44] text-white shadow-lg"
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
                 }`}
               >
@@ -80,8 +79,8 @@ export default function PricingPage() {
               <button
                 onClick={() => setIsAnnual(true)}
                 className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 min-w-[90px] ${
-                  isAnnual 
-                    ? "bg-gradient-to-r from-[var(--accent)] to-[#6366f1] text-white shadow-lg" 
+                  isAnnual
+                    ? "bg-gradient-to-r from-[#ff6b35] to-[#ffaa44] text-white shadow-lg"
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
                 }`}
               >
@@ -94,7 +93,6 @@ export default function PricingPage() {
           </motion.div>
 
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-            {/* Left - Main Pricing */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -103,7 +101,7 @@ export default function PricingPage() {
               <div className="text-[var(--accent)] text-sm font-mono mb-3 tracking-wider">
                 PRICING_MODULE_v2.1
               </div>
-              
+
               <AnimatePresence mode="wait">
                 <motion.div
                   key={isAnnual ? "annual" : "monthly"}
@@ -139,7 +137,7 @@ export default function PricingPage() {
                   )}
                 </motion.div>
               </AnimatePresence>
-              
+
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-[var(--muted)] line-through">$250 setup</span>
                 <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-sm font-mono">
@@ -152,8 +150,8 @@ export default function PricingPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="group relative px-8 py-4 bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-xl font-semibold text-lg flex items-center gap-3 overflow-hidden text-white"
-                >
+                className="group brand-button relative flex items-center gap-3 overflow-hidden rounded-xl px-8 py-4 text-lg font-semibold text-white"
+              >
                   <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
                   <Zap className="w-5 h-5" />
                   DEPLOY NOW
@@ -162,12 +160,11 @@ export default function PricingPage() {
               </Link>
             </motion.div>
 
-            {/* Right - Stats Card */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="bg-[var(--card)]/50 border border-[var(--border)] rounded-2xl p-5 backdrop-blur-sm"
+              className="brand-panel rounded-2xl p-5"
             >
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -238,7 +235,6 @@ export default function PricingPage() {
             </motion.div>
           </div>
 
-          {/* Bottom Features */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -257,7 +253,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Trust Badges */}
       <section className="py-10 px-4 sm:px-6 lg:px-8 bg-[var(--card)]/30 border-y border-[var(--border)]">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
@@ -283,7 +278,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* More Stats Section */}
       <section className="py-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <motion.div
@@ -315,7 +309,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* VS Agency Comparison */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[var(--card)]/20">
         <div className="max-w-4xl mx-auto">
           <motion.div
@@ -362,7 +355,6 @@ export default function PricingPage() {
             ))}
           </motion.div>
 
-          {/* ROI Highlight */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -374,7 +366,7 @@ export default function PricingPage() {
               <div className="text-3xl font-bold text-green-400 mb-1">$8,400</div>
               <div className="text-sm text-[var(--muted)]">Average annual savings</div>
             </div>
-            <div className="bg-gradient-to-br from-[var(--accent)]/10 to-purple-500/10 border border-[var(--accent)]/20 rounded-xl p-5 text-center">
+            <div className="brand-panel rounded-xl border-[var(--accent)]/20 bg-[linear-gradient(135deg,rgba(255,107,53,0.12),rgba(255,170,68,0.08))] p-5 text-center">
               <div className="text-3xl font-bold text-[var(--accent)] mb-1">624 hrs</div>
               <div className="text-sm text-[var(--muted)]">Time saved per year</div>
             </div>
@@ -386,7 +378,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Use Cases */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <motion.div
@@ -419,7 +410,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-[var(--card)]/20 to-[var(--background)]">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
@@ -437,16 +427,16 @@ export default function PricingPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-8 py-4 bg-gradient-to-r from-[var(--accent)] to-[#6366f1] rounded-xl font-semibold text-lg inline-flex items-center gap-3 text-white shadow-lg shadow-[var(--accent)]/25 hover:shadow-xl hover:shadow-[var(--accent)]/30 transition-all"
+                className="brand-button inline-flex items-center gap-3 rounded-xl px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-[var(--accent)]/25 transition-all hover:shadow-xl hover:shadow-[var(--accent)]/30"
               >
-                <Sparkles className="w-5 h-5" />
+                <BrandMonogram className="h-5 w-5" />
                 Start Building Now
                 <ArrowRight className="w-5 h-5" />
               </motion.button>
             </Link>
             <p className="mt-4 text-sm text-[var(--muted)]">
-              {isAnnual 
-                ? `$${annualPrice}/year (save $800) • $150 one-time setup` 
+              {isAnnual
+                ? `$${annualPrice}/year (save $800) • $150 one-time setup`
                 : `$150 first month • $150/mo after`}
             </p>
           </motion.div>

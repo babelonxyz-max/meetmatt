@@ -5,7 +5,7 @@ import { getErrorMessage, getStatusError } from "@/lib/http-error";
 
 export async function DELETE(req: NextRequest) {
   try {
-    const { userId } = await requireAuth(req);
+    const { userId, workspaceId } = await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const agentId = searchParams.get("id");
 
@@ -17,7 +17,13 @@ export async function DELETE(req: NextRequest) {
       where: { id: agentId },
     });
 
-    if (!agent || agent.userId !== userId) {
+    if (
+      !agent ||
+      (
+        agent.workspaceId !== workspaceId &&
+        !(agent.workspaceId === null && agent.userId === userId)
+      )
+    ) {
       return NextResponse.json({ error: "Agent not found" }, { status: 404 });
     }
 

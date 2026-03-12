@@ -73,21 +73,28 @@ function wrapTemplate(title: string, body: string): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background-color:#07080f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:40px 24px;">
-    <div style="text-align:center;margin-bottom:32px;">
-      <h1 style="color:#ffffff;font-size:24px;margin:0;">MeetMatt</h1>
+    <div style="margin-bottom:28px;">
+      <div style="display:inline-flex;align-items:center;gap:12px;padding:10px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);">
+        <div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#FF6B35,#FFAA44);color:#07080f;font-size:20px;font-weight:700;">M</div>
+        <div>
+          <div style="color:#F0EEE8;font-size:18px;font-weight:700;letter-spacing:-0.02em;">Meet Matt</div>
+          <div style="color:#A8A8B8;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;">Operator layer</div>
+        </div>
+      </div>
     </div>
-    <div style="background-color:#111111;border:1px solid #222222;border-radius:12px;padding:32px;">
-      <h2 style="color:#ffffff;font-size:20px;margin:0 0 16px 0;">${title}</h2>
+    <div style="background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04));border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:32px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);">
+      <div style="height:1px;width:100%;background:linear-gradient(90deg,transparent,rgba(255,170,68,0.7),transparent);margin-bottom:24px;"></div>
+      <h2 style="color:#F0EEE8;font-size:24px;margin:0 0 16px 0;letter-spacing:-0.04em;">${title}</h2>
       ${body}
     </div>
     <div style="text-align:center;margin-top:24px;">
-      <p style="color:#666666;font-size:12px;margin:0;">
-        MeetMatt - AI Agent Deployment Platform
+      <p style="color:#7C8192;font-size:12px;margin:0;">
+        Meet Matt · Deploy AI agents in minutes
       </p>
-      <p style="color:#666666;font-size:12px;margin:4px 0 0 0;">
-        <a href="https://meetmatt.xyz" style="color:#666666;">meetmatt.xyz</a>
+      <p style="color:#7C8192;font-size:12px;margin:4px 0 0 0;">
+        <a href="https://meetmatt.xyz" style="color:#C8B38E;text-decoration:none;">meetmatt.xyz</a>
       </p>
     </div>
   </div>
@@ -100,16 +107,16 @@ export function paymentConfirmedEmail(agentName: string, amount: number): EmailT
     subject: `Payment confirmed for ${agentName}`,
     html: wrapTemplate(
       "Payment Confirmed",
-      `<p style="color:#cccccc;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
-        Your payment of <strong style="color:#ffffff;">$${amount.toFixed(2)}</strong> for
-        <strong style="color:#ffffff;">${agentName}</strong> has been confirmed.
+      `<p style="color:#D3D5DD;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
+        Your payment of <strong style="color:#F0EEE8;">$${amount.toFixed(2)}</strong> for
+        <strong style="color:#F0EEE8;">${agentName}</strong> has been confirmed.
       </p>
-      <p style="color:#cccccc;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
-        Your agent is now being deployed. You will receive another email once it is ready.
+      <p style="color:#D3D5DD;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
+        Matt has started deployment. You will receive another email once the agent is live.
       </p>
       <div style="text-align:center;margin-top:24px;">
         <a href="https://meetmatt.xyz/dashboard"
-           style="display:inline-block;padding:12px 24px;background-color:#6366f1;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+           style="display:inline-block;padding:12px 24px;background-color:#FF6B35;color:#ffffff;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;">
           View Dashboard
         </a>
       </div>`
@@ -122,19 +129,19 @@ export function deploymentCompleteEmail(agentName: string, telegramLink: string)
     subject: `${agentName} is live!`,
     html: wrapTemplate(
       "Your Agent is Live",
-      `<p style="color:#cccccc;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
-        <strong style="color:#ffffff;">${agentName}</strong> has been deployed successfully
+      `<p style="color:#D3D5DD;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
+        <strong style="color:#F0EEE8;">${agentName}</strong> has been deployed successfully
         and is ready to use.
       </p>
       <div style="text-align:center;margin-top:24px;">
         <a href="${telegramLink}"
-           style="display:inline-block;padding:12px 24px;background-color:#0088cc;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+           style="display:inline-block;padding:12px 24px;background-color:#FF6B35;color:#ffffff;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;">
           Open in Telegram
         </a>
       </div>
       <div style="text-align:center;margin-top:12px;">
         <a href="https://meetmatt.xyz/dashboard"
-           style="color:#6366f1;font-size:13px;text-decoration:none;">
+           style="color:#FFAA44;font-size:13px;text-decoration:none;">
           View Dashboard
         </a>
       </div>`
@@ -148,16 +155,16 @@ export function subscriptionExpiringEmail(agentName: string, daysLeft: number): 
     subject: `${agentName} subscription expires in ${daysLeft} ${dayWord}`,
     html: wrapTemplate(
       "Subscription Expiring Soon",
-      `<p style="color:#cccccc;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
-        Your subscription for <strong style="color:#ffffff;">${agentName}</strong> will expire
-        in <strong style="color:#f59e0b;">${daysLeft} ${dayWord}</strong>.
+      `<p style="color:#D3D5DD;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
+        Your subscription for <strong style="color:#F0EEE8;">${agentName}</strong> will expire
+        in <strong style="color:#FFAA44;">${daysLeft} ${dayWord}</strong>.
       </p>
-      <p style="color:#cccccc;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
+      <p style="color:#D3D5DD;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
         Renew now to keep your agent running without interruption.
       </p>
       <div style="text-align:center;margin-top:24px;">
         <a href="https://meetmatt.xyz/billing"
-           style="display:inline-block;padding:12px 24px;background-color:#6366f1;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+           style="display:inline-block;padding:12px 24px;background-color:#FF6B35;color:#ffffff;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;">
           Renew Subscription
         </a>
       </div>`
@@ -170,16 +177,16 @@ export function deploymentFailedEmail(agentName: string): EmailTemplate {
     subject: `Deployment failed for ${agentName}`,
     html: wrapTemplate(
       "Deployment Failed",
-      `<p style="color:#cccccc;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
-        We were unable to deploy <strong style="color:#ffffff;">${agentName}</strong>.
+      `<p style="color:#D3D5DD;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
+        We were unable to deploy <strong style="color:#F0EEE8;">${agentName}</strong>.
         Our team has been notified and is looking into it.
       </p>
-      <p style="color:#cccccc;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
+      <p style="color:#D3D5DD;font-size:15px;line-height:1.6;margin:0 0 16px 0;">
         If this issue persists, please contact support.
       </p>
       <div style="text-align:center;margin-top:24px;">
         <a href="https://meetmatt.xyz/dashboard"
-           style="display:inline-block;padding:12px 24px;background-color:#6366f1;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+           style="display:inline-block;padding:12px 24px;background-color:#FF6B35;color:#ffffff;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;">
           View Dashboard
         </a>
       </div>`

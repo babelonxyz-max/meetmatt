@@ -1,47 +1,51 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
-  ],
+  themeColor: "#0a0a0f",
 };
 
 export const metadata: Metadata = {
-  title: "Meet Matt - Deploy Custom AI Agents in 15 Minutes",
-  description: "Create and deploy AI-powered assistants with Meet Matt. No coding required. $150/month. Deploy AI assistants, coworkers, or digital employees.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "https://meetmatt.xyz"),
+  title: "Meet Matt | Deploy AI Agents in Minutes",
+  description: "Meet Matt is the relationship layer behind your AI operators. Deploy agents quickly, keep Matt on the thread, and manage billing, support, and activation from one place.",
   keywords: ["AI agent", "AI assistant", "deploy AI", "custom AI", "digital employee", "AI coworker"],
   authors: [{ name: "Meet Matt" }],
   openGraph: {
-    title: "Meet Matt - Deploy Custom AI Agents in 15 Minutes",
-    description: "Create and deploy AI-powered assistants. No coding required.",
+    title: "Meet Matt | Deploy AI Agents in Minutes",
+    description: "Deploy AI agents quickly and keep Matt on the thread across onboarding, payment, and activation.",
     type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Meet Matt",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Meet Matt | Deploy AI Agents in Minutes",
+    description: "Deploy AI agents quickly and keep Matt on the thread across onboarding, payment, and activation.",
+    images: ["/twitter-image"],
   },
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
       { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon', type: 'image/png', sizes: '1024x1024' },
     ],
     shortcut: '/favicon.svg',
-    apple: '/apple-touch-icon.png',
+    apple: [
+      { url: '/apple-icon', type: 'image/png', sizes: '180x180' },
+    ],
   },
 };
 
@@ -57,7 +61,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: 'window.__PRIVY_APP_ID__=' + JSON.stringify(privyAppId) + ';' }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased bg-[var(--background)] overflow-x-hidden`}>
+      <body className="min-h-dvh antialiased bg-[var(--background)] overflow-x-hidden">
         <Providers>
           <Navbar />
           <main className="relative min-h-screen">

@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, User, ChevronDown, LogOut } from "lucide-react";
+import { User, ChevronDown, LogOut } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { ThemeToggle } from "./ThemeToggle";
+import { BrandMark } from "./BrandMark";
 
 export function Navbar() {
   const { authenticated, login, logout, user } = usePrivy();
@@ -48,30 +48,35 @@ export function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-[100] flex h-16 items-center justify-between px-6 sm:h-20 sm:px-8 ${
+      className={`fixed left-0 right-0 top-0 z-[100] flex items-center justify-between ${
         isHome
-          ? "border-b border-white/10 bg-[#020612]/72 text-white backdrop-blur-xl"
-          : "border-b border-[var(--border)] bg-[var(--background)]"
+          ? "h-16 border-b border-white/10 bg-[#070a12]/68 px-6 text-white backdrop-blur-2xl"
+          : "h-16 border-b border-white/8 bg-[#0b0e17]/78 px-6 text-[var(--foreground)] backdrop-blur-2xl sm:h-20 sm:px-8"
       }`}
     >
       <Link href="/" className="flex items-center gap-3">
-        <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
-          <Sparkles className={`h-7 w-7 ${isHome ? "text-cyan-300" : "text-[var(--accent)]"}`} />
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+        >
+          <BrandMark
+            glow={isHome}
+            wordmarkClassName={isHome ? "text-[1.55rem] text-white" : "text-[1.55rem]"}
+          />
         </motion.div>
-        <span className={`text-2xl font-bold tracking-tight ${isHome ? "text-white" : ""}`}>Matt</span>
       </Link>
       
       <nav className="flex items-center gap-3 sm:gap-5">
-        <ThemeToggle isHome={isHome} />
         <Link
           href="/pricing"
-          className={`text-lg transition-colors ${isHome ? "text-white/85 hover:text-cyan-200" : "text-[var(--foreground)] hover:text-[var(--accent)]"}`}
+          className={`text-lg transition-colors ${isHome ? "text-white/82 hover:text-[#ffd6b2]" : "text-[var(--foreground)]/82 hover:text-[var(--accent-soft)]"}`}
         >
           Pricing
         </Link>
         <Link
           href="/whitelabel"
-          className={`text-lg transition-colors ${isHome ? "text-white/85 hover:text-cyan-200" : "text-[var(--foreground)] hover:text-[var(--accent)]"}`}
+          className={`text-lg transition-colors ${isHome ? "text-white/82 hover:text-[#ffd6b2]" : "text-[var(--foreground)]/82 hover:text-[var(--accent-soft)]"}`}
         >
           Toolkit
         </Link>
@@ -81,8 +86,8 @@ export function Navbar() {
               onClick={() => setShowDropdown(!showDropdown)}
               className={`flex items-center gap-2 rounded-lg px-3 py-2 text-lg transition-colors ${
                 isHome
-                  ? "text-white/90 hover:bg-white/10 hover:text-cyan-200"
-                  : "text-[var(--foreground)] hover:bg-[var(--card)] hover:text-[var(--accent)]"
+                  ? "text-white/90 hover:bg-white/8 hover:text-[#ffd6b2]"
+                  : "text-[var(--foreground)] hover:bg-white/8 hover:text-[var(--accent-soft)]"
               }`}
             >
               <User className="w-5 h-5" />
@@ -101,8 +106,8 @@ export function Navbar() {
                   transition={{ duration: 0.15 }}
                   className={`absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl border shadow-xl ${
                     isHome
-                      ? "border-white/15 bg-[#081024]/95 backdrop-blur-xl"
-                      : "border-[var(--border)] bg-[var(--card)]"
+                      ? "brand-panel brand-noise border-white/15 bg-[#0d1120]/92 backdrop-blur-xl"
+                      : "brand-panel brand-noise"
                   }`}
                 >
                   <Link
@@ -110,8 +115,8 @@ export function Navbar() {
                     onClick={() => setShowDropdown(false)}
                     className={`flex items-center gap-3 px-4 py-3 transition-colors ${
                       isHome
-                        ? "text-white/90 hover:bg-white/10"
-                        : "text-[var(--foreground)] hover:bg-[var(--card)]/80"
+                        ? "text-white/90 hover:bg-white/8"
+                        : "text-[var(--foreground)] hover:bg-white/8"
                     }`}
                   >
                     <span>Dashboard</span>
@@ -134,7 +139,7 @@ export function Navbar() {
         ) : (
           <button 
             onClick={login} 
-            className={`flex items-center gap-2 text-lg transition-colors ${isHome ? "text-white/90 hover:text-cyan-200" : "text-[var(--foreground)] hover:text-[var(--accent)]"}`}
+            className={`flex items-center gap-2 text-lg transition-colors ${isHome ? "text-white/90 hover:text-[#ffd6b2]" : "text-[var(--foreground)] hover:text-[var(--accent-soft)]"}`}
           >
             <User className="w-5 h-5" />
             <span className="hidden sm:inline">Log in</span>

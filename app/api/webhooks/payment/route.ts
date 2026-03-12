@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyIPNSignature } from "@/lib/nowpayments";
 import { getErrorMessage } from "@/lib/http-error";
-import { activateSubscription } from "@/lib/subscription";
-import { sendEmail, paymentConfirmedEmail, deploymentFailedEmail } from "@/lib/email";
+import { fulfillConfirmedPayment } from "@/lib/payment-fulfillment";
 
 const NOWPAYMENTS_IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || "";
 
@@ -64,90 +63,19 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // If payment confirmed, trigger deployment
+    // If payment confirmed, trigger provisioning/deployment
     if (newStatus === "confirmed") {
-      // Extract agentId from order_id format: matt_{agentId}_{timestamp}
-      const orderParts = orderId.split("_");
-      const agentIdFromOrder = orderParts.length >= 3 ? orderParts.slice(1, -1).join("_") : null;
-
-      if (!agentIdFromOrder) {
-        console.error("[Payment Webhook] Cannot parse agentId from order_id:", orderId);
-        return NextResponse.json({ success: true, warning: "Could not determine agent" });
-      }
-
-      const agent = await prisma.agent.findUnique({ where: { id: agentIdFromOrder } });
-      if (!agent) {
-        console.error("[Payment Webhook] Agent not found:", agentIdFromOrder);
-        return NextResponse.json({ success: true, warning: "Agent not found" });
-      }
-
-      if (agent && agent.activationStatus === "pending") {
-        console.log("[Payment Webhook] Triggering deployment for agent:", agent.id);
-
-        // Update agent status
-        await prisma.agent.update({
-          where: { id: agent.id },
-          data: {
-            activationStatus: "activating",
-            lastPaymentId: payment.id,
-          },
-        });
-
-        // Trigger Devin deployment
-        if (!process.env.INTERNAL_WEBHOOK_SECRET) {
-          console.error("[Payment Webhook] INTERNAL_WEBHOOK_SECRET not set, cannot trigger deploy");
-          await prisma.agent.update({
-            where: { id: agent.id },
-            data: { activationStatus: "failed" },
-          });
-        } else {
-          const triggerUrl = new URL("/api/agents/trigger-deploy", req.url).toString();
-          const triggerResponse = await fetch(triggerUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-internal-secret": process.env.INTERNAL_WEBHOOK_SECRET,
-            },
-            body: JSON.stringify({ agentId: agent.id }),
-          });
-
-          if (!triggerResponse.ok) {
-            console.error("[Payment Webhook] Deploy trigger failed:", triggerResponse.status, await triggerResponse.text().catch(() => ""));
-            await prisma.agent.update({
-              where: { id: agent.id },
-              data: { activationStatus: "failed" },
-            });
-
-            // Send deployment failed email
-            const failedUser = await prisma.user.findUnique({ where: { id: payment.userId ?? undefined } });
-            if (failedUser?.email) {
-              const { subject, html } = deploymentFailedEmail(agent.name);
-              await sendEmail(failedUser.email, subject, html).catch((e: unknown) => {
-                console.error("[Payment Webhook] Failed to send deployment-failed email:", e);
-              });
-            }
-          } else {
-            console.log("[Payment Webhook] Deploy triggered successfully for agent:", agent.id);
-
-            // Activate subscription
-            const subData = activateSubscription("monthly");
-            await prisma.agent.update({
-              where: { id: agent.id },
-              data: subData,
-            });
-            console.log("[Payment Webhook] Subscription activated for agent:", agent.id);
-
-            // Send payment confirmation email
-            const user = await prisma.user.findUnique({ where: { id: payment.userId ?? undefined } });
-            if (user?.email) {
-              const { subject, html } = paymentConfirmedEmail(agent.name, payment.amount);
-              await sendEmail(user.email, subject, html).catch((e: unknown) => {
-                console.error("[Payment Webhook] Failed to send confirmation email:", e);
-              });
-            }
-          }
-        }
-      }
+      const result = await fulfillConfirmedPayment({
+        payment: {
+          ...payment,
+          status: newStatus,
+          txHash: payinHash,
+          confirmedAt: newStatus === "confirmed" ? new Date() : payment.confirmedAt,
+        },
+        requestUrl: req.url,
+        logPrefix: "[Payment Webhook]",
+      });
+      return NextResponse.json({ success: true, ...result });
     }
 
     return NextResponse.json({ success: true });

@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, ArrowLeft, Home } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "./components/BrandMark";
 
 export default function NotFound() {
   return (
@@ -25,9 +26,9 @@ export default function NotFound() {
               repeat: Infinity,
               ease: "easeInOut",
             }}
-            className="absolute inset-0 bg-gradient-to-r from-[#0ea5e9] to-[#6366f1] rounded-full blur-3xl"
+            className="absolute inset-0 rounded-full bg-gradient-to-r from-[#ff6b35] to-[#ffaa44] blur-3xl"
           />
-          <h1 className="relative text-8xl font-bold bg-gradient-to-r from-[#0ea5e9] to-[#6366f1] bg-clip-text text-transparent">
+          <h1 className="gradient-text relative text-8xl font-bold">
             404
           </h1>
         </div>
@@ -39,7 +40,7 @@ export default function NotFound() {
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/">
-            <Button className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white">
+            <Button className="brand-button border-0 text-white hover:opacity-95">
               <Home className="w-4 h-4 mr-2" />
               Go Home
             </Button>
@@ -55,9 +56,8 @@ export default function NotFound() {
         </div>
 
         {/* Decorative elements */}
-        <div className="mt-12 flex items-center justify-center gap-2 text-[var(--muted)]">
-          <Sparkles className="w-4 h-4" />
-          <span className="text-sm">Meet Matt</span>
+        <div className="mt-12 flex items-center justify-center">
+          <BrandMark iconClassName="h-5 w-5" wordmarkClassName="text-sm" />
         </div>
       </motion.div>
     </div>

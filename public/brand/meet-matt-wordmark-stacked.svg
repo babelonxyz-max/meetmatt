@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 168" fill="none">
+  <defs>
+    <linearGradient id="brand-gradient" x1="92" y1="8" x2="164" y2="92" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF6B35"/>
+      <stop offset="1" stop-color="#FFAA44"/>
+    </linearGradient>
+  </defs>
+  <path d="M92 88V28c0-4.16 4.77-6.61 8.17-4.18L128 46.24l27.83-22.42C159.23 21.39 164 23.84 164 28v60" stroke="url(#brand-gradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M92 88V42l36 28 36-28v46" stroke="url(#brand-gradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="130" y="122" text-anchor="middle" fill="#F0EEE8" font-size="34" font-weight="700" letter-spacing="-1.8" font-family="Inter, Arial, sans-serif">Meet Matt</text>
+  <text x="130" y="150" text-anchor="middle" fill="#A8A8B8" font-size="13" font-weight="500" letter-spacing="2.5" font-family="Inter, Arial, sans-serif">DEPLOY AI AGENTS IN MINUTES</text>
+</svg>
