@@ -17,6 +17,7 @@ type ActiveStep = "name" | "personality" | "demo" | "telegram" | "payment" | "de
 type Step = "idle" | ActiveStep;
 type DeployStatus = "deploying" | "completed" | "failed";
 type DeploymentMode = "assistant" | "fleet";
+type LaunchOffer = "paid" | "trial";
 type TelegramBotProfile = {
   id: string;
   username: string | null;
@@ -56,8 +57,8 @@ const STEP_MESSAGES: Record<ActiveStep, string[]> = {
   ],
   payment: [
     "Stage 5 of 5.",
-    "Everything is configured. Confirm the launch shape and continue to payment.",
-    "After checkout, Matt provisions the live runtime against your connected bot.",
+    "Everything is configured. Confirm the launch shape and choose a paid launch or a 1-day trial.",
+    "Matt will provision the live runtime against your connected bot either way.",
   ],
   deploy: [
     "Deployment in progress.",
@@ -109,6 +110,8 @@ export default function Home() {
   const [telegramBotError, setTelegramBotError] = useState<string | null>(null);
   const [isValidatingTelegramBot, setIsValidatingTelegramBot] = useState(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
+  const [launchOffer, setLaunchOffer] = useState<LaunchOffer>("paid");
+  const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false);
   const [config, setConfig] = useState({
     agentName: "",
     useCase: "assistant" as DeploymentMode,
@@ -145,12 +148,16 @@ export default function Home() {
   };
 
   const handleNameSubmit = (name: string) => {
+    setPendingAgentId(null);
+    setLaunchError(null);
     setAgentName(name);
     setConfig((prev) => ({ ...prev, agentName: name }));
     setStep("personality");
   };
 
   const handlePersonalitySelect = (value: string) => {
+    setPendingAgentId(null);
+    setLaunchError(null);
     setPersonality(value);
     setConfig((prev) => ({ ...prev, scope: value }));
     setStep("demo");
@@ -165,6 +172,7 @@ export default function Home() {
   };
 
   const handleTelegramTokenChange = (value: string) => {
+    setPendingAgentId(null);
     setTelegramBotToken(value);
     setTelegramBot(null);
     setTelegramBotError(null);
@@ -216,8 +224,41 @@ export default function Home() {
     }
   };
 
+  const createPendingAgent = async (token: string) => {
+    const response = await fetch("/api/agents", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        agentName,
+        personality,
+        useCase: config.useCase,
+        telegramBotToken,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to create agent");
+    }
+
+    return data.id as string;
+  };
+
+  const deletePendingAgent = async (agentId: string, token: string) => {
+    await fetch(`/api/agents/delete?id=${encodeURIComponent(agentId)}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }).catch(() => undefined);
+  };
+
   const handlePaymentContinue = async () => {
     try {
+      setIsSubmittingLaunch(true);
       setLaunchError(null);
 
       if (!telegramBotToken.trim()) {
@@ -232,32 +273,47 @@ export default function Home() {
         return;
       }
 
-      const response = await fetch("/api/agents", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          agentName,
-          personality,
-          useCase: config.useCase,
-          telegramBotToken,
-        }),
-      });
+      let agentId = pendingAgentId;
+      let createdAgentId: string | null = null;
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create agent");
+      if (!agentId) {
+        agentId = await createPendingAgent(token);
+        createdAgentId = agentId;
+        setPendingAgentId(agentId);
       }
 
-      setPendingAgentId(data.id);
+      if (launchOffer === "trial") {
+        const trialResponse = await fetch("/api/agents/start-trial", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ agentId }),
+        });
+
+        const trialData = await trialResponse.json();
+        if (!trialResponse.ok) {
+          if (createdAgentId && trialResponse.status === 409) {
+            await deletePendingAgent(createdAgentId, token);
+            setPendingAgentId(null);
+          }
+          throw new Error(trialData.error || "Failed to start 1-day trial");
+        }
+
+        setStep("deploy");
+        pollAgentStatus(agentId);
+        return;
+      }
+
       setShowPaymentModal(true);
     } catch (error) {
       console.error("Agent creation error:", error);
       setLaunchError(
-        error instanceof Error ? error.message : "Failed to create agent",
+        error instanceof Error ? error.message : "Failed to start launch",
       );
+    } finally {
+      setIsSubmittingLaunch(false);
     }
   };
 
@@ -580,9 +636,20 @@ export default function Home() {
                             <StepPayment
                               agentName={agentName}
                               deploymentMode={config.useCase}
+                              launchOffer={launchOffer}
                               botUsername={telegramBot?.username}
                               errorMessage={launchError}
-                              onDeploymentModeChange={(mode) => setConfig((prev) => ({ ...prev, useCase: mode }))}
+                              isSubmitting={isSubmittingLaunch}
+                              onDeploymentModeChange={(mode) => {
+                                setPendingAgentId(null);
+                                setLaunchError(null);
+                                setConfig((prev) => ({ ...prev, useCase: mode }));
+                              }}
+                              onLaunchOfferChange={(offer) => {
+                                setPendingAgentId(null);
+                                setLaunchError(null);
+                                setLaunchOffer(offer);
+                              }}
                               onContinue={handlePaymentContinue}
                             />
                           </motion.div>

@@ -154,6 +154,14 @@ function formatRelativeOrNever(value?: string | null) {
   return date.toLocaleString();
 }
 
+function getAgentPlanLabel(agent: Agent) {
+  if (agent.subscriptionStatus === "trial") {
+    return "1-day trial";
+  }
+
+  return agent.subscriptionType === "annual" ? "Annual plan" : "Monthly plan";
+}
+
 export default function DashboardPage() {
   const { authenticated, user, logout, getAccessToken } = usePrivy();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -440,8 +448,9 @@ export default function DashboardPage() {
                               </span>
                             </div>
                             <p className="text-base text-[var(--muted)]">
-                              {agent.subscriptionType === 'annual' ? 'Annual plan' : 'Monthly plan'}
-                              {agent.currentPeriodEnd && ` • Renews ${new Date(agent.currentPeriodEnd).toLocaleDateString()}`}
+                              {getAgentPlanLabel(agent)}
+                              {agent.currentPeriodEnd &&
+                                ` • ${agent.subscriptionStatus === "trial" ? "Ends" : "Renews"} ${new Date(agent.currentPeriodEnd).toLocaleDateString()}`}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 ml-4">

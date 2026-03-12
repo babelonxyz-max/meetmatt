@@ -42,6 +42,25 @@ export function activateSubscription(paymentType: "monthly" | "annual"): {
   };
 }
 
+export function activateTrial(days: number = 1): {
+  subscriptionStatus: string;
+  subscriptionType: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+} {
+  const now = new Date();
+  const currentPeriodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+  return {
+    subscriptionStatus: "trial",
+    subscriptionType: "trial",
+    currentPeriodStart: now,
+    currentPeriodEnd,
+    cancelAtPeriodEnd: true,
+  };
+}
+
 /**
  * Check whether an agent's subscription has expired.
  * Returns true if currentPeriodEnd is in the past.

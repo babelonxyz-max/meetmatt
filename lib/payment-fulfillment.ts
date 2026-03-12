@@ -96,8 +96,47 @@ export async function fulfillConfirmedPayment(params: {
     return { provisioned: "topup" } as const;
   }
 
-  if (agent.activationStatus !== "pending") {
-    return { provisioned: "subscription", state: "already-active" } as const;
+  const alreadyProvisionedRuntime =
+    agent.status === "active" ||
+    agent.status === "deploying" ||
+    agent.deployState === "queued" ||
+    agent.deployState === "provisioning" ||
+    agent.activationStatus === "active" ||
+    agent.activationStatus === "activating";
+
+  if (alreadyProvisionedRuntime) {
+    const subData = activateSubscription("monthly");
+    await prisma.agent.update({
+      where: { id: agent.id },
+      data: {
+        ...subData,
+        lastPaymentId: payment.id,
+        deployErrorCode: null,
+        deployErrorMessage: null,
+      },
+    });
+
+    await activateAgentCapabilityEntitlements(agent.id, {
+      paymentId: payment.id,
+    }).catch((error: unknown) => {
+      console.error(
+        `${logPrefix} Failed to activate capability entitlements:`,
+        error,
+      );
+    });
+
+    const user = await prisma.user.findUnique({ where: { id: payment.userId ?? undefined } });
+    if (user?.email) {
+      const { subject, html } = paymentConfirmedEmail(agent.name, payment.amount);
+      await sendEmail(user.email, subject, html).catch((error: unknown) => {
+        console.error(`${logPrefix} Failed to send confirmation email:`, error);
+      });
+    }
+
+    return {
+      provisioned: "subscription",
+      state: agent.status === "active" ? "already-live" : "already-provisioning",
+    } as const;
   }
 
   const telegramLaunch = await ensurePrimaryTelegramIdentityForAgent(agent.id);

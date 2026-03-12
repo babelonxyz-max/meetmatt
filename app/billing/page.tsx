@@ -67,6 +67,16 @@ const paymentStatusColors: Record<string, string> = {
   partial: "text-orange-500",
 };
 
+function getPlanLabel(agent: BillingAgent): string {
+  if (agent.subscriptionStatus === "trial") {
+    return "1-day trial";
+  }
+
+  return agent.subscriptionType === "annual"
+    ? "Annual plan ($1,000/yr)"
+    : "Monthly plan ($150/mo)";
+}
+
 export default function BillingPage() {
   const { authenticated, ready, getAccessToken } = usePrivy();
   const router = useRouter();
@@ -250,12 +260,13 @@ export default function BillingPage() {
                           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-[var(--muted)]">
                             <span className="flex items-center gap-1.5">
                               <CreditCard className="w-3.5 h-3.5" />
-                              {agent.subscriptionType === "annual" ? "Annual plan ($1,000/yr)" : "Monthly plan ($150/mo)"}
+                              {getPlanLabel(agent)}
                             </span>
                             {periodEnd && (
                               <span className="flex items-center gap-1.5">
                                 <CalendarDays className="w-3.5 h-3.5" />
-                                {isExpired ? "Expired" : "Renews"} {periodEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                {(isExpired ? "Expired" : agent.subscriptionStatus === "trial" ? "Ends" : "Renews")}{" "}
+                                {periodEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                               </span>
                             )}
                           </div>

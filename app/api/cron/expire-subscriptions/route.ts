@@ -20,10 +20,12 @@ export async function GET(req: NextRequest) {
   try {
     const now = new Date();
 
-    // 1. Find and expire all active agents past their period end
+    // 1. Find and expire all active or trial agents past their period end
     const expiredAgents = await prisma.agent.findMany({
       where: {
-        subscriptionStatus: "active",
+        subscriptionStatus: {
+          in: ["active", "trial"],
+        },
         currentPeriodEnd: { lt: now },
       },
       select: { id: true, name: true },

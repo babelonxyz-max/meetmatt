@@ -7,22 +7,29 @@ import { useState } from "react";
 interface StepPaymentProps {
   agentName: string;
   deploymentMode: "assistant" | "fleet";
+  launchOffer: "paid" | "trial";
   botUsername?: string | null;
   errorMessage?: string | null;
+  isSubmitting?: boolean;
   onDeploymentModeChange: (mode: "assistant" | "fleet") => void;
+  onLaunchOfferChange: (offer: "paid" | "trial") => void;
   onContinue: () => void;
 }
 
 export function StepPayment({
   agentName,
   deploymentMode,
+  launchOffer,
   botUsername,
   errorMessage,
+  isSubmitting = false,
   onDeploymentModeChange,
+  onLaunchOfferChange,
   onContinue,
 }: StepPaymentProps) {
   const [accepted, setAccepted] = useState(false);
   const isFleet = deploymentMode === "fleet";
+  const isTrial = launchOffer === "trial";
 
   return (
     <motion.div
@@ -75,16 +82,54 @@ export function StepPayment({
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">
-                Starter launch
+                {isTrial ? "Trial launch" : "Starter launch"}
               </p>
               <div className="mt-2.5 flex items-end gap-2">
-                <span className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">$150</span>
-                <span className="pb-1 text-sm text-white/58">first month</span>
+                <span className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  {isTrial ? "Free" : "$150"}
+                </span>
+                <span className="pb-1 text-sm text-white/58">
+                  {isTrial ? "for 24 hours" : "first month"}
+                </span>
               </div>
             </div>
             <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/62">
-              Card or crypto
+              {isTrial ? "No payment now" : "Card or crypto"}
             </div>
+          </div>
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => onLaunchOfferChange("trial")}
+              className={`rounded-[1rem] border px-3 py-3 text-left transition ${
+                isTrial
+                  ? "border-[#ffaa44]/40 bg-[#ffaa44]/10"
+                  : "border-white/10 bg-black/16 hover:border-white/20"
+              }`}
+            >
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Trial</p>
+              <p className="mt-1 text-sm font-medium text-white/86">1-day live trial</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-white/56">
+                Launch now, validate the operator, and pay later if it fits.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onLaunchOfferChange("paid")}
+              className={`rounded-[1rem] border px-3 py-3 text-left transition ${
+                !isTrial
+                  ? "border-[#ffaa44]/40 bg-[#ffaa44]/10"
+                  : "border-white/10 bg-black/16 hover:border-white/20"
+              }`}
+            >
+              <p className="text-[10px] uppercase tracking-[0.16em] text-white/34">Paid</p>
+              <p className="mt-1 text-sm font-medium text-white/86">$150 first month</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-white/56">
+                Go straight to hosted checkout by card or crypto.
+              </p>
+            </button>
           </div>
 
           <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
@@ -106,7 +151,7 @@ export function StepPayment({
 
           <div className="mt-3 grid gap-2">
             {[
-              "Unlimited messages",
+              isTrial ? "One-day live access window" : "Unlimited messages",
               botUsername ? `Uses @${botUsername}` : "Uses your connected Telegram bot",
               isFleet ? "Fleet orchestration template" : "Managed operator runtime",
             ].map((feature) => (
@@ -130,19 +175,22 @@ export function StepPayment({
           className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent"
         />
         <span className="text-sm leading-relaxed text-white/68">
-          I understand this starts the first live Telegram operator runtime and setup usually takes
-          2 to 5 minutes after payment confirmation.
+          {isTrial
+            ? "I understand this starts one live 24-hour trial for this workspace and setup usually takes 2 to 5 minutes."
+            : "I understand this starts the first live Telegram operator runtime and setup usually takes 2 to 5 minutes after payment confirmation."}
         </span>
       </label>
 
       <button
         type="button"
         onClick={onContinue}
-        disabled={!accepted}
+        disabled={!accepted || isSubmitting}
         className="brand-button mt-4 flex w-full max-w-sm items-center justify-center gap-2 py-3 text-sm font-semibold uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-35"
       >
         <Wallet className="h-5 w-5" />
-        Proceed to Payment
+        {isSubmitting
+          ? (isTrial ? "Starting Trial..." : "Preparing Checkout...")
+          : (isTrial ? "Start 1-Day Trial" : "Proceed to Payment")}
       </button>
     </motion.div>
   );
