@@ -20,7 +20,7 @@ import { playPaymentSuccess } from "@/lib/audio";
 
 interface PaymentData {
   id: string;
-  provider: "nowpayments" | "dodo";
+  provider: "nowpayments" | "dodo" | "admin";
   paymentMethodType: "crypto" | "card" | null;
   address?: string | null;
   amount: number;
@@ -42,6 +42,15 @@ interface PaymentModalProps {
   };
   launchOffer: "monthly" | "day_pass";
   agentId: string | null;
+  pricing?: {
+    monthlyPriceUsd: number;
+    dayPassPriceUsd: number;
+    monthlySource: "default" | "override" | "waived";
+    dayPassSource: "default" | "override" | "waived";
+    monthlyCardCheckoutEnabled: boolean;
+    dayPassCardCheckoutEnabled: boolean;
+    billingNotes?: string | null;
+  } | null;
   onSuccess: () => void;
 }
 
@@ -99,6 +108,7 @@ export function PaymentModal({
   config,
   launchOffer,
   agentId,
+  pricing,
   onSuccess,
 }: PaymentModalProps) {
   const { getAccessToken } = usePrivy();
@@ -112,7 +122,19 @@ export function PaymentModal({
   const [timeLeft, setTimeLeft] = useState(3600);
 
   const isDayPass = launchOffer === "day_pass";
-  const displayPrice = isDayPass ? DAY_PASS_PRICE : MONTHLY_PLAN_PRICE;
+  const displayPrice = isDayPass
+    ? pricing?.dayPassPriceUsd ?? DAY_PASS_PRICE
+    : pricing?.monthlyPriceUsd ?? MONTHLY_PLAN_PRICE;
+  const isWaived = displayPrice === 0;
+  const cardCheckoutEnabled = isDayPass
+    ? pricing?.dayPassCardCheckoutEnabled ?? true
+    : pricing?.monthlyCardCheckoutEnabled ?? true;
+
+  useEffect(() => {
+    if (!cardCheckoutEnabled && selectedMethod === "card") {
+      setSelectedMethod("crypto");
+    }
+  }, [cardCheckoutEnabled, selectedMethod]);
 
   useEffect(() => {
     if (isOpen) {
@@ -233,6 +255,14 @@ export function PaymentModal({
       };
       setPayment(nextPayment);
       setTimeLeft(getSecondsUntilExpiry(nextPayment.expiresAt));
+
+      if (nextPayment.status === "confirmed") {
+        setStatus("confirmed");
+        playPaymentSuccess();
+        setTimeout(onSuccess, 800);
+        return;
+      }
+
       setStatus("waiting");
 
       if (nextPayment.provider === "dodo" && nextPayment.checkoutUrl) {
@@ -243,7 +273,15 @@ export function PaymentModal({
       setError(message);
       setStatus("error");
     }
-  }, [agentId, isDayPass, selectedCurrency, selectedMethod, getAccessToken, openCheckoutWindow]);
+  }, [
+    agentId,
+    isDayPass,
+    selectedCurrency,
+    selectedMethod,
+    getAccessToken,
+    onSuccess,
+    openCheckoutWindow,
+  ]);
 
   const copyAddress = useCallback(() => {
     if (payment?.address) {
@@ -254,7 +292,7 @@ export function PaymentModal({
   }, [payment?.address]);
 
   const selectedCrypto = ALL_CRYPTO_OPTIONS.find((c) => c.code === selectedCurrency);
-  const isCardPayment = payment?.provider === "dodo" || selectedMethod === "card";
+  const isCardPayment = payment?.provider === "dodo" || (!isWaived && selectedMethod === "card");
 
   return (
     <AnimatePresence>
@@ -292,10 +330,16 @@ export function PaymentModal({
             <div className="p-4 space-y-4">
               <div className="brand-panel rounded-2xl py-4 text-center">
                 <div className="flex items-center justify-center gap-2">
-                  <span className="text-4xl font-bold text-[#ff8a53]">${displayPrice}</span>
+                  <span className="text-4xl font-bold text-[#ff8a53]">
+                    {displayPrice === 0 ? "$0" : `$${displayPrice.toFixed(displayPrice % 1 === 0 ? 0 : 2)}`}
+                  </span>
                 </div>
                 <p className="text-xs text-[var(--muted)] mt-1">
-                  {isDayPass ? "24-hour access" : "First month"}
+                  {isWaived
+                    ? "Waived by ops"
+                    : isDayPass
+                      ? "24-hour access"
+                      : "First month"}
                 </p>
               </div>
 
@@ -316,48 +360,63 @@ export function PaymentModal({
 
               {status === "selecting" && (
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-mono text-[var(--muted)]">PAYMENT METHOD</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMethod("card")}
-                        className={`rounded-lg border p-3 text-left transition-all ${
-                          selectedMethod === "card"
-                            ? "bg-[#ff8a53]/20 border-[#ff8a53] text-[#ffd3a7]"
-                            : "bg-[var(--card)] border-[var(--border)] hover:border-[#ff8a53]/50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="w-4 h-4" />
-                          <span className="text-sm font-semibold">Card</span>
-                        </div>
-                        <p className="mt-1 text-[11px] text-[var(--muted)]">
-                          Secure hosted checkout via Dodo
-                        </p>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMethod("crypto")}
-                        className={`rounded-lg border p-3 text-left transition-all ${
-                          selectedMethod === "crypto"
-                            ? "bg-[#ff8a53]/20 border-[#ff8a53] text-[#ffd3a7]"
-                            : "bg-[var(--card)] border-[var(--border)] hover:border-[#ff8a53]/50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Wallet className="w-4 h-4" />
-                          <span className="text-sm font-semibold">Crypto</span>
-                        </div>
-                        <p className="mt-1 text-[11px] text-[var(--muted)]">
-                          USDT / USDC via NowPayments
-                        </p>
-                      </button>
+                  {isWaived ? (
+                    <div className="brand-panel rounded-2xl p-4 text-sm text-[var(--muted)]">
+                      <p className="text-white">This launch fee has been waived in ops.</p>
+                      <p className="mt-2">
+                        No external checkout is needed. Confirm below and Matt will move straight into internal activation.
+                      </p>
+                      {pricing?.billingNotes ? (
+                        <p className="mt-2 text-xs text-[#ffd3a7]">{pricing.billingNotes}</p>
+                      ) : null}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="text-xs font-mono text-[var(--muted)]">PAYMENT METHOD</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMethod("card")}
+                          disabled={!cardCheckoutEnabled}
+                          className={`rounded-lg border p-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-45 ${
+                            selectedMethod === "card"
+                              ? "bg-[#ff8a53]/20 border-[#ff8a53] text-[#ffd3a7]"
+                              : "bg-[var(--card)] border-[var(--border)] hover:border-[#ff8a53]/50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4" />
+                            <span className="text-sm font-semibold">Card</span>
+                          </div>
+                          <p className="mt-1 text-[11px] text-[var(--muted)]">
+                            {cardCheckoutEnabled
+                              ? "Secure hosted checkout via Dodo"
+                              : "Unavailable for custom user pricing"}
+                          </p>
+                        </button>
 
-                  {selectedMethod === "crypto" ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMethod("crypto")}
+                          className={`rounded-lg border p-3 text-left transition-all ${
+                            selectedMethod === "crypto"
+                              ? "bg-[#ff8a53]/20 border-[#ff8a53] text-[#ffd3a7]"
+                              : "bg-[var(--card)] border-[var(--border)] hover:border-[#ff8a53]/50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Wallet className="w-4 h-4" />
+                            <span className="text-sm font-semibold">Crypto</span>
+                          </div>
+                          <p className="mt-1 text-[11px] text-[var(--muted)]">
+                            USDT / USDC via NowPayments
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isWaived && selectedMethod === "crypto" ? (
                     <div className="space-y-3">
                       <label className="text-xs font-mono text-[var(--muted)]">SELECT CRYPTOCURRENCY</label>
                       <div className="grid grid-cols-2 gap-2">
@@ -384,17 +443,33 @@ export function PaymentModal({
                         ))}
                       </div>
                     </div>
-                  ) : (
+                  ) : !isWaived ? (
                     <div className="brand-panel rounded-2xl p-4 text-sm text-[var(--muted)]">
                       <p className="text-white">Card checkout opens in a secure hosted page.</p>
                       <p className="mt-2">
                         Complete payment there and keep this window open. We&apos;ll activate the agent automatically when confirmation arrives.
                       </p>
                     </div>
-                  )}
+                  ) : null}
+
+                  {!cardCheckoutEnabled && !isWaived ? (
+                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                      Card checkout is disabled for this user because ops assigned a custom non-standard launch price.
+                    </div>
+                  ) : null}
+
+                  {pricing?.billingNotes && !isWaived ? (
+                    <div className="rounded-lg border border-[#ff8a53]/20 bg-[#ff8a53]/10 px-3 py-2 text-xs text-[#ffd3a7]">
+                      {pricing.billingNotes}
+                    </div>
+                  ) : null}
 
                   <Button onClick={createNewPayment} className="brand-button h-12 w-full border-0 text-white hover:opacity-95">
-                    {selectedMethod === "card" ? "PROCEED TO SECURE CHECKOUT" : "GENERATE CRYPTO PAYMENT"}
+                    {isWaived
+                      ? "CONFIRM WAIVED LAUNCH"
+                      : selectedMethod === "card"
+                        ? "PROCEED TO SECURE CHECKOUT"
+                        : "GENERATE CRYPTO PAYMENT"}
                   </Button>
                 </div>
               )}
@@ -403,7 +478,11 @@ export function PaymentModal({
                 <div className="flex flex-col items-center gap-4 py-8">
                   <Loader2 className="w-8 h-8 text-[#ff8a53] animate-spin" />
                   <p className="text-sm text-[var(--muted)] font-mono">
-                    {selectedMethod === "card" ? "PREPARING CHECKOUT..." : "GENERATING ADDRESS..."}
+                    {isWaived
+                      ? "CONFIRMING WAIVED LAUNCH..."
+                      : selectedMethod === "card"
+                        ? "PREPARING CHECKOUT..."
+                        : "GENERATING ADDRESS..."}
                   </p>
                 </div>
               )}

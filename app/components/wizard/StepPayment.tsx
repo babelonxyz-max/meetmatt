@@ -9,6 +9,13 @@ interface StepPaymentProps {
   deploymentMode: "assistant" | "fleet";
   launchOffer: "monthly" | "day_pass";
   botUsername?: string | null;
+  pricing?: {
+    monthlyPriceUsd: number;
+    dayPassPriceUsd: number;
+    monthlySource: "default" | "override" | "waived";
+    dayPassSource: "default" | "override" | "waived";
+    billingNotes?: string | null;
+  } | null;
   errorMessage?: string | null;
   isSubmitting?: boolean;
   onDeploymentModeChange: (mode: "assistant" | "fleet") => void;
@@ -16,11 +23,21 @@ interface StepPaymentProps {
   onContinue: () => void;
 }
 
+function formatUsdPrice(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export function StepPayment({
   agentName,
   deploymentMode,
   launchOffer,
   botUsername,
+  pricing,
   errorMessage,
   isSubmitting = false,
   onDeploymentModeChange,
@@ -30,8 +47,19 @@ export function StepPayment({
   const [accepted, setAccepted] = useState(false);
   const isFleet = deploymentMode === "fleet";
   const isDayPass = launchOffer === "day_pass";
-  const priceLabel = isDayPass ? "$5" : "$150";
-  const termLabel = isDayPass ? "for 24 hours" : "first month";
+  const priceAmount = isDayPass
+    ? pricing?.dayPassPriceUsd ?? 5
+    : pricing?.monthlyPriceUsd ?? 150;
+  const pricingSource = isDayPass
+    ? pricing?.dayPassSource ?? "default"
+    : pricing?.monthlySource ?? "default";
+  const priceLabel = formatUsdPrice(priceAmount);
+  const termLabel =
+    priceAmount === 0
+      ? "waived by ops"
+      : isDayPass
+        ? "for 24 hours"
+        : "first month";
   const summaryRows = [
     { label: "Operator", value: agentName },
     { label: "Runtime", value: isFleet ? "Fleet rollout" : "Single operator" },
@@ -67,7 +95,7 @@ export function StepPayment({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mx-auto flex h-full w-full max-w-3xl flex-col"
+      className="flex h-full w-full max-w-none flex-col"
     >
       {errorMessage ? (
         <div className="mb-3 rounded-[1.1rem] border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
@@ -137,9 +165,13 @@ export function StepPayment({
                 isDayPass ? "wizard-choice-chip-active" : ""
               }`}
             >
-              <p className="text-sm font-medium text-white">$5 day pass</p>
+              <p className="text-sm font-medium text-white">
+                {formatUsdPrice(pricing?.dayPassPriceUsd ?? 5)} day pass
+              </p>
               <p className="mt-1 text-xs leading-relaxed text-white/58">
-                Live for 24 hours. Good for a paid pilot.
+                {pricing?.dayPassSource === "waived"
+                  ? "No checkout charge. Good for internal tests and waived launches."
+                  : "Live for 24 hours. Good for a paid pilot."}
               </p>
             </button>
 
@@ -150,9 +182,13 @@ export function StepPayment({
                 !isDayPass ? "wizard-choice-chip-active" : ""
               }`}
             >
-              <p className="text-sm font-medium text-white">$150 monthly</p>
+              <p className="text-sm font-medium text-white">
+                {formatUsdPrice(pricing?.monthlyPriceUsd ?? 150)} monthly
+              </p>
               <p className="mt-1 text-xs leading-relaxed text-white/58">
-                Go straight into the full hosted runtime.
+                {pricing?.monthlySource === "waived"
+                  ? "No checkout charge. Launch goes straight into internal confirmation."
+                  : "Go straight into the full hosted runtime."}
               </p>
             </button>
           </div>
@@ -172,9 +208,20 @@ export function StepPayment({
               </div>
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-white/58">
-              Matt will provision the live runtime on your connected Telegram bot right after payment.
+              {priceAmount === 0
+                ? "Ops has waived this launch fee, so Matt can provision the runtime without an external checkout."
+                : "Matt will provision the live runtime on your connected Telegram bot right after payment."}
             </p>
           </div>
+
+          {pricingSource !== "default" || pricing?.billingNotes ? (
+            <div className="rounded-[1rem] border border-[#ffaa44]/12 bg-[#ffaa44]/8 px-3.5 py-3 text-sm text-[#ffe4c8]">
+              <span className="font-medium text-white">
+                {pricingSource === "waived" ? "Special pricing: waived." : "Special pricing applied."}
+              </span>
+              {pricing?.billingNotes ? ` ${pricing.billingNotes}` : ""}
+            </div>
+          ) : null}
 
           <div className="grid gap-2 sm:grid-cols-2">
             {summaryRows.map((row) => (
@@ -221,8 +268,12 @@ export function StepPayment({
         />
         <span className="text-[13px] leading-relaxed text-white/68">
           {isDayPass
-            ? "I understand this starts a paid 24-hour operator pass and setup usually takes 2 to 5 minutes after payment confirmation."
-            : "I understand this starts the first live Telegram operator runtime and setup usually takes 2 to 5 minutes after payment confirmation."}
+            ? priceAmount === 0
+              ? "I understand this starts a waived 24-hour operator pass and setup usually takes 2 to 5 minutes after internal confirmation."
+              : "I understand this starts a paid 24-hour operator pass and setup usually takes 2 to 5 minutes after payment confirmation."
+            : priceAmount === 0
+              ? "I understand this starts a waived live Telegram operator runtime and setup usually takes 2 to 5 minutes after internal confirmation."
+              : "I understand this starts the first live Telegram operator runtime and setup usually takes 2 to 5 minutes after payment confirmation."}
         </span>
       </label>
 
@@ -235,7 +286,9 @@ export function StepPayment({
         <Wallet className="h-5 w-5" />
         {isSubmitting
           ? "Preparing Checkout..."
-          : (isDayPass ? "Checkout 24-Hour Pass" : "Proceed to Payment")}
+          : priceAmount === 0
+            ? "Launch Without Payment"
+            : (isDayPass ? "Checkout 24-Hour Pass" : "Proceed to Payment")}
       </button>
     </motion.div>
   );

@@ -6,15 +6,22 @@ import {
   BriefcaseBusiness,
   Building2,
   Cable,
+  CreditCard,
   PackagePlus,
   RadioTower,
+  Rocket,
+  Settings2,
   Users,
   Workflow,
 } from "lucide-react";
 import { getOpsPlatformData } from "@/lib/ops-platform";
+import { resolveUserLaunchPricing } from "@/lib/user-launch-pricing";
 import {
+  confirmCustomerAgentWithoutPaymentAction,
+  createCustomerAgentAction,
   createWorkspaceAction,
   provisionPlanckHqBotFleetAction,
+  updateUserBillingAction,
 } from "@/app/ops/(protected)/platform/actions";
 
 export const dynamic = "force-dynamic";
@@ -113,6 +120,14 @@ function describeNotice(params: SearchParams): string | null {
       return `Workspace ${shortId(readSearchParam(params, "workspaceId"))} created.`;
     case "planck-fleet-provisioned":
       return `Planck HQ fleet provisioned. Created ${readSearchParam(params, "createdAgents") ?? "0"} agents, ${readSearchParam(params, "createdIdentities") ?? "0"} identities, updated ${readSearchParam(params, "updatedIdentities") ?? "0"} identities.`;
+    case "billing-updated":
+      return `Billing controls updated for user ${shortId(readSearchParam(params, "userId"))}.`;
+    case "customer-agent-created":
+      return `Customer agent ${shortId(readSearchParam(params, "agentId"))} created and left pending checkout.`;
+    case "customer-agent-activated":
+      return `Customer agent ${shortId(readSearchParam(params, "agentId"))} created and activated without external checkout.`;
+    case "manual-activation-complete":
+      return `Agent ${shortId(readSearchParam(params, "agentId"))} activated without external checkout.`;
     default:
       return null;
   }
@@ -127,9 +142,34 @@ function describeError(params: SearchParams): string | null {
       return "Workspace name is required.";
     case "planck-user-required":
       return "A userId is required to provision the Planck HQ fleet.";
+    case "billing-user-required":
+      return "A userId is required to update billing controls.";
+    case "customer-agent-required":
+      return "User ID, agent name, personality, and bot token are required to create a customer agent.";
+    case "manual-activation-agent-required":
+      return "An agentId is required for internal activation.";
     default:
       return message;
   }
+}
+
+function describeLaunchPricing(user: {
+  monthlyLaunchFeeUsd: number | null;
+  dayPassLaunchFeeUsd: number | null;
+  monthlyLaunchFeeWaived: boolean;
+  dayPassLaunchFeeWaived: boolean;
+}) {
+  const pricing = resolveUserLaunchPricing(user);
+  return {
+    monthly:
+      pricing.monthlySource === "waived"
+        ? "Monthly waived"
+        : `${pricing.monthlyPriceUsd.toFixed(pricing.monthlyPriceUsd % 1 === 0 ? 0 : 2)} USD monthly`,
+    dayPass:
+      pricing.dayPassSource === "waived"
+        ? "Day pass waived"
+        : `${pricing.dayPassPriceUsd.toFixed(pricing.dayPassPriceUsd % 1 === 0 ? 0 : 2)} USD day pass`,
+  };
 }
 
 export default async function OpsPlatformPage({
@@ -441,6 +481,288 @@ export default async function OpsPlatformPage({
         ))}
       </datalist>
 
+      <datalist id="recent-customer-agents">
+        {data.recentCustomerAgents.map((agent) => (
+          <option
+            key={agent.id}
+            value={agent.id}
+            label={`${agent.name} · ${describeUser(agent.user)} · ${agent.status}`}
+          />
+        ))}
+      </datalist>
+
+      <section className="grid gap-6 xl:grid-cols-3">
+        <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-white">
+            <CreditCard className="h-4 w-4 text-cyan-300" />
+            User Billing Controls
+          </div>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            Override or waive monthly and day-pass launch fees per user. A zero or waived
+            fee will skip external checkout and confirm internally.
+          </p>
+          <form action={updateUserBillingAction} className="mt-5 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200" htmlFor="billingUserId">
+                User ID
+              </label>
+              <input
+                id="billingUserId"
+                name="userId"
+                type="text"
+                list="recent-users"
+                placeholder="Select userId"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-200" htmlFor="monthlyLaunchFeeUsd">
+                  Monthly Fee (USD)
+                </label>
+                <input
+                  id="monthlyLaunchFeeUsd"
+                  name="monthlyLaunchFeeUsd"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="150"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-200" htmlFor="dayPassLaunchFeeUsd">
+                  Day Pass Fee (USD)
+                </label>
+                <input
+                  id="dayPassLaunchFeeUsd"
+                  name="dayPassLaunchFeeUsd"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="5"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-300">
+                <input type="checkbox" name="monthlyLaunchFeeWaived" className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent" />
+                <span>Waive monthly launch fee</span>
+              </label>
+              <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-300">
+                <input type="checkbox" name="dayPassLaunchFeeWaived" className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent" />
+                <span>Waive day-pass fee</span>
+              </label>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200" htmlFor="billingNotes">
+                Billing Notes
+              </label>
+              <textarea
+                id="billingNotes"
+                name="billingNotes"
+                rows={3}
+                placeholder="Internal note shown when special pricing is applied"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+              />
+            </div>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+            >
+              <Settings2 className="h-4 w-4" />
+              Save Billing Controls
+            </button>
+          </form>
+        </section>
+
+        <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-white">
+            <Rocket className="h-4 w-4 text-cyan-300" />
+            Create Customer Agent
+          </div>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            No-code create a customer agent from ops. You can leave it pending checkout or
+            activate it immediately without Dodo.
+          </p>
+          <form action={createCustomerAgentAction} className="mt-5 space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-200" htmlFor="customerUserId">
+                  User ID
+                </label>
+                <input
+                  id="customerUserId"
+                  name="userId"
+                  type="text"
+                  list="recent-users"
+                  placeholder="Customer userId"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-200" htmlFor="customerWorkspaceId">
+                  Workspace
+                </label>
+                <select
+                  id="customerWorkspaceId"
+                  name="workspaceId"
+                  defaultValue=""
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                >
+                  <option value="">Use personal workspace</option>
+                  {data.workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name} ({workspace.kind})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-200" htmlFor="customerAgentName">
+                  Agent Name
+                </label>
+                <input
+                  id="customerAgentName"
+                  name="agentName"
+                  type="text"
+                  placeholder="Ada"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-200" htmlFor="customerUseCase">
+                  Use Case
+                </label>
+                <select
+                  id="customerUseCase"
+                  name="useCase"
+                  defaultValue="assistant"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                >
+                  <option value="assistant">Assistant</option>
+                  <option value="fleet">Fleet</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200" htmlFor="customerPersonality">
+                Personality / Scope
+              </label>
+              <textarea
+                id="customerPersonality"
+                name="personality"
+                rows={3}
+                placeholder="Professional, direct, responsive, and suited for Telegram customer conversations."
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-200" htmlFor="customerUseCaseSlug">
+                  Use Case Template Slug
+                </label>
+                <input
+                  id="customerUseCaseSlug"
+                  name="useCaseSlug"
+                  type="text"
+                  placeholder="Optional override"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-200" htmlFor="customerLaunchPlan">
+                  Internal Launch Plan
+                </label>
+                <select
+                  id="customerLaunchPlan"
+                  name="launchPlan"
+                  defaultValue="monthly"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="day_pass">Day pass</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200" htmlFor="customerTelegramBotToken">
+                Bot Token
+              </label>
+              <input
+                id="customerTelegramBotToken"
+                name="telegramBotToken"
+                type="password"
+                autoComplete="off"
+                placeholder="1234567890:AAExampleBotFatherToken"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-mono text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+              />
+            </div>
+            <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-300">
+              <input type="checkbox" name="activateWithoutPayment" className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent" />
+              <span>Activate immediately without external checkout using the user&apos;s effective pricing / waiver settings.</span>
+            </label>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+            >
+              <Rocket className="h-4 w-4" />
+              Create Customer Agent
+            </button>
+          </form>
+        </section>
+
+        <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-white">
+            <Bot className="h-4 w-4 text-cyan-300" />
+            Activate Existing Agent
+          </div>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            Use this when a pending customer agent already exists and you want to move it
+            into deployment without running Dodo.
+          </p>
+          <form action={confirmCustomerAgentWithoutPaymentAction} className="mt-5 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200" htmlFor="manualAgentId">
+                Agent ID
+              </label>
+              <input
+                id="manualAgentId"
+                name="agentId"
+                type="text"
+                list="recent-customer-agents"
+                placeholder="Pending customer agent"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200" htmlFor="manualLaunchPlan">
+                Launch Plan
+              </label>
+              <select
+                id="manualLaunchPlan"
+                name="launchPlan"
+                defaultValue="monthly"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+              >
+                <option value="monthly">Monthly</option>
+                <option value="day_pass">Day pass</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:border-cyan-400/30 hover:bg-cyan-400/10"
+            >
+              <Bot className="h-4 w-4" />
+              Activate Without Checkout
+            </button>
+          </form>
+        </section>
+      </section>
+
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
           <div className="flex items-center gap-2 text-sm font-medium text-white">
@@ -522,30 +844,106 @@ export default async function OpsPlatformPage({
           </p>
           <div className="mt-5 space-y-3">
             {data.recentUsers.map((user) => (
-              <div
-                key={user.id}
-                className="rounded-2xl border border-white/10 bg-slate-950/35 p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-medium text-white">
-                      {describeUser(user)}
+              (() => {
+                const pricing = describeLaunchPricing(user);
+                return (
+                  <div
+                    key={user.id}
+                    className="rounded-2xl border border-white/10 bg-slate-950/35 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-white">
+                          {describeUser(user)}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-400">
+                          {user.email ?? "No email"}
+                        </div>
+                        <div className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                          {user.id}
+                        </div>
+                      </div>
+                      <div className="text-right text-sm text-slate-400">
+                        <div>{formatDateTime(user.createdAt)}</div>
+                        <div className="mt-1">
+                          {user._count.agents} agents • {user._count.workspaceMemberships} workspaces
+                        </div>
+                      </div>
                     </div>
-                    <div className="mt-1 text-sm text-slate-400">
-                      {user.email ?? "No email"}
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-200">
+                      <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                        {pricing.monthly}
+                      </span>
+                      <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                        {pricing.dayPass}
+                      </span>
                     </div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
-                      {user.id}
-                    </div>
+                    {user.billingNotes ? (
+                      <div className="mt-3 text-sm leading-6 text-slate-400">
+                        {user.billingNotes}
+                      </div>
+                    ) : null}
                   </div>
-                  <div className="text-right text-sm text-slate-400">
-                    {formatDateTime(user.createdAt)}
-                  </div>
-                </div>
-              </div>
+                );
+              })()
             ))}
           </div>
         </section>
+      </section>
+
+      <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
+        <div className="flex items-center gap-2 text-sm font-medium text-white">
+          <Bot className="h-4 w-4 text-cyan-300" />
+          Recent Customer Agents
+        </div>
+        <p className="mt-2 text-sm leading-6 text-slate-300">
+          Operational view of customer-owned agents that can be manually activated from ops.
+        </p>
+        <div className="mt-5 space-y-3">
+          {data.recentCustomerAgents.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-5 text-sm text-slate-500">
+              No customer agents found.
+            </div>
+          ) : (
+            data.recentCustomerAgents.map((agent) => (
+              <div
+                key={agent.id}
+                className="rounded-2xl border border-white/10 bg-slate-950/35 p-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-base font-medium text-white">
+                        {agent.name}
+                      </span>
+                      <span
+                        className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] ${statusTone(agent.status)}`}
+                      >
+                        {agent.status}
+                      </span>
+                      <span
+                        className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] ${statusTone(agent.activationStatus)}`}
+                      >
+                        {agent.activationStatus}
+                      </span>
+                    </div>
+                    <div className="text-sm text-slate-300">
+                      {describeUser(agent.user)} • {agent.workspace?.name ?? "Personal workspace"}
+                    </div>
+                    <div className="text-sm text-slate-400">
+                      Deploy {agent.deployState} • Subscription {agent.subscriptionStatus}/{agent.subscriptionType}
+                      {agent.botUsername ? ` • @${agent.botUsername}` : ""}
+                    </div>
+                  </div>
+                  <div className="text-right text-sm text-slate-400">
+                    <div>{formatDateTime(agent.updatedAt)}</div>
+                    <div className="mt-1">ID {shortId(agent.id)}</div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">

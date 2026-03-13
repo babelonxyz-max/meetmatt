@@ -98,6 +98,7 @@ export async function getOpsPlatformData() {
     fleets,
     useCaseTemplates,
     recentUsers,
+    recentCustomerAgents,
     workspaceCount,
     personalWorkspaceCount,
     companyWorkspaceCount,
@@ -136,6 +137,54 @@ export async function getOpsPlatformData() {
         email: true,
         name: true,
         createdAt: true,
+        monthlyLaunchFeeUsd: true,
+        dayPassLaunchFeeUsd: true,
+        monthlyLaunchFeeWaived: true,
+        dayPassLaunchFeeWaived: true,
+        billingNotes: true,
+        _count: {
+          select: {
+            agents: true,
+            workspaceMemberships: true,
+          },
+        },
+      },
+    }),
+    prisma.agent.findMany({
+      where: {
+        ownerType: "customer",
+        status: {
+          not: "deleted",
+        },
+      },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      take: 40,
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        deployState: true,
+        activationStatus: true,
+        subscriptionStatus: true,
+        subscriptionType: true,
+        botUsername: true,
+        createdAt: true,
+        updatedAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+        workspace: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            kind: true,
+          },
+        },
       },
     }),
     prisma.workspace.count(),
@@ -166,6 +215,7 @@ export async function getOpsPlatformData() {
     fleets,
     useCaseTemplates,
     recentUsers,
+    recentCustomerAgents,
     metrics: {
       workspaceCount,
       personalWorkspaceCount,

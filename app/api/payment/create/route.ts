@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { ensurePrimaryTelegramIdentityForAgent } from "@/lib/agent-telegram";
 import { TRANSPORT_PROVIDER } from "@/lib/agent-blueprint";
+import { createConfirmedAdminPaymentForAgent } from "@/lib/admin-payment";
 import { getErrorMessage, getStatusError } from "@/lib/http-error";
 import { syncCapabilityCommerceCatalog } from "@/lib/capability-commerce/registry";
 import {
@@ -14,6 +15,13 @@ import {
   createWorkspaceDodoCheckoutSession,
   isSeshAdminConfigured,
 } from "@/lib/sesh";
+import {
+  DEFAULT_DAY_PASS_PRICE_USD,
+  DEFAULT_MONTHLY_LAUNCH_PRICE_USD,
+  getLaunchPriceForPurchaseType,
+  isCardCheckoutEnabledForPurchaseType,
+  resolveUserLaunchPricing,
+} from "@/lib/user-launch-pricing";
 
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 const DODO_DISPLAY_CURRENCY = "USD";
@@ -23,7 +31,7 @@ const ALLOWED_CURRENCIES = [
   "usdc", "usdccsol", "usdcarb",
 ];
 
-type PaymentProvider = "nowpayments" | "dodo";
+type PaymentProvider = "nowpayments" | "dodo" | "admin";
 type PaymentMethodType = "crypto" | "card";
 type PurchaseType = "subscription" | "day_pass" | "addon" | "topup";
 
@@ -121,11 +129,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        name: true,
+        monthlyLaunchFeeUsd: true,
+        dayPassLaunchFeeUsd: true,
+        monthlyLaunchFeeWaived: true,
+        dayPassLaunchFeeWaived: true,
+        billingNotes: true,
+      },
+    });
+    const launchPricing = resolveUserLaunchPricing(user);
+
     let orderId =
       purchaseType === "day_pass"
         ? `daypass_${agentId}_${Date.now()}`
         : `matt_${agentId}_${Date.now()}`;
-    let priceAmount = purchaseType === "day_pass" ? 5 : 150;
+    let priceAmount =
+      purchaseType === "day_pass"
+        ? DEFAULT_DAY_PASS_PRICE_USD
+        : DEFAULT_MONTHLY_LAUNCH_PRICE_USD;
     let orderDescription =
       purchaseType === "day_pass"
         ? `24-hour pass for AI agent: ${agent.name}`
@@ -145,6 +170,49 @@ export async function POST(req: NextRequest) {
           ? process.env.DODO_PAYMENTS_DAY_PASS_PRODUCT_ID
           : process.env.DODO_PAYMENTS_MATT_PRODUCT_ID
       )?.trim() || null;
+
+    if (purchaseType === "subscription" || purchaseType === "day_pass") {
+      priceAmount = getLaunchPriceForPurchaseType(
+        launchPricing,
+        purchaseType === "day_pass" ? "day_pass" : "subscription",
+      );
+      lineItems = {
+        ...(lineItems as Prisma.InputJsonObject),
+        billingPriceUsd: priceAmount,
+        pricingSource:
+          purchaseType === "day_pass"
+            ? launchPricing.dayPassSource
+            : launchPricing.monthlySource,
+      } satisfies Prisma.InputJsonObject;
+
+      if (priceAmount === 0) {
+        const payment = await createConfirmedAdminPaymentForAgent({
+          agentId: agent.id,
+          userId,
+          workspaceId,
+          plan: purchaseType === "day_pass" ? "day_pass" : "monthly",
+          amountUsd: 0,
+          requestUrl: req.url,
+          source: "user-pricing-waiver",
+          notes: user?.billingNotes ?? null,
+        });
+
+        return NextResponse.json({
+          success: true,
+          payment: {
+            id: payment.id,
+            provider: payment.provider,
+            paymentMethodType: payment.paymentMethodType,
+            checkoutUrl: payment.checkoutUrl,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status,
+            confirmedAt: payment.confirmedAt,
+            expiresAt: payment.expiresAt,
+          },
+        });
+      }
+    }
 
     if (purchaseType === "addon" || purchaseType === "topup") {
       await syncCapabilityCommerceCatalog();
@@ -251,6 +319,22 @@ export async function POST(req: NextRequest) {
     }
 
     if (provider === "dodo") {
+      if (
+        (purchaseType === "subscription" || purchaseType === "day_pass") &&
+        !isCardCheckoutEnabledForPurchaseType(
+          launchPricing,
+          purchaseType === "day_pass" ? "day_pass" : "subscription",
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Card checkout is not available for this user's custom launch pricing yet. Use crypto or waive the fee in ops.",
+          },
+          { status: 400 },
+        );
+      }
+
       if (!dodoProductId) {
         console.error("[Payment/Create] Dodo product mapping missing", {
           purchaseType,
@@ -262,14 +346,6 @@ export async function POST(req: NextRequest) {
           { status: 503 },
         );
       }
-
-      const customer = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          email: true,
-          name: true,
-        },
-      });
 
       const apiKey = process.env.DODO_PAYMENTS_API_KEY?.trim();
       if (!isSeshAdminConfigured() && !apiKey) {
@@ -289,8 +365,8 @@ export async function POST(req: NextRequest) {
               },
             ],
             customer: {
-              email: customer?.email ?? null,
-              name: customer?.name ?? agent.name,
+              email: user?.email ?? null,
+              name: user?.name ?? agent.name,
             },
             returnUrl,
             options: {

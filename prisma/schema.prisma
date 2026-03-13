@@ -290,6 +290,7 @@ enum UsageResult {
 enum PaymentProvider {
   nowpayments
   dodo
+  admin
 }
 
 enum PaymentMethodType {
@@ -464,6 +465,11 @@ model User {
   walletAddress    String?   @map("wallet_address")
   name             String?
   avatar           String?
+  monthlyLaunchFeeUsd Float? @map("monthly_launch_fee_usd")
+  dayPassLaunchFeeUsd Float? @map("day_pass_launch_fee_usd")
+  monthlyLaunchFeeWaived Boolean @default(false) @map("monthly_launch_fee_waived")
+  dayPassLaunchFeeWaived Boolean @default(false) @map("day_pass_launch_fee_waived")
+  billingNotes     String?   @map("billing_notes")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   lastLoginAt      DateTime? @map("last_login_at")

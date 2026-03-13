@@ -4,13 +4,8 @@ import { requireAuth } from "@/lib/auth";
 import { safeCompare } from "@/lib/crypto-utils";
 import { sanitizeAgentName, sanitizeText } from "@/lib/sanitize";
 import { getStatusError } from "@/lib/http-error";
-import {
-  buildCustomerAgentDefaults,
-  OWNER_TYPE,
-} from "@/lib/agent-blueprint";
-import { provisionCustomerProvidedTelegramBotForAgent } from "@/lib/agent-telegram";
-import { provisionAgentUseCaseBundle } from "@/lib/capability-commerce/provisioning";
-import { fetchTelegramBotProfile } from "@/lib/telegram-bot-api";
+import { OWNER_TYPE } from "@/lib/agent-blueprint";
+import { createPendingCustomerAgent } from "@/lib/customer-agent-launch";
 
 // GET /api/agents - Get authenticated user's agents
 export async function GET(req: NextRequest) {
@@ -100,80 +95,21 @@ export async function POST(req: NextRequest) {
 
     const sanitizedName = sanitizeAgentName(agentName);
     const sanitizedPersonality = sanitizeText(personality, 500);
-    const botProfile = await fetchTelegramBotProfile(telegramBotToken);
 
     if (!sanitizedName || !sanitizedPersonality) {
       return NextResponse.json({ error: "agentName and personality required" }, { status: 400 });
     }
 
-    // Generate unique slug from agent name
-    const baseSlug = sanitizedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
-    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-    const defaults = buildCustomerAgentDefaults({
+    const agent = await createPendingCustomerAgent({
+      userId,
+      workspaceId,
+      agentName: sanitizedName,
       personality: sanitizedPersonality,
       useCase: normalizedUseCase,
+      useCaseSlug: explicitUseCaseTemplateSlug,
+      telegramBotToken,
+      source: "api/agents",
     });
-
-    // Create agent with pending status — deployment triggers from payment webhook
-    const agent = await prisma.agent.create({
-      data: {
-        sessionId,
-        slug: uniqueSlug,
-        name: sanitizedName,
-        purpose: sanitizedPersonality,
-        features: [JSON.stringify({ personality: sanitizedPersonality, useCase: normalizedUseCase })],
-        tier: "matt",
-        status: "pending",
-        userId,
-        workspaceId,
-        ownerType: defaults.ownerType,
-        agentKind: defaults.agentKind,
-        productUseCase: defaults.productUseCase,
-        personalityPreset: defaults.personalityPreset,
-        transportProvider: defaults.transportProvider,
-        brainProvider: defaults.brainProvider,
-        deploymentProvider: defaults.deploymentProvider,
-        cortexId: defaults.cortexId,
-        botUsername: botProfile.username,
-        telegramLink: botProfile.telegramLink,
-        activationStatus: "pending",
-        metadata: {
-          telegramLaunch: {
-            provisioningMode: "customer_provided_bot",
-          },
-          customerProvidedTelegramBot: {
-            id: botProfile.id,
-            username: botProfile.username,
-            firstName: botProfile.firstName,
-            connectedAt: new Date().toISOString(),
-          },
-        },
-      },
-    });
-
-    try {
-      await provisionAgentUseCaseBundle({
-        agentId: agent.id,
-        useCaseTemplateSlug: explicitUseCaseTemplateSlug,
-      });
-
-      await provisionCustomerProvidedTelegramBotForAgent({
-        agentId: agent.id,
-        userId,
-        workspaceId,
-        agentName: sanitizedName,
-        botId: botProfile.id,
-        botUsername: botProfile.username,
-        botFirstName: botProfile.firstName,
-        botToken: telegramBotToken,
-      });
-    } catch (provisionError) {
-      await prisma.agent.delete({
-        where: { id: agent.id },
-      }).catch(() => undefined);
-      throw provisionError;
-    }
 
     return NextResponse.json(agent);
   } catch (error: unknown) {
