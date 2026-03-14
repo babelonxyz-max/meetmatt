@@ -101,26 +101,26 @@ function parseJsonText(
 }
 
 export async function seedMattRelationshipPackAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const userId = getStringValue(formData, "userId");
 
   if (!userId) {
-    redirect("/ops?error=seed-user-id");
+    redirect("/ops/control-room?error=seed-user-id");
   }
 
   try {
     await ensureMattRelationshipPack({ userId });
   } catch (error) {
     console.error("[Ops] Failed to seed Matt relationship pack:", error);
-    redirect(`/ops?error=seed-failed&userId=${encodeURIComponent(userId)}`);
+    redirect(`/ops/control-room?error=seed-failed&userId=${encodeURIComponent(userId)}`);
   }
 
-  revalidatePath("/ops");
-  redirect(`/ops?notice=relationship-seeded&userId=${encodeURIComponent(userId)}`);
+  revalidatePath("/ops/control-room");
+  redirect(`/ops/control-room?notice=relationship-seeded&userId=${encodeURIComponent(userId)}`);
 }
 
 export async function processDeployJobsAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const rawLimit = getStringValue(formData, "limit");
   const parsedLimit = Number.parseInt(rawLimit, 10);
   const limit = Number.isNaN(parsedLimit)
@@ -129,22 +129,22 @@ export async function processDeployJobsAction(formData: FormData) {
 
   try {
     const result = await processDeployJobs(limit);
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=deploy-processed&processed=${result.processed}&completed=${result.completed}&retried=${result.retried}&failed=${result.failed}`,
+      `/ops/control-room?notice=deploy-processed&processed=${result.processed}&completed=${result.completed}&retried=${result.retried}&failed=${result.failed}`,
     );
   } catch (error) {
     console.error("[Ops] Failed to process deploy jobs:", error);
-    redirect("/ops?error=deploy-process-failed");
+    redirect("/ops/control-room?error=deploy-process-failed");
   }
 }
 
 export async function replayOutboundTransportMessageAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const messageId = getStringValue(formData, "messageId");
 
   if (!messageId) {
-    redirect("/ops?error=outbound-message-id");
+    redirect("/ops/control-room?error=outbound-message-id");
   }
 
   try {
@@ -152,18 +152,18 @@ export async function replayOutboundTransportMessageAction(formData: FormData) {
   } catch (error) {
     console.error("[Ops] Failed to replay outbound transport message:", error);
     redirect(
-      `/ops?error=outbound-replay-failed&messageId=${encodeURIComponent(messageId)}`,
+      `/ops/control-room?error=outbound-replay-failed&messageId=${encodeURIComponent(messageId)}`,
     );
   }
 
-  revalidatePath("/ops");
+  revalidatePath("/ops/control-room");
   redirect(
-    `/ops?notice=outbound-replayed&messageId=${encodeURIComponent(messageId)}`,
+    `/ops/control-room?notice=outbound-replayed&messageId=${encodeURIComponent(messageId)}`,
   );
 }
 
 export async function queueInboundRelationshipTaskAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const userId = getStringValue(formData, "userId");
   const telegramIdentityId = getStringValue(formData, "telegramIdentityId");
   const externalThreadId = getStringValue(formData, "externalThreadId");
@@ -172,7 +172,7 @@ export async function queueInboundRelationshipTaskAction(formData: FormData) {
   const role = getRelationshipRole(formData);
 
   if (!userId || !telegramIdentityId || !externalThreadId || !text) {
-    redirect("/ops?error=thread-bind-required");
+    redirect("/ops/control-room?error=thread-bind-required");
   }
 
   try {
@@ -186,20 +186,20 @@ export async function queueInboundRelationshipTaskAction(formData: FormData) {
       channel: "telegram",
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=thread-bound&userId=${encodeURIComponent(userId)}&externalThreadId=${encodeURIComponent(externalThreadId)}&threadId=${encodeURIComponent(result.thread.id)}`,
+      `/ops/control-room?notice=thread-bound&userId=${encodeURIComponent(userId)}&externalThreadId=${encodeURIComponent(externalThreadId)}&threadId=${encodeURIComponent(result.thread.id)}`,
     );
   } catch (error) {
     console.error("[Ops] Failed to create Matt thread binding:", error);
     redirect(
-      `/ops?error=thread-bind-failed&userId=${encodeURIComponent(userId)}&externalThreadId=${encodeURIComponent(externalThreadId)}`,
+      `/ops/control-room?error=thread-bind-failed&userId=${encodeURIComponent(userId)}&externalThreadId=${encodeURIComponent(externalThreadId)}`,
     );
   }
 }
 
 export async function provisionTelethonIdentityAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const kind = getTelegramIdentityKind(formData);
   const ownershipType = getTelegramIdentityOwnership(formData);
   const status = getTelegramIdentityStatus(formData);
@@ -225,18 +225,18 @@ export async function provisionTelethonIdentityAction(formData: FormData) {
     !externalPhone &&
     !externalTelegramUserId
   ) {
-    redirect("/ops?error=identity-label-required");
+    redirect("/ops/control-room?error=identity-label-required");
   }
 
   if (kind === "bot" && !botToken) {
-    redirect("/ops?error=identity-bot-token");
+    redirect("/ops/control-room?error=identity-bot-token");
   }
 
   if (status === "active") {
     const hasRuntimeCredential = kind === "bot" ? Boolean(botToken) : Boolean(session);
 
     if (!hasRuntimeCredential) {
-      redirect("/ops?error=identity-active-credentials");
+      redirect("/ops/control-room?error=identity-active-credentials");
     }
   }
 
@@ -266,18 +266,18 @@ export async function provisionTelethonIdentityAction(formData: FormData) {
         : [],
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=identity-provisioned&identityId=${encodeURIComponent(identity.id)}`,
+      `/ops/control-room?notice=identity-provisioned&identityId=${encodeURIComponent(identity.id)}`,
     );
   } catch (error) {
     console.error("[Ops] Failed to provision Telethon identity:", error);
-    redirect("/ops?error=identity-provision-failed");
+    redirect("/ops/control-room?error=identity-provision-failed");
   }
 }
 
 export async function dispatchFleetTaskAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const taskId = getStringValue(formData, "taskId");
   const status = getStringValue(formData, "status");
   const ticketStatus = getStringValue(formData, "ticketStatus");
@@ -285,7 +285,7 @@ export async function dispatchFleetTaskAction(formData: FormData) {
   const enqueueTransport = getBooleanValue(formData, "enqueueTransport", false);
 
   if (!taskId) {
-    redirect("/ops?error=task-id-required");
+    redirect("/ops/control-room?error=task-id-required");
   }
 
   try {
@@ -299,25 +299,25 @@ export async function dispatchFleetTaskAction(formData: FormData) {
       touchConversationOnNoTransport: false,
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     const outboundMessageId =
       typeof result.outboundMessage?.id === "string"
         ? result.outboundMessage.id
         : null;
     redirect(
-      `/ops?notice=task-updated&taskId=${encodeURIComponent(taskId)}&status=${encodeURIComponent(result.task.status)}${outboundMessageId ? `&messageId=${encodeURIComponent(outboundMessageId)}` : ""}`,
+      `/ops/control-room?notice=task-updated&taskId=${encodeURIComponent(taskId)}&status=${encodeURIComponent(result.task.status)}${outboundMessageId ? `&messageId=${encodeURIComponent(outboundMessageId)}` : ""}`,
     );
   } catch (error) {
     const message = getErrorMessage(error, "Failed to update task");
     console.error("[Ops] Failed to update fleet task:", error);
     redirect(
-      `/ops?error=task-update-failed&taskId=${encodeURIComponent(taskId)}&message=${encodeURIComponent(message)}`,
+      `/ops/control-room?error=task-update-failed&taskId=${encodeURIComponent(taskId)}&message=${encodeURIComponent(message)}`,
     );
   }
 }
 
 export async function updateSupportTicketAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const ticketId = getStringValue(formData, "ticketId");
   const status = getStringValue(formData, "status");
   const priority = getStringValue(formData, "priority");
@@ -330,7 +330,7 @@ export async function updateSupportTicketAction(formData: FormData) {
         : undefined;
 
   if (!ticketId) {
-    redirect("/ops?error=ticket-id-required");
+    redirect("/ops/control-room?error=ticket-id-required");
   }
 
   try {
@@ -341,27 +341,27 @@ export async function updateSupportTicketAction(formData: FormData) {
       assignedAgentId,
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=ticket-updated&ticketId=${encodeURIComponent(ticketId)}&status=${encodeURIComponent(ticket.status)}`,
+      `/ops/control-room?notice=ticket-updated&ticketId=${encodeURIComponent(ticketId)}&status=${encodeURIComponent(ticket.status)}`,
     );
   } catch (error) {
     const message = getErrorMessage(error, "Failed to update ticket");
     console.error("[Ops] Failed to update support ticket:", error);
     redirect(
-      `/ops?error=ticket-update-failed&ticketId=${encodeURIComponent(ticketId)}&message=${encodeURIComponent(message)}`,
+      `/ops/control-room?error=ticket-update-failed&ticketId=${encodeURIComponent(ticketId)}&message=${encodeURIComponent(message)}`,
     );
   }
 }
 
 export async function sendTelethonHeartbeatAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const telegramIdentityId = getStringValue(formData, "telegramIdentityId");
   const connected = getStringValue(formData, "connected") !== "false";
   const runner = getStringValue(formData, "runner") || "ops-console";
 
   if (!telegramIdentityId) {
-    redirect("/ops?error=heartbeat-identity-required");
+    redirect("/ops/control-room?error=heartbeat-identity-required");
   }
 
   try {
@@ -376,21 +376,21 @@ export async function sendTelethonHeartbeatAction(formData: FormData) {
       },
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=heartbeat-sent&identityId=${encodeURIComponent(identity.id)}&connected=${connected ? "true" : "false"}`,
+      `/ops/control-room?notice=heartbeat-sent&identityId=${encodeURIComponent(identity.id)}&connected=${connected ? "true" : "false"}`,
     );
   } catch (error) {
     const message = getErrorMessage(error, "Failed to send heartbeat");
     console.error("[Ops] Failed to send Telethon heartbeat:", error);
     redirect(
-      `/ops?error=heartbeat-failed&identityId=${encodeURIComponent(telegramIdentityId)}&message=${encodeURIComponent(message)}`,
+      `/ops/control-room?error=heartbeat-failed&identityId=${encodeURIComponent(telegramIdentityId)}&message=${encodeURIComponent(message)}`,
     );
   }
 }
 
 export async function claimTelethonOutboundAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const telegramIdentityId = getStringValue(formData, "telegramIdentityId");
   const claimedBy = getStringValue(formData, "claimedBy") || "ops-console";
   const limit = getBoundedInteger(formData, "limit", 10, 1, 50);
@@ -402,21 +402,21 @@ export async function claimTelethonOutboundAction(formData: FormData) {
       telegramIdentityId: telegramIdentityId || null,
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=outbound-claimed&count=${messages.length}&identityId=${encodeURIComponent(telegramIdentityId || "all")}`,
+      `/ops/control-room?notice=outbound-claimed&count=${messages.length}&identityId=${encodeURIComponent(telegramIdentityId || "all")}`,
     );
   } catch (error) {
     const message = getErrorMessage(error, "Failed to claim outbound work");
     console.error("[Ops] Failed to claim Telethon outbound work:", error);
     redirect(
-      `/ops?error=outbound-claim-failed&message=${encodeURIComponent(message)}`,
+      `/ops/control-room?error=outbound-claim-failed&message=${encodeURIComponent(message)}`,
     );
   }
 }
 
 export async function upsertTelegramThreadBindingAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const telegramIdentityId = getStringValue(formData, "telegramIdentityId");
   const externalChatId = getStringValue(formData, "externalChatId");
   const externalPeerId = getStringValue(formData, "externalPeerId");
@@ -429,7 +429,7 @@ export async function upsertTelegramThreadBindingAction(formData: FormData) {
   const touchOutbound = getBooleanValue(formData, "touchOutbound", false);
 
   if (!telegramIdentityId || !externalChatId) {
-    redirect("/ops?error=binding-required");
+    redirect("/ops/control-room?error=binding-required");
   }
 
   try {
@@ -449,15 +449,15 @@ export async function upsertTelegramThreadBindingAction(formData: FormData) {
       touchOutbound,
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=binding-upserted&bindingId=${encodeURIComponent(binding.id)}`,
+      `/ops/control-room?notice=binding-upserted&bindingId=${encodeURIComponent(binding.id)}`,
     );
   } catch (error) {
     const message = getErrorMessage(error, "Failed to upsert thread binding");
     console.error("[Ops] Failed to upsert Telegram thread binding:", error);
     redirect(
-      `/ops?error=binding-failed&message=${encodeURIComponent(message)}`,
+      `/ops/control-room?error=binding-failed&message=${encodeURIComponent(message)}`,
     );
   }
 }
@@ -465,7 +465,7 @@ export async function upsertTelegramThreadBindingAction(formData: FormData) {
 export async function acknowledgeOutboundTransportMessageAction(
   formData: FormData,
 ) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const messageId = getStringValue(formData, "messageId");
   const status = getStringValue(formData, "status");
   const responseExternalMessageId = getStringValue(
@@ -478,7 +478,7 @@ export async function acknowledgeOutboundTransportMessageAction(
   const ticketStatus = getStringValue(formData, "ticketStatus");
 
   if (!messageId || !status) {
-    redirect("/ops?error=outbound-ack-required");
+    redirect("/ops/control-room?error=outbound-ack-required");
   }
 
   try {
@@ -509,21 +509,21 @@ export async function acknowledgeOutboundTransportMessageAction(
           : null,
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=outbound-acked&messageId=${encodeURIComponent(message.id)}&status=${encodeURIComponent(message.status)}`,
+      `/ops/control-room?notice=outbound-acked&messageId=${encodeURIComponent(message.id)}&status=${encodeURIComponent(message.status)}`,
     );
   } catch (error) {
     const message = getErrorMessage(error, "Failed to acknowledge outbound");
     console.error("[Ops] Failed to acknowledge outbound transport message:", error);
     redirect(
-      `/ops?error=outbound-ack-failed&messageId=${encodeURIComponent(messageId)}&message=${encodeURIComponent(message)}`,
+      `/ops/control-room?error=outbound-ack-failed&messageId=${encodeURIComponent(messageId)}&message=${encodeURIComponent(message)}`,
     );
   }
 }
 
 export async function validateWorkspaceComposioAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const workspaceId = getStringValue(formData, "workspaceId");
   const smokeTestToolSlug = getStringValue(formData, "smokeTestToolSlug");
   const toolkitsRaw = getStringValue(formData, "toolkits");
@@ -532,7 +532,7 @@ export async function validateWorkspaceComposioAction(formData: FormData) {
   const smokeTestInputRaw = getStringValue(formData, "smokeTestInput");
 
   if (!workspaceId) {
-    redirect("/ops?error=composio-validate-required");
+    redirect("/ops/control-room?error=composio-validate-required");
   }
 
   try {
@@ -561,21 +561,21 @@ export async function validateWorkspaceComposioAction(formData: FormData) {
         (parseJsonText(smokeTestInputRaw, {}) as Record<string, unknown> | null) ?? undefined,
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=composio-validated&workspaceId=${encodeURIComponent(workspaceId)}`,
+      `/ops/control-room?notice=composio-validated&workspaceId=${encodeURIComponent(workspaceId)}`,
     );
   } catch (error) {
     const message = getErrorMessage(error, "Failed to validate Composio workspace");
     console.error("[Ops] Failed to validate Composio workspace:", error);
     redirect(
-      `/ops?error=composio-validate-failed&workspaceId=${encodeURIComponent(workspaceId)}&message=${encodeURIComponent(message)}`,
+      `/ops/control-room?error=composio-validate-failed&workspaceId=${encodeURIComponent(workspaceId)}&message=${encodeURIComponent(message)}`,
     );
   }
 }
 
 export async function smokeTestMattConnectorActionAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const workspaceId = getStringValue(formData, "workspaceId");
   const composioToolSlug = getStringValue(formData, "composioToolSlug");
   const composioToolkitsRaw = getStringValue(formData, "composioToolkits");
@@ -585,7 +585,7 @@ export async function smokeTestMattConnectorActionAction(formData: FormData) {
   const fallbackArgsRaw = getStringValue(formData, "fallbackArgs");
 
   if (!workspaceId || !composioToolSlug) {
-    redirect("/ops?error=connector-smoke-required");
+    redirect("/ops/control-room?error=connector-smoke-required");
   }
 
   try {
@@ -607,27 +607,27 @@ export async function smokeTestMattConnectorActionAction(formData: FormData) {
       allowSeshFallback: true,
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=connector-smoke-tested&workspaceId=${encodeURIComponent(workspaceId)}&status=${encodeURIComponent(result.status)}&provider=${encodeURIComponent(result.providerUsed)}`,
+      `/ops/control-room?notice=connector-smoke-tested&workspaceId=${encodeURIComponent(workspaceId)}&status=${encodeURIComponent(result.status)}&provider=${encodeURIComponent(result.providerUsed)}`,
     );
   } catch (error) {
     const message = getErrorMessage(error, "Failed to run connector smoke test");
     console.error("[Ops] Failed to run connector smoke test:", error);
     redirect(
-      `/ops?error=connector-smoke-failed&workspaceId=${encodeURIComponent(workspaceId)}&message=${encodeURIComponent(message)}`,
+      `/ops/control-room?error=connector-smoke-failed&workspaceId=${encodeURIComponent(workspaceId)}&message=${encodeURIComponent(message)}`,
     );
   }
 }
 
 export async function smokeTestWhatsAppAction(formData: FormData) {
-  await requireOpsSession("/ops");
+  await requireOpsSession("/ops/control-room");
   const workspaceId = getStringValue(formData, "workspaceId");
   const to = getStringValue(formData, "to");
   const text = getStringValue(formData, "text");
 
   if (!workspaceId || !to || !text) {
-    redirect("/ops?error=whatsapp-smoke-required");
+    redirect("/ops/control-room?error=whatsapp-smoke-required");
   }
 
   try {
@@ -637,15 +637,15 @@ export async function smokeTestWhatsAppAction(formData: FormData) {
       text,
     });
 
-    revalidatePath("/ops");
+    revalidatePath("/ops/control-room");
     redirect(
-      `/ops?notice=whatsapp-smoke-tested&workspaceId=${encodeURIComponent(workspaceId)}`,
+      `/ops/control-room?notice=whatsapp-smoke-tested&workspaceId=${encodeURIComponent(workspaceId)}`,
     );
   } catch (error) {
     const message = getErrorMessage(error, "Failed to run WhatsApp smoke test");
     console.error("[Ops] Failed to run WhatsApp smoke test:", error);
     redirect(
-      `/ops?error=whatsapp-smoke-failed&workspaceId=${encodeURIComponent(workspaceId)}&message=${encodeURIComponent(message)}`,
+      `/ops/control-room?error=whatsapp-smoke-failed&workspaceId=${encodeURIComponent(workspaceId)}&message=${encodeURIComponent(message)}`,
     );
   }
 }

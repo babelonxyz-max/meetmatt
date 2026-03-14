@@ -25,10 +25,10 @@ function readSearchParam(params: SearchParams, key: string): string | null {
 
 function readErrorMessage(error: string | null) {
   if (error === "invalid") {
-    return "The admin token did not match `ADMIN_AUTH_TOKEN`.";
+    return "The token did not match the current Planck HQ admin secret.";
   }
   if (error === "unconfigured") {
-    return "Ops login is unavailable until `ADMIN_AUTH_TOKEN` is configured.";
+    return "Planck HQ login is unavailable until `ADMIN_AUTH_TOKEN` is configured.";
   }
   return null;
 }
@@ -57,45 +57,48 @@ export default async function OpsLoginPage({
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(6,16,30,0.95),rgba(4,12,24,0.9))] shadow-[0_24px_80px_rgba(0,0,0,0.4)]">
           <div className="space-y-8 px-6 py-8 sm:px-8 sm:py-10">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.28em] text-cyan-200">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.28em] text-amber-100">
               <Shield className="h-3.5 w-3.5" />
-              Internal Ops
+              Planck HQ
             </div>
 
             <div className="space-y-3">
               <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                Keep Matt support live, reliable, and paid.
+                Enter the operating deck for launches, runtime, and inventory.
               </h1>
               <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-                This login opens the thin operating surface for Matt relationships,
-                Telethon identities, payment-to-deployment flow, and queue health.
-                It is intentionally not exposed in the public navigation.
+                Planck HQ is the internal surface for fee overrides, manual
+                activations, customer support pressure, Telegram transport, and
+                warm-stock provisioning. It stays outside the public story on purpose.
               </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
-                  Relationship layer
+                  Launch desk
                 </div>
                 <div className="mt-2 text-sm text-slate-200">
-                  See who owns each customer thread and whether Matt support is seeded.
+                  Adjust billing, waive fees, and activate customer agents without
+                  waiting on external checkout.
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
-                  Transport health
+                  Runtime health
                 </div>
                 <div className="mt-2 text-sm text-slate-200">
-                  Inspect Telethon identities, bindings, and outbound queue pressure.
+                  Inspect Telethon identities, bindings, deploy queue, and outbound
+                  pressure before customers feel it.
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
-                  Money path
+                  Inventory
                 </div>
                 <div className="mt-2 text-sm text-slate-200">
-                  Track recent payments and deploy jobs so revenue does not stall in ops.
+                  Manage warm BotFather stock, 17-seat packs, and assignment flow into
+                  Planck workspaces.
                 </div>
               </div>
             </div>
@@ -110,7 +113,7 @@ export default async function OpsLoginPage({
                 Admin token
               </div>
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">
-                Sign in to Ops
+                Sign in to Planck HQ
               </h2>
               <p className="text-sm leading-6 text-[var(--muted)]">
                 Use the current `ADMIN_AUTH_TOKEN` value. Sessions are stored as an
@@ -162,7 +165,7 @@ export default async function OpsLoginPage({
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
                 >
                   <Shield className="h-4 w-4" />
-                  Open Ops Console
+                  Open Planck HQ
                 </button>
               </form>
             )}
@@ -170,9 +173,9 @@ export default async function OpsLoginPage({
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)]/70 p-4 text-sm leading-6 text-[var(--muted)]">
               <div className="font-medium text-[var(--foreground)]">Scope</div>
               <p className="mt-2">
-                This is for internal operation only. The public story stays simple while
-                the internal stack handles Matt relationships, tasking, and premium
-                runtime orchestration.
+                This is for internal operation only. Planck HQ owns launch exceptions,
+                runtime repair, and stock management so the public product can stay
+                simple.
               </p>
             </div>
 

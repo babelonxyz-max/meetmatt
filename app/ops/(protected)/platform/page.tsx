@@ -189,24 +189,24 @@ export default async function OpsPlatformPage({
           <div className="space-y-3">
             <Link
               href="/ops"
-              className="inline-flex items-center gap-2 text-sm text-cyan-300 transition hover:text-cyan-200"
+              className="inline-flex items-center gap-2 text-sm text-amber-200 transition hover:text-amber-100"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Ops
+              Back to Planck HQ
             </Link>
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.28em] text-cyan-200">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.28em] text-amber-100">
               <Building2 className="h-3.5 w-3.5" />
-              Platform Control
+              Planck HQ Launch Studio
             </div>
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                Workspaces, fleets, Planck provisioning, and Matt platform registry.
+                Launch customers, shape fees, and provision the Planck workspace fabric.
               </h1>
               <p className="max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
-                This page closes the gap between Matt’s internal capabilities and what
-                the admin panel can actually operate. Use it for workspace creation,
-                Planck HQ provisioning, fleet visibility, and capability-commerce
-                template review.
+                This is the commercial and provisioning desk inside Planck HQ. Use it
+                to create workspaces, provision internal fleet structure, set
+                per-customer billing exceptions, and launch or activate customer agents
+                without leaving the admin surface.
               </p>
             </div>
           </div>
