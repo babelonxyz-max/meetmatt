@@ -229,7 +229,7 @@ export function resolveDeployProvider(
   if (explicit) {
     return explicit;
   }
-  return useCase === "fleet" ? "openclaw" : "devin";
+  return "openclaw";
 }
 
 export async function createOpenClawSession(config: OpenClawConfig): Promise<OpenClawSession> {

@@ -381,6 +381,7 @@ model Agent {
   entitlementPackGrants EntitlementPackGrant[]
   usageLedgerEntries UsageLedgerEntry[]
   usageDecisionLogs UsageDecisionLog[]
+  conversationMessages ConversationMessage[]
 
   @@index([status])
   @@index([devinSessionId])
@@ -398,6 +399,22 @@ model Agent {
   @@index([useCaseTemplateId])
   @@index([workerTier])
   @@map("agents")
+}
+
+model ConversationMessage {
+  id                String   @id @default(cuid())
+  agentId           String   @map("agent_id")
+  chatId            String   @map("chat_id")
+  role              String
+  content           String
+  telegramMessageId String?  @map("telegram_message_id")
+  tokenCount        Int?     @map("token_count")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, chatId, createdAt])
+  @@map("conversation_messages")
 }
 
 model Payment {

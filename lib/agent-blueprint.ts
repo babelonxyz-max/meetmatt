@@ -113,7 +113,7 @@ function defaultBrainProvider(
 
   return productUseCase === "fleet"
     ? BRAIN_PROVIDER.openclaw
-    : BRAIN_PROVIDER.devin;
+    : BRAIN_PROVIDER.cortex;
 }
 
 function defaultTransportProvider(ownerType: OwnerType): AgentTransportProvider {
@@ -192,11 +192,8 @@ export function buildCustomerAgentDefaults(params: {
     brainProvider:
       normalizeUseCase(params.useCase) === "fleet"
         ? BRAIN_PROVIDER.openclaw
-        : BRAIN_PROVIDER.devin,
-    deploymentProvider:
-      normalizeUseCase(params.useCase) === "fleet"
-        ? BRAIN_PROVIDER.openclaw
-        : BRAIN_PROVIDER.devin,
+        : BRAIN_PROVIDER.cortex,
+    deploymentProvider: BRAIN_PROVIDER.openclaw,
     cortexId: defaultCortexIdForAgentKind(AGENT_KIND.customerAgent),
   });
 }
