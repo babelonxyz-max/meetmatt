@@ -14,6 +14,7 @@ interface NexusOrbProps {
   className?: string;
   orbClassName?: string;
   showEyes?: boolean;
+  size?: "sm" | "md" | "lg";
 }
 
 export function NexusOrb({
@@ -24,6 +25,7 @@ export function NexusOrb({
   className = "",
   orbClassName = "",
   showEyes = true,
+  size,
 }: NexusOrbProps) {
   const orbRef = useRef<HTMLDivElement>(null);
   const [orbMetrics, setOrbMetrics] = useState({ x: 0, y: 0, size: 0 });
@@ -138,6 +140,13 @@ export function NexusOrb({
         ? "rgba(255, 244, 232, 0.24)"
         : "rgba(255, 112, 64, 0.34)";
 
+  const sizeClasses: Record<string, string> = {
+    sm: "h-16 w-16",
+    md: "h-40 w-40",
+    lg: "h-[200px] w-[200px]",
+  };
+  const orbSizeClass = size ? sizeClasses[size] : (orbClassName || "h-48 w-48 md:h-64 md:w-64");
+
   return (
     <div className={`relative flex flex-col items-center justify-center ${className}`}>
       <AnimatePresence>
@@ -156,7 +165,7 @@ export function NexusOrb({
 
       <motion.div
         ref={orbRef}
-        className={`orb-container relative shrink-0 cursor-pointer rounded-full ${orbClassName || "h-48 w-48 md:h-64 md:w-64"}`}
+        className={`orb-container relative shrink-0 cursor-pointer rounded-full ${orbSizeClass}`}
         animate={{
           y: state === "idle" ? [0, -10, 0] : 0,
           scale: getScale(),
