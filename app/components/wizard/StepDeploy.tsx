@@ -1,170 +1,98 @@
-"use client";
-
-import { motion } from "framer-motion";
-import { Loader2, Check, Bot, MessageSquare, Shield, AlertCircle } from "lucide-react";
-import { NexusOrb } from "../NexusOrb";
+"use client"
+import { useState } from "react"
+import { motion } from "framer-motion"
 
 interface StepDeployProps {
-  agentName: string;
-  status: "deploying" | "completed" | "failed";
-  progress: number;
-  telegramLink?: string;
-  botUsername?: string;
+  agentName: string
+  role: string
+  features: string[]
+  botHandle: string | null
+  deployStatus: "idle" | "deploying" | "completed" | "failed"
+  progress: number
+  telegramLink?: string
+  onDeploy: (offer: "day_pass" | "monthly") => void
+  onRetry?: () => void
 }
 
-const steps = [
-  { icon: Bot, label: "Connecting Telegram bot..." },
-  { icon: MessageSquare, label: "Configuring responses..." },
-  { icon: Shield, label: "Preparing activation..." },
-];
+export function StepDeploy({ agentName, role, features, botHandle, deployStatus, progress, telegramLink, onDeploy, onRetry }: StepDeployProps) {
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
-export function StepDeploy({ agentName, status, progress, telegramLink, botUsername }: StepDeployProps) {
-  const currentStep = Math.min(Math.floor((progress / 100) * steps.length), steps.length - 1);
-  const deployOrbState = progress >= 70 ? "speaking" : progress >= 35 ? "thinking" : "listening";
-  const resolvedBotUsername = botUsername || telegramLink?.split("/").pop();
-
-  if (status === "completed" && telegramLink) {
+  if (deployStatus === "completed" && telegramLink) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="mx-auto flex h-full w-full max-w-lg flex-col justify-start"
-      >
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-4">
-            <NexusOrb className="shrink-0" orbClassName="h-20 w-20" state="speaking" variant="plasma" />
-            <div className="text-left">
-              <p className="brand-kicker">Launch Confirmed</p>
-              <h2 className="mt-1.5 text-[1.35rem] font-semibold text-white">{agentName} is ready!</h2>
-              <p className="mt-1 text-sm text-white/65">Your AI assistant has been deployed and linked to your Telegram bot.</p>
-            </div>
-          </div>
-
-          <div className="wizard-preview-card p-3">
-            <p className="mb-1 text-xs uppercase tracking-[0.14em] text-white/55">Bot username</p>
-            <p className="font-mono text-base text-white sm:text-lg">
-              {resolvedBotUsername ? `@${resolvedBotUsername.replace(/^@+/, "")}` : "Connected"}
-            </p>
-          </div>
-
-          <a
-            href={telegramLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="brand-button block w-full max-w-xs py-2.5 text-center text-xs font-semibold uppercase tracking-[0.14em]"
-          >
-            Open in Telegram
-          </a>
+      <>
+        <div className="text-[#e8e6e0] text-xl font-medium max-w-[420px]">
+          {agentName} is live. 🎉
         </div>
-      </motion.div>
-    );
+        <a href={telegramLink} target="_blank" rel="noopener"
+          className="inline-flex max-w-[420px] bg-gradient-to-br from-[#ff6b35] to-[#ffaa44] rounded-xl p-3.5 text-white text-[15px] font-semibold justify-center hover:opacity-90 transition-opacity">
+          Open in Telegram →
+        </a>
+      </>
+    )
   }
 
-  if (status === "failed") {
+  if (deployStatus === "deploying") {
+    const steps = ["Connecting bot...", "Configuring responses...", "Going live..."]
+    const activeIdx = progress < 33 ? 0 : progress < 66 ? 1 : 2
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="mx-auto flex h-full w-full max-w-lg flex-col justify-start"
-      >
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-4">
-            <div className="relative flex h-[4rem] w-[4rem] items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.14),rgba(248,113,113,0.2)_30%,rgba(14,10,14,0.98)_100%)] shadow-[inset_0_0_0_1px_rgba(248,113,113,0.18),0_18px_34px_rgba(0,0,0,0.2)]">
-              <div className="absolute inset-[-20%] rounded-full bg-red-400/18 blur-xl" />
-              <AlertCircle className="relative z-10 h-7 w-7 text-red-300" />
-            </div>
-            <div className="text-left">
-              <h2 className="text-[1.35rem] font-semibold text-white">Deployment failed</h2>
-              <p className="mt-1.5 text-sm text-white/65">
-                Something went wrong during setup. You can retry from the dashboard or contact support.
-              </p>
-            </div>
-          </div>
-          <a
-            href="/dashboard"
-            className="brand-button-secondary inline-block w-fit px-5 py-2.5 text-xs font-medium uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/10"
-          >
-            Go to Dashboard
-          </a>
+      <>
+        <div className="text-[#e8e6e0] text-xl font-medium max-w-[420px]">
+          Deploying {agentName}...
         </div>
-      </motion.div>
-    );
+        <div className="flex flex-col gap-2 max-w-[420px]">
+          {steps.map((s, i) => (
+            <div key={s} className={`text-sm ${i <= activeIdx ? "text-[#ff6b35]" : "text-[#333]"}`}>
+              {i < activeIdx ? "✓ " : i === activeIdx ? "◉ " : "○ "}{s}
+            </div>
+          ))}
+        </div>
+      </>
+    )
+  }
+
+  if (deployStatus === "failed") {
+    return (
+      <>
+        <div className="text-[#e8e6e0] text-xl font-medium max-w-[420px]">
+          Hit a snag — let me try again.
+        </div>
+        <motion.button whileTap={{ scale: 0.97 }} onClick={onRetry}
+          className="max-w-[420px] bg-gradient-to-br from-[#ff6b35] to-[#ffaa44] rounded-xl p-3.5 text-white text-[15px] font-semibold text-center">
+          Retry Deploy
+        </motion.button>
+      </>
+    )
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="mx-auto flex h-full w-full max-w-lg flex-col justify-start"
-    >
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-4">
-          <div className="relative flex h-24 w-24 shrink-0 items-center justify-center">
-          <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,170,68,0.18),transparent_68%)] blur-2xl" />
-          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
-            <path
-              className="text-white/8"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-            />
-            <path
-              className="text-[#ff8a53]"
-              strokeDasharray={`${progress}, 100`}
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-            />
-          </svg>
-          <NexusOrb className="relative z-10" orbClassName="h-14 w-14" state={deployOrbState} variant="plasma" />
-          <div className="pointer-events-none absolute bottom-0 rounded-full bg-[#0f1422]/88 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-white/65 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-            {progress}% synced
-          </div>
-        </div>
-          <div className="text-left">
-            <p className="brand-kicker">Provisioning</p>
-            <h2 className="mt-1.5 text-[1.2rem] font-semibold text-white">Deploying {agentName}...</h2>
-            <p className="mt-1 text-[13px] text-white/65">Usually takes around 2 minutes.</p>
-            <div className="mt-2.5 flex items-center gap-2 text-[13px] text-white/70">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#ffaa44]" />
-              Matt is connecting the runtime to your Telegram bot.
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const isActive = index === currentStep;
-            const isComplete = index < currentStep;
-
-            return (
-              <div
-                key={step.label}
-                className={`flex items-center gap-2.5 rounded-[1rem] px-3 py-2.5 transition-colors shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] ${
-                  isActive
-                    ? "bg-[#ffaa44]/12"
-                    : isComplete
-                      ? "bg-emerald-500/10"
-                      : "bg-white/[0.05]"
-                }`}
-              >
-                <div className={`rounded-full p-1.5 ${
-                  isActive ? "bg-[#ff8a53]" : isComplete ? "bg-emerald-500" : "bg-white/14"
-                }`}>
-                  {isComplete ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
-                </div>
-                <span className={`text-[13px] ${isActive ? "text-white" : isComplete ? "text-white/85" : "text-white/50"}`}>
-                  {step.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+    <>
+      <div className="text-[#e8e6e0] text-xl font-medium max-w-[420px]">
+        {agentName} is ready to go live.
       </div>
-    </motion.div>
-  );
+      <div className="max-w-[420px] bg-[#1a1a22] border border-[#2a2a35] rounded-[14px] p-5 flex flex-col gap-2">
+        <div className="flex justify-between text-[13px]"><span className="text-[#666]">Name</span><span className="text-[#ccc]">{agentName}</span></div>
+        <div className="flex justify-between text-[13px]"><span className="text-[#666]">Role</span><span className="text-[#ccc] capitalize">{role}</span></div>
+        <div className="flex justify-between text-[13px]"><span className="text-[#666]">Features</span><span className="text-[#ccc]">{features.slice(0, 3).join(", ")}{features.length > 3 ? ` +${features.length - 3}` : ""}</span></div>
+        {botHandle && <div className="flex justify-between text-[13px]"><span className="text-[#666]">Bot</span><span className="text-[#ccc]">@{botHandle}</span></div>}
+        <div className="h-px bg-[#2a2a35] my-1.5" />
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input type="checkbox" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)}
+            className="mt-0.5 accent-[#ff6b35]" />
+          <span className="text-[11px] text-[#666] leading-relaxed">
+            I agree to the <a href="/terms" className="text-[#ff6b35] hover:underline">Terms of Service</a>
+          </span>
+        </label>
+      </div>
+      <div className="flex gap-2.5 max-w-[420px] flex-col sm:flex-row">
+        <motion.button whileTap={{ scale: 0.97 }} onClick={() => onDeploy("day_pass")} disabled={!termsAccepted}
+          className="flex-1 bg-gradient-to-br from-[#ff6b35] to-[#ffaa44] rounded-xl p-3.5 text-white text-[15px] font-semibold text-center disabled:opacity-30">
+          Deploy {agentName} — $5/day
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.97 }} onClick={() => onDeploy("monthly")} disabled={!termsAccepted}
+          className="border border-[#333] rounded-xl p-3.5 text-[#777] text-sm text-center disabled:opacity-30 hover:border-[#555] transition-colors">
+          $150/mo
+        </motion.button>
+      </div>
+    </>
+  )
 }
