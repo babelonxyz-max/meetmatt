@@ -50,18 +50,18 @@ export function WizardThread({ history, currentStep, stepIndicator, onEditStep, 
             className="mb-8"
           >
             <h1 className="text-[clamp(1.5rem,3.2vw,2.4rem)] font-bold leading-[1.05] tracking-tight text-white mb-3">
-              Deploy AI agents<br />
-              <span className="bg-gradient-to-r from-[#ff6b35] to-[#ffaa44] bg-clip-text text-transparent">in minutes.</span>
+              Your AI assistant,<br />
+              <span className="bg-gradient-to-r from-[#ff6b35] to-[#ffaa44] bg-clip-text text-transparent">live in 2 minutes.</span>
             </h1>
             <p className="text-[#8a8a9a] text-[14px] leading-relaxed max-w-[400px] mb-4">
-              Matt handles onboarding, payment, and activation — the relationship doesn&apos;t end at deployment.
+              Build, configure, and deploy an AI-powered assistant to Telegram. Matt walks you through the whole thing.
             </p>
             <div className="flex gap-4 text-[11px] text-[#555]">
-              <span>2 min deploy</span>
+              <span>No code needed</span>
               <span className="text-[#333]">·</span>
-              <span>Card or crypto</span>
+              <span>Works 24/7</span>
               <span className="text-[#333]">·</span>
-              <span>Matt stays on thread</span>
+              <span>Pay by card or crypto</span>
             </div>
           </motion.div>
         )}
