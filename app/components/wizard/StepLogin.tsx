@@ -3,12 +3,10 @@ import { motion } from "framer-motion"
 
 interface StepLoginProps {
   agentName: string
-  onGoogle: () => void
-  onEmail: () => void
-  onWallet: () => void
+  onLogin: () => void
 }
 
-export function StepLogin({ agentName, onGoogle, onEmail, onWallet }: StepLoginProps) {
+export function StepLogin({ agentName, onLogin }: StepLoginProps) {
   return (
     <>
       <div className="text-[#e8e6e0] text-xl font-medium max-w-[420px]">
@@ -17,22 +15,15 @@ export function StepLogin({ agentName, onGoogle, onEmail, onWallet }: StepLoginP
       <div className="text-[#888] text-sm max-w-[420px] leading-relaxed">
         Sign in so {agentName} is ready when you come back.
       </div>
-      <div className="flex flex-col gap-2.5 max-w-[420px] mt-1">
-        <motion.button whileTap={{ scale: 0.98 }} onClick={onGoogle}
-          className="bg-white rounded-xl p-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors">
-          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          <span className="text-[#333] text-sm font-medium">Continue with Google</span>
-        </motion.button>
-        <motion.button whileTap={{ scale: 0.98 }} onClick={onEmail}
-          className="bg-[#1a1a22] border border-[#2a2a35] rounded-xl p-3.5 flex items-center gap-3 hover:border-[#444] transition-colors">
-          <span className="text-base">📧</span>
-          <span className="text-[#ccc] text-sm">Continue with email</span>
-        </motion.button>
-        <motion.button whileTap={{ scale: 0.98 }} onClick={onWallet}
-          className="bg-[#1a1a22] border border-[#2a2a35] rounded-xl p-3.5 flex items-center gap-3 hover:border-[#444] transition-colors">
-          <span className="text-base">👛</span>
-          <span className="text-[#ccc] text-sm">Connect wallet</span>
-        </motion.button>
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        onClick={onLogin}
+        className="max-w-[420px] w-full bg-gradient-to-r from-[#ff6b35] to-[#ffaa44] rounded-xl p-3.5 text-white text-[15px] font-semibold text-center hover:opacity-90 transition-opacity"
+      >
+        Sign in to continue
+      </motion.button>
+      <div className="text-[#555] text-xs max-w-[420px]">
+        Google, email, or wallet — your choice.
       </div>
     </>
   )

@@ -424,15 +424,7 @@ export default function Home() {
                   {step === "login" && (
                     <StepLogin
                       agentName={agentName}
-                      onGoogle={() => {
-                        saveWizardState();
-                        login();
-                      }}
-                      onEmail={() => {
-                        saveWizardState();
-                        login();
-                      }}
-                      onWallet={() => {
+                      onLogin={() => {
                         saveWizardState();
                         login();
                       }}
