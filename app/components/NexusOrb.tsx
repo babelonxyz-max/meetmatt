@@ -214,15 +214,6 @@ export function NexusOrb({
 
           <div className="pointer-events-none absolute inset-[4%] rounded-full border border-white/8" />
 
-          {variant === "plasma" ? (
-            <div className="absolute inset-0">
-              <div className="plasma-ring plasma-ring-1" />
-              <div className="plasma-ring plasma-ring-2" />
-              <div className="plasma-ring plasma-ring-3" />
-              <div className="plasma-ring plasma-ring-4" />
-            </div>
-          ) : null}
-
           {variant === "techy" ? (
             <div className="tech-core absolute inset-0 rounded-full">
               <div className="tech-ring" />
@@ -268,6 +259,16 @@ export function NexusOrb({
             <div className="pointer-events-none absolute inset-[27%] rounded-full bg-[radial-gradient(circle,rgba(255,251,241,0.72),rgba(255,197,132,0.28)_36%,transparent_72%)] blur-xl" />
           )}
         </motion.div>
+
+        {/* Plasma rings — outside overflow-hidden so they can extend beyond the sphere */}
+        {variant === "plasma" ? (
+          <div className="absolute inset-[-15%] pointer-events-none">
+            <div className="plasma-ring plasma-ring-1" />
+            <div className="plasma-ring plasma-ring-2" />
+            <div className="plasma-ring plasma-ring-3" />
+            <div className="plasma-ring plasma-ring-4" />
+          </div>
+        ) : null}
       </motion.div>
     </div>
   );

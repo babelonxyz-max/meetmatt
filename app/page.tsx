@@ -417,8 +417,8 @@ export default function Home() {
                   <NexusOrb size="sm" state={getOrbState(step)} variant="plasma" />
                 </div>
               ) : (
-                <div className="fixed inset-0 flex items-center pointer-events-none z-10">
-                  <div className="w-full max-w-[1200px] mx-auto flex items-center px-12">
+                <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10">
+                  <div className="w-full max-w-[1060px] mx-auto flex items-center px-8">
                     {/* Orb — big, slightly left of center */}
                     <div className="relative flex flex-col items-center justify-center flex-shrink-0" style={{ width: "clamp(280px, 28vw, 380px)" }}>
                       <div className="absolute w-[400px] h-[400px] rounded-full bg-[radial-gradient(circle,rgba(255,107,53,0.15)_0%,rgba(255,107,53,0.05)_40%,transparent_70%)] blur-[50px]" />
@@ -435,7 +435,7 @@ export default function Home() {
 
               {/* Conversation — same centered max-width, offset to the right half */}
               <div className={isMobile ? "px-6 pb-12" : "min-h-screen flex items-center"}>
-                <div className={isMobile ? "" : "w-full max-w-[1200px] mx-auto flex px-12"}>
+                <div className={isMobile ? "" : "w-full max-w-[1060px] mx-auto flex px-8"}>
                   {/* Spacer matching orb width */}
                   {!isMobile && <div className="flex-shrink-0" style={{ width: "clamp(280px, 28vw, 380px)" }} />}
                   {/* Chat zone — takes remaining space */}
