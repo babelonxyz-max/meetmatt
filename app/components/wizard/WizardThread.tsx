@@ -58,9 +58,9 @@ export function WizardThread({ history, currentStep, stepIndicator, onEditStep, 
             </p>
             <div className="flex gap-4 text-[11px] text-[#555]">
               <span>No code needed</span>
-              <span className="text-[#333]">·</span>
+              <span className="text-[#444]">·</span>
               <span>Works 24/7</span>
-              <span className="text-[#333]">·</span>
+              <span className="text-[#444]">·</span>
               <span>Pay by card or crypto</span>
             </div>
           </motion.div>
@@ -106,7 +106,7 @@ export function WizardThread({ history, currentStep, stepIndicator, onEditStep, 
             compressionLevel="full"
             isActive={true}
           >
-            <div className="text-[10px] text-[#333] tracking-[2px] uppercase mb-3">
+            <div className="text-[10px] text-[#666] tracking-[2px] uppercase mb-3">
               {stepIndicator}
             </div>
             {children}

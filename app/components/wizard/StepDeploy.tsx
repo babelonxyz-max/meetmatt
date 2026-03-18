@@ -57,7 +57,7 @@ export function StepDeploy({ agentName, role, features, botHandle, deployStatus,
           Hit a snag — let me try again.
         </div>
         <motion.button whileTap={{ scale: 0.97 }} onClick={onRetry}
-          className="max-w-[420px] bg-gradient-to-br from-[#ff6b35] to-[#ffaa44] rounded-xl p-3.5 text-white text-[15px] font-semibold text-center">
+          className="max-w-[420px] bg-gradient-to-br from-[#ff6b35] to-[#ffaa44] rounded-xl p-3.5 text-white text-[15px] font-semibold text-center hover:opacity-90 transition-opacity">
           Retry Deploy
         </motion.button>
       </>
@@ -89,7 +89,7 @@ export function StepDeploy({ agentName, role, features, botHandle, deployStatus,
           Deploy {agentName} — $5/day
         </motion.button>
         <motion.button whileTap={{ scale: 0.97 }} onClick={() => onDeploy("monthly")} disabled={!termsAccepted}
-          className="border border-[#333] rounded-xl p-3.5 text-[#777] text-sm text-center disabled:opacity-30 hover:border-[#555] transition-colors">
+          className="border border-[#333] rounded-xl p-3.5 text-[#777] text-[15px] text-center disabled:opacity-30 hover:border-[#555] transition-colors min-w-[96px] flex-shrink-0">
           $150/mo
         </motion.button>
       </div>
