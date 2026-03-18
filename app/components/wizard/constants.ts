@@ -16,7 +16,7 @@ export const FEATURE_CHIPS: Record<string, string[]> = {
   frontdesk: ["Greeting", "Routing", "Intake forms", "Availability check", "FAQ", "Escalation"],
 }
 
-export const NAME_SUGGESTIONS = ["Ada", "Relay", "Friday", "Atlas"]
+export const NAME_SUGGESTIONS = ["Jarvis", "Eva", "Nova", "Sage"]
 
 export const STEP_ORDER: Step[] = ["name", "role", "features", "login", "token", "deploy"]
 
