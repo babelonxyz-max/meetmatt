@@ -46,12 +46,9 @@ export function WizardThread({ history, currentStep, stepIndicator, onEditStep, 
     <div
       ref={scrollRef}
       onScroll={checkAtBottom}
-      className="flex flex-col justify-end min-h-full overflow-y-auto px-6 md:px-0 md:pr-12"
+      className="flex flex-col min-h-full overflow-y-auto"
     >
-      {/* Gradient fade at top */}
-      <div className="sticky top-0 h-[60px] bg-gradient-to-b from-[#0a0a0f] to-transparent z-10 pointer-events-none -mb-[60px]" />
-
-      <div className="flex flex-col gap-0 pt-16">
+      <div className="flex flex-col gap-0">
         {/* Collapsed history line */}
         {collapsedEntries.length > 0 && (
           <div className="opacity-35 text-xs text-[#555] mb-3.5 flex gap-4 flex-wrap">

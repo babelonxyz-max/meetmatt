@@ -425,7 +425,7 @@ export default function Home() {
               )}
 
               {/* Conversation zone — pushed right on desktop */}
-              <div className={isMobile ? "px-6 pb-12" : "ml-[45vw] min-h-screen flex flex-col justify-center py-20 pr-12 pl-4"}>
+              <div className={isMobile ? "px-6 pb-12" : "ml-[45vw] min-h-screen flex flex-col justify-center py-20 pr-[8vw] pl-0"}>
                 <WizardThread
                   history={history}
                   currentStep={step}
