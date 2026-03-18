@@ -3,9 +3,15 @@
 import { ReactNode } from "react";
 import PrivyProvider from "@/components/PrivyProvider";
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  privyAppId,
+}: {
+  children: ReactNode;
+  privyAppId?: string | null;
+}) {
   return (
-    <PrivyProvider>
+    <PrivyProvider appId={privyAppId}>
       {children}
     </PrivyProvider>
   );

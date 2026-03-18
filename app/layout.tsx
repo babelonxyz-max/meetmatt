@@ -58,11 +58,9 @@ export default function RootLayout({
   
   return (
     <html lang="en" suppressHydrationWarning className="dark overflow-x-hidden">
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: 'window.__PRIVY_APP_ID__=' + JSON.stringify(privyAppId) + ';' }} />
-      </head>
+      <head />
       <body className="min-h-dvh antialiased bg-[var(--background)] overflow-x-hidden">
-        <Providers>
+        <Providers privyAppId={privyAppId}>
           <Navbar />
           <main className="relative min-h-screen">
             {children}

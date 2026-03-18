@@ -5,7 +5,6 @@ import {
   PLANCK_HQ_BOT_SEATS,
   PLANCK_HQ_BOT_SEAT_COUNT,
   buildAgentMetadata,
-  buildIdentityMetadata,
   buildTelegramLink,
   getPlanckHqBotSeat,
   upsertPlanckHqSeatAgent,
@@ -54,8 +53,6 @@ type PackTemplate =
   (typeof TELEGRAM_BOT_PACK_TEMPLATE)[keyof typeof TELEGRAM_BOT_PACK_TEMPLATE];
 type PackStatus =
   (typeof TELEGRAM_BOT_PACK_STATUS)[keyof typeof TELEGRAM_BOT_PACK_STATUS];
-type PackItemStatus =
-  (typeof TELEGRAM_BOT_PACK_ITEM_STATUS)[keyof typeof TELEGRAM_BOT_PACK_ITEM_STATUS];
 type TransferStatus =
   (typeof TELEGRAM_BOT_TRANSFER_STATUS)[keyof typeof TELEGRAM_BOT_TRANSFER_STATUS];
 

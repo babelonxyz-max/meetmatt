@@ -46,7 +46,6 @@ export async function routeRequest(
   const actualTier = applyBudgetConstraints(
     originalTier,
     budgetState,
-    cortex,
   );
 
   // Fail-closed check
@@ -80,7 +79,6 @@ export async function routeRequest(
 function applyBudgetConstraints(
   tier: Tier,
   budgetState: BudgetState,
-  cortex: Cortex,
 ): Tier {
   const { constraint } = budgetState;
 

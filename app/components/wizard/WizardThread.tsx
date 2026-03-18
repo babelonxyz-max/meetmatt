@@ -77,11 +77,6 @@ export function WizardThread({ history, currentStep, stepIndicator, onEditStep, 
           )
         })}
 
-        {/* Divider */}
-        {history.length > 0 && (
-          <div className="h-px bg-gradient-to-r from-transparent via-[#222] to-transparent mb-5" />
-        )}
-
         {/* Active step */}
         <div ref={activeRef}>
           <AnimatePresence mode="popLayout">

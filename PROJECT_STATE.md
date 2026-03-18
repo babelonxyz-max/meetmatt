@@ -1,5 +1,5 @@
 # MeetMatt Project State
-**Last Updated:** 2026-03-07 (Workspace/company tenancy foundation + Dodo card payments)
+**Last Updated:** 2026-03-13 (Wizard shell reset + unified Matt conversation flow)
 **Branch:** main
 **Deployment:** https://meetmatt.xyz (Vercel)
 **Repo:** https://github.com/babelonxyz-max/meetmatt
@@ -17,11 +17,42 @@ Next.js 16 monolith (App Router), deployed on Vercel. OpenClaw wrapper for AI ag
 - **Telegram Transport**: Bot API by default, Telethon as optional extra layer for internal user agents and future beta synthetic employees
 - **Inference**: Cortex gateway — smart 3-tier model routing with budget controls
 - **UI**: Tailwind 4, Framer Motion, Lucide icons, Tone.js (audio feedback)
-- **Pricing**: $5/day (monthly) or $3/day (annual) per Matt agent
+- **Pricing**: $5 paid 24-hour pass or $150/month per Matt operator
 
 ---
 
 ## What's Working
+
+### Latest Update (2026-03-13): Wizard Shell Reset
+- [x] Home wizard restructured into named product regions:
+  - `GuideRail`
+  - `ConversationSpine`
+  - `LiveCanvas`
+- [x] Old split composition replaced with one coherent full-height wizard surface
+- [x] Explicit UI state model added for the public flow:
+  - `idle`
+  - `active_guidance`
+  - `generating`
+  - `review`
+  - `blocked`
+  - `completed`
+- [x] New shared wizard chrome implemented in:
+  - `app/components/wizard/WizardChrome.tsx`
+  - `app/components/wizard/types.ts`
+- [x] Home page shell rebuilt in:
+  - `app/page.tsx`
+- [x] Existing step components widened/reused inside the unified conversation spine:
+  - `StepName`
+  - `StepPersonality`
+  - `StepDemo`
+  - `StepTelegram`
+  - `StepPayment`
+  - `StepDeploy`
+- [x] Live canvas now mirrors each step so identity, tone, Telegram binding, checkout summary, and deploy status stay visible without leaving the wizard
+- [x] Inline state banner + recovery panel now surface validation/payment/deploy blockers inside the flow instead of relying on disconnected cards
+- [x] `npm run build` passed after the refactor
+- [ ] Browser QA still needed on desktop + mobile for spacing, height usage, and overflow behavior
+- [ ] Final product decision still needed on whether `LiveCanvas` stays informational or becomes an interactive preview surface later
 
 ### Latest Update (2026-03-07): Dodo Card Payments
 - [x] Card checkout added via Dodo Payments hosted checkout
@@ -171,7 +202,9 @@ Next.js 16 monolith (App Router), deployed on Vercel. OpenClaw wrapper for AI ag
 - [x] Toolkit navigation links added to Navbar and Footer
 
 ### Core Flow
-- [x] Home page with NexusOrb + 5-step wizard (Name → Personality → Demo → Payment → Deploy)
+- [x] Home page with NexusOrb-driven unified wizard shell:
+  - Name → Personality → Demo → Telegram → Payment → Deploy
+- [x] Wizard now uses a persistent `GuideRail`, `ConversationSpine`, and `LiveCanvas` instead of a split orb-stage plus framed step stack
 - [x] Privy authentication
 - [x] Agent creation with pending status (deployment triggers from payment webhook)
 - [x] NowPayments crypto payment (USDT/USDC on multiple networks)
@@ -395,6 +428,12 @@ External audit found broken payment-to-deployment flow, Prisma mock DB fallback,
 ---
 
 ## Backlog
+
+### Immediate Resume (Wizard / Matt Chat)
+- [ ] Browser-check `/` on desktop and mobile, focusing on shell height, overflow, spacing, and whether the conversation spine feels like one coherent surface
+- [ ] Decide whether `LiveCanvas` should remain a synced informational panel or become an interactive preview surface in a second pass
+- [ ] Tighten wizard copy/naming so pricing, launch options, and Telegram terminology match exactly across home page, modal, and pricing page
+- [ ] If the shell is approved, move next to the product follow-up thread: Telegram onboarding polish, payment UX polish, and one-day paid-pass clarity
 
 ### High Priority
 1. [ ] Deploy Cortex gateway to Contabo, run 1-week test with 15 agents (~$33-43 test cost)

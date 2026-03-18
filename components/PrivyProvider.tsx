@@ -2,33 +2,29 @@
 
 import { PrivyProvider as BasePrivyProvider } from "@privy-io/react-auth";
 
-interface WindowWithPrivyAppId extends Window {
-  __PRIVY_APP_ID__?: string;
-}
-
 export default function PrivyProvider({
   children,
+  appId,
 }: {
   children: React.ReactNode;
+  appId?: string | null;
 }) {
-  if (typeof window === "undefined") {
-    return <>{children}</>;
-  }
+  const normalizedAppId = appId?.trim() || null;
 
-  const appId = (window as WindowWithPrivyAppId).__PRIVY_APP_ID__ ?? null;
-
-  if (!appId) {
+  if (!normalizedAppId) {
     return (
-      <div className="fixed top-20 right-4 z-50 p-4 bg-red-900/90 text-white rounded-lg">
-        Privy not configured. Check console.
+      <>
+        <div className="fixed top-20 right-4 z-50 rounded-lg bg-red-900/90 p-4 text-white shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          Privy not configured. Check console.
+        </div>
         {children}
-      </div>
+      </>
     );
   }
 
   return (
     <BasePrivyProvider
-      appId={appId}
+      appId={normalizedAppId}
       config={{
         loginMethods: ["email", "wallet"],
         appearance: {

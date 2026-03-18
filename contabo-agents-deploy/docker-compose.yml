@@ -1,0 +1,100 @@
+# 16 Agents Deployment on Contabo
+# 15 Telegram Bots + 1 Real User Account (Telethon)
+# 
+# Architecture:
+# - telethon-runner: Main service managing all 16 identities
+# - Each agent can be accessed via HTTP API
+# - Real user account requires initial session setup (see setup-real-user.sh)
+
+version: '3.8'
+
+services:
+  telethon-runner:
+    build:
+      context: ../services/telethon-runner
+      dockerfile: Dockerfile
+    container_name: meetmatt-16-agents
+    restart: unless-stopped
+    
+    ports:
+      - "8787:8787"
+    
+    volumes:
+      # Mount sessions directory for persistence
+      - ./sessions:/app/sessions
+      - ./logs:/app/logs
+    
+    environment:
+      # Telegram API credentials (from my.telegram.org/apps)
+      - TELETHON_API_ID=${TELETHON_API_ID}
+      - TELETHON_API_HASH=${TELETHON_API_HASH}
+      
+      # Optional: Static bot for local testing
+      # Real identities are loaded from MeetMatt API
+      - TELETHON_BOT_TOKEN=${TELETHON_BOT_TOKEN:-}
+      - TELETHON_SESSION_STRING=${TELETHON_SESSION_STRING:-}
+      
+      # MeetMatt API connection
+      - MEETMATT_API_BASE_URL=${MEETMATT_API_BASE_URL}
+      - MEETMATT_INTERNAL_SECRET=${MEETMATT_INTERNAL_SECRET}
+      
+      # Runner configuration
+      - TELETHON_ENABLED=true
+      - TELETHON_BIND_HOST=0.0.0.0
+      - TELETHON_BIND_PORT=8787
+      - TELETHON_RUNNER_NAME=contabo-16-agents
+      
+      # Polling intervals
+      - TELETHON_IDENTITY_REFRESH_SECONDS=30
+      - TELETHON_OUTBOUND_POLL_SECONDS=3
+      - TELETHON_OUTBOUND_BATCH_SIZE=20
+      - TELETHON_HEARTBEAT_SECONDS=30
+      
+      # Default fallback (if not using MeetMatt API provisioning)
+      - TELETHON_DEFAULT_CHANNEL=telegram
+      - TELETHON_DEFAULT_RELATIONSHIP_ROLE=support
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # Optional: Redis for caching (if needed by MeetMatt integration)
+  redis:
+    image: redis:7-alpine
+    container_name: meetmatt-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    profiles:
+      - with-redis
+
+  # Optional: Nginx reverse proxy (for SSL/production)
+  nginx:
+    image: nginx:alpine
+    container_name: meetmatt-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - telethon-runner
+    profiles:
+      - with-nginx
+
+volumes:
+  redis-data:

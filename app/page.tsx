@@ -409,35 +409,23 @@ export default function Home() {
               </motion.div>
             </div>
           ) : (
-            <div className="min-h-full flex flex-col md:flex-row h-full" data-home-wizard-active>
-              {/* Orb zone */}
-              <div
-                className={
-                  isMobile
-                    ? "flex items-center justify-center py-8 sticky top-0 z-20 bg-[#0a0a0f]"
-                    : "w-[45%] flex items-center justify-center relative overflow-hidden min-h-full"
-                }
-              >
-                {!isMobile && (
-                  <div className="absolute w-[320px] h-[320px] rounded-full bg-[radial-gradient(circle,rgba(255,107,53,0.15)_0%,rgba(255,107,53,0.05)_40%,transparent_70%)] blur-[40px]" />
-                )}
-                {isMobile && (
+            <div className="min-h-full relative" data-home-wizard-active>
+              {/* Orb — positioned absolutely on desktop, sticky top on mobile */}
+              {isMobile ? (
+                <div className="flex items-center justify-center py-6 sticky top-0 z-20 bg-[#0a0a0f]/90 backdrop-blur-md">
                   <div className="absolute w-[120px] h-[120px] rounded-full bg-[radial-gradient(circle,rgba(255,107,53,0.12)_0%,transparent_70%)] blur-[20px]" />
-                )}
-                <NexusOrb
-                  size={isMobile ? "sm" : "lg"}
-                  state={getOrbState(step)}
-                  variant="plasma"
-                />
-                {!isMobile && (
-                  <div className="absolute bottom-[50px] text-[#444] text-[11px] tracking-[3px] uppercase">
-                    MATT
-                  </div>
-                )}
-              </div>
+                  <NexusOrb size="sm" state={getOrbState(step)} variant="plasma" />
+                </div>
+              ) : (
+                <div className="fixed left-0 top-0 w-[45vw] h-screen flex items-center justify-center pointer-events-none z-10">
+                  <div className="absolute w-[320px] h-[320px] rounded-full bg-[radial-gradient(circle,rgba(255,107,53,0.15)_0%,rgba(255,107,53,0.05)_40%,transparent_70%)] blur-[40px]" />
+                  <NexusOrb size="lg" state={getOrbState(step)} variant="plasma" />
+                  <div className="absolute bottom-[50px] text-[#444] text-[11px] tracking-[3px] uppercase">MATT</div>
+                </div>
+              )}
 
-              {/* Conversation zone */}
-              <div className={isMobile ? "flex-1 min-h-[60vh]" : "w-[55%] min-h-full flex flex-col justify-end"}>
+              {/* Conversation zone — pushed right on desktop */}
+              <div className={isMobile ? "px-6 pb-12" : "ml-[45vw] min-h-screen flex flex-col justify-end pr-12 pl-4"}>
                 <WizardThread
                   history={history}
                   currentStep={step}
@@ -464,7 +452,7 @@ export default function Home() {
                       onSelect={(r) => {
                         setRole(r);
                         const roleObj = ROLE_OPTIONS.find((o) => o.id === r);
-                        advanceStep("role", r, roleObj?.label || r, roleObj?.emoji);
+                        advanceStep("role", r, roleObj?.label || r);
                       }}
                     />
                   )}

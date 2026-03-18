@@ -2,6 +2,34 @@
 import { motion } from "framer-motion"
 import { ROLE_OPTIONS } from "./constants"
 
+// Brand icon system (from brandbook p.14) — line-art with gradient stroke
+const ROLE_ICONS: Record<string, React.ReactNode> = {
+  assistant: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#brand-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stopColor="#FF6B35"/><stop offset="100%" stopColor="#FFAA44"/></linearGradient></defs>
+      <path d="M12 2a7 7 0 0 1 7 7v1a7 7 0 0 1-14 0V9a7 7 0 0 1 7-7z"/><path d="M8 21h8"/><path d="M12 17v4"/>
+    </svg>
+  ),
+  employee: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#brand-grad2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <defs><linearGradient id="brand-grad2" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stopColor="#FF6B35"/><stop offset="100%" stopColor="#FFAA44"/></linearGradient></defs>
+      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/><circle cx="12" cy="14" r="2"/>
+    </svg>
+  ),
+  coworker: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#brand-grad3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <defs><linearGradient id="brand-grad3" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stopColor="#FF6B35"/><stop offset="100%" stopColor="#FFAA44"/></linearGradient></defs>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  frontdesk: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#brand-grad4)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <defs><linearGradient id="brand-grad4" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stopColor="#FF6B35"/><stop offset="100%" stopColor="#FFAA44"/></linearGradient></defs>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  ),
+}
+
 interface StepRoleProps {
   agentName: string
   onSelect: (roleId: string) => void
@@ -19,9 +47,11 @@ export function StepRole({ agentName, onSelect }: StepRoleProps) {
             key={role.id}
             whileTap={{ scale: 0.97 }}
             onClick={() => onSelect(role.id)}
-            className="bg-[#1a1a22] border border-[#2a2a35] rounded-[14px] p-4 text-left hover:border-[#ff6b35] hover:shadow-[0_0_20px_rgba(255,107,53,0.1)] transition-all"
+            className="bg-[#1a1a22] border border-[#2a2a35] rounded-[14px] p-4 text-left hover:border-[#ff6b35] hover:shadow-[0_0_20px_rgba(255,107,53,0.1)] transition-all group"
           >
-            <div className="text-xl mb-1.5">{role.emoji}</div>
+            <div className="mb-2 opacity-70 group-hover:opacity-100 transition-opacity">
+              {ROLE_ICONS[role.id] || <span className="text-xl">{role.emoji}</span>}
+            </div>
             <div className="text-[#e0ded8] text-sm font-medium">{role.label}</div>
             <div className="text-[#555] text-[11px] mt-1">{role.desc}</div>
           </motion.button>
