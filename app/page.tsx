@@ -364,27 +364,43 @@ export default function Home() {
           }
         >
           {!isWizardActive ? (
-            <div className="relative flex shrink-0 flex-col items-center justify-center">
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="brand-pill mb-4">
+            <div className="relative flex shrink-0 flex-col items-center justify-center py-12 md:py-20">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="brand-pill mb-6"
+              >
                 <span className="brand-kicker">Matt relationship layer</span>
               </motion.div>
 
-              <NexusOrb
-                state={getOrbState(step)}
-                variant="plasma"
-                onClick={handleWake}
-                className="mb-5 md:mb-6"
-                orbClassName="h-[clamp(12.75rem,25vh,16.5rem)] w-[clamp(12.75rem,25vh,16.5rem)]"
-              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
+              >
+                <NexusOrb
+                  state={getOrbState(step)}
+                  variant="plasma"
+                  onClick={handleWake}
+                  className="mb-8 md:mb-10"
+                  orbClassName="h-[clamp(13rem,28vh,18rem)] w-[clamp(13rem,28vh,18rem)]"
+                />
+              </motion.div>
 
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex max-w-4xl flex-col items-center text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="flex max-w-4xl flex-col items-center text-center"
+              >
                 <h1 className="max-w-[11ch] text-[clamp(2rem,4.7vw,3.75rem)] font-bold leading-[0.92] tracking-tight text-white">
                   Deploy AI agents <span className="gradient-text">in minutes.</span>
                 </h1>
-                <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed tracking-wide text-white/68 md:text-[15px]">
+                <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed tracking-wide text-white/68 md:text-[15px]">
                   Matt handles onboarding, payment, activation, and follow-through so the relationship doesn&apos;t end at deployment.
                 </p>
-                <div className="mt-5 flex w-full max-w-4xl flex-wrap justify-center gap-2.5">
+                <div className="mt-6 flex w-full max-w-4xl flex-wrap justify-center gap-2.5">
                   {[
                     { label: "Deployment", value: "2 min launch" },
                     { label: "Payments", value: "Card or crypto" },
@@ -402,7 +418,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleWake}
-                  className="brand-button mt-5 px-7 py-3 text-sm font-semibold uppercase tracking-[0.18em]"
+                  className="brand-button mt-6 px-7 py-3 text-sm font-semibold uppercase tracking-[0.18em]"
                 >
                   Start With Matt
                 </button>

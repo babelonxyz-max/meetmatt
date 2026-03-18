@@ -11,22 +11,26 @@ interface WizardMessageProps {
   children?: React.ReactNode
 }
 
+// Smooth, natural easing — not robotic
+const smoothEase = [0.22, 0.68, 0.35, 1.0] as const
+
 const staggerContainer = {
   hidden: {},
   show: {
     transition: {
-      staggerChildren: 0.12,
-      delayChildren: 0.08,
+      staggerChildren: 0.18,
+      delayChildren: 0.15,
     },
   },
 }
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 14 },
+  hidden: { opacity: 0, y: 18, filter: "blur(4px)" },
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] as const },
+    filter: "blur(0px)",
+    transition: { duration: 0.55, ease: smoothEase },
   },
 } as const
 
@@ -37,7 +41,7 @@ export function WizardMessage({ record, compressionLevel, isActive, onEdit, chil
         variants={staggerContainer}
         initial="hidden"
         animate="show"
-        className="flex flex-col gap-3.5"
+        className="flex flex-col gap-4"
       >
         {record.mattMessage && (
           <motion.div
@@ -60,10 +64,10 @@ export function WizardMessage({ record, compressionLevel, isActive, onEdit, chil
     return (
       <motion.div
         layout
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 0.35, y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="cursor-pointer hover:opacity-50 transition-opacity"
+        transition={{ duration: 0.45, ease: smoothEase }}
+        className="cursor-pointer hover:opacity-50 transition-opacity duration-300"
         onClick={onEdit}
       >
         <div className="flex gap-4 text-xs text-[#555]">
@@ -74,14 +78,14 @@ export function WizardMessage({ record, compressionLevel, isActive, onEdit, chil
     )
   }
 
-  // compact mode
+  // compact mode — history record
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 0.5, y: 0 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="cursor-pointer hover:opacity-70 transition-opacity mb-5"
+      transition={{ duration: 0.5, ease: smoothEase }}
+      className="cursor-pointer hover:opacity-70 transition-opacity duration-300 mb-5"
       onClick={onEdit}
     >
       <div className="text-[#666] text-[13px] leading-normal">{record.mattMessage}</div>
