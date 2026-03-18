@@ -260,9 +260,9 @@ export function NexusOrb({
           )}
         </motion.div>
 
-        {/* Plasma rings — outside overflow-hidden so they can extend beyond the sphere */}
+        {/* Plasma rings — outside overflow-hidden, subtle extend */}
         {variant === "plasma" ? (
-          <div className="absolute inset-[-15%] pointer-events-none">
+          <div className="absolute inset-[-6%] pointer-events-none">
             <div className="plasma-ring plasma-ring-1" />
             <div className="plasma-ring plasma-ring-2" />
             <div className="plasma-ring plasma-ring-3" />

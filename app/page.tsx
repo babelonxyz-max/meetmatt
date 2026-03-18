@@ -417,15 +417,15 @@ export default function Home() {
                   <NexusOrb size="sm" state={getOrbState(step)} variant="plasma" />
                 </div>
               ) : (
-                <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[5]">
                   <div className="w-full max-w-[1060px] mx-auto flex items-center px-8">
-                    {/* Orb — big, slightly left of center */}
-                    <div className="relative flex flex-col items-center justify-center flex-shrink-0" style={{ width: "clamp(280px, 28vw, 380px)" }}>
-                      <div className="absolute w-[400px] h-[400px] rounded-full bg-[radial-gradient(circle,rgba(255,107,53,0.15)_0%,rgba(255,107,53,0.05)_40%,transparent_70%)] blur-[50px]" />
+                    {/* Orb */}
+                    <div className="relative flex flex-col items-center justify-center flex-shrink-0" style={{ width: "clamp(240px, 24vw, 320px)" }}>
+                      <div className="absolute w-[300px] h-[300px] rounded-full bg-[radial-gradient(circle,rgba(255,107,53,0.12)_0%,rgba(255,107,53,0.04)_40%,transparent_70%)] blur-[40px]" />
                       <NexusOrb
                         state={getOrbState(step)}
                         variant="plasma"
-                        orbClassName="h-[clamp(14rem,22vw,20rem)] w-[clamp(14rem,22vw,20rem)]"
+                        orbClassName="h-[clamp(11rem,18vw,15rem)] w-[clamp(11rem,18vw,15rem)]"
                       />
                       <div className="mt-5 text-[#444] text-[11px] tracking-[3px] uppercase">MATT</div>
                     </div>
@@ -434,12 +434,12 @@ export default function Home() {
               )}
 
               {/* Conversation — same centered max-width, offset to the right half */}
-              <div className={isMobile ? "px-6 pb-12" : "min-h-screen flex items-center"}>
+              <div className={isMobile ? "px-6 pb-12" : "relative z-10 min-h-screen flex items-center"}>
                 <div className={isMobile ? "" : "w-full max-w-[1060px] mx-auto flex px-8"}>
                   {/* Spacer matching orb width */}
-                  {!isMobile && <div className="flex-shrink-0" style={{ width: "clamp(280px, 28vw, 380px)" }} />}
-                  {/* Chat zone — takes remaining space */}
-                  <div className={isMobile ? "" : "flex-1 pl-12 max-w-[520px]"}>
+                  {!isMobile && <div className="flex-shrink-0" style={{ width: "clamp(240px, 24vw, 320px)" }} />}
+                  {/* Chat zone */}
+                  <div className={isMobile ? "" : "flex-1 pl-10 max-w-[520px]"}>
                 <WizardThread
                   history={history}
                   currentStep={step}
