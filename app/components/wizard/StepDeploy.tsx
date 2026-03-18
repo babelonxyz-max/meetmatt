@@ -23,7 +23,7 @@ export function StepDeploy({ agentName, role, features, botHandle, deployStatus,
         <div className="text-[#e8e6e0] text-xl font-medium max-w-[420px]">
           {agentName} is live. 🎉
         </div>
-        <a href={telegramLink} target="_blank" rel="noopener"
+        <a href={telegramLink} target="_blank" rel="noopener noreferrer"
           className="inline-flex max-w-[420px] bg-gradient-to-br from-[#ff6b35] to-[#ffaa44] rounded-xl p-3.5 text-white text-[15px] font-semibold justify-center hover:opacity-90 transition-opacity">
           Open in Telegram →
         </a>

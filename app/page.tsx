@@ -16,7 +16,7 @@ import type { Step, StepRecord } from "./components/wizard/types";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { NexusOrb } from "./components/NexusOrb";
 
-type DeployStatus = "deploying" | "completed" | "failed";
+type DeployStatus = "idle" | "deploying" | "completed" | "failed";
 type DeploymentMode = "assistant" | "fleet";
 type LaunchOffer = "monthly" | "day_pass";
 type TelegramBotProfile = {
@@ -40,7 +40,7 @@ export default function Home() {
   const [pendingAgentId, setPendingAgentId] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("name");
   const [agentName, setAgentName] = useState("");
-  const [deployStatus, setDeployStatus] = useState<DeployStatus>("deploying");
+  const [deployStatus, setDeployStatus] = useState<DeployStatus>("idle");
   const [deployProgress, setDeployProgress] = useState(0);
   const [telegramLink, setTelegramLink] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -71,19 +71,18 @@ export default function Home() {
 
   const WIZARD_STORAGE_KEY = "meetmatt-wizard-state";
 
-  // Auto-open Privy when login step is reached — no intermediate UI
-  useEffect(() => {
-    if (step === "login") {
-      const state = { history, agentName, role, features };
-      sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(state));
-      login();
-    }
-  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const saveWizardState = () => {
     const state = { history, agentName, role, features };
     sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(state));
   };
+
+  // Auto-open Privy when login step is reached — no intermediate UI
+  useEffect(() => {
+    if (step === "login") {
+      saveWizardState();
+      login();
+    }
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const advanceStep = (fromStep: Step, answer: string | string[], displayAnswer: string, icon?: string) => {
     const mattMessages: Record<string, string> = {
@@ -306,7 +305,7 @@ export default function Home() {
     }
   };
 
-  const isWizardActive = true; // always active — no idle hero
+  const isWizardActive = true;
 
   useEffect(() => {
     const html = document.documentElement;
@@ -384,7 +383,9 @@ export default function Home() {
               )}
 
               {/* Conversation — same centered max-width, offset to the right half */}
-              <div className={isMobile ? "px-6 pb-12" : "relative z-10 min-h-screen flex items-center"}>
+              <div
+                className={isMobile ? "overflow-y-auto px-6 pb-12 h-[calc(100vh-120px)]" : "relative z-10 min-h-screen flex items-center"}
+              >
                 <div className={isMobile ? "" : "w-full max-w-[1060px] mx-auto flex px-8"}>
                   {/* Spacer matching orb width */}
                   {!isMobile && <div className="flex-shrink-0" style={{ width: "clamp(240px, 24vw, 320px)" }} />}

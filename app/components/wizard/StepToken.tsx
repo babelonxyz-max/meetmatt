@@ -59,7 +59,7 @@ export function StepToken({ agentName, isValidating, botHandle, error, onSubmit 
       )}
       <div className="text-[#555] text-xs max-w-[420px]">
         Don&apos;t have a bot yet?{" "}
-        <a href="https://t.me/BotFather" target="_blank" rel="noopener" className="text-[#ff6b35] hover:underline">
+        <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-[#ff6b35] hover:underline">
           Open BotFather →
         </a>
       </div>
