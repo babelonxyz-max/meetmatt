@@ -417,15 +417,15 @@ export default function Home() {
                   <NexusOrb size="sm" state={getOrbState(step)} variant="plasma" />
                 </div>
               ) : (
-                <div className="fixed left-0 top-0 w-[45vw] h-screen flex items-center justify-center pointer-events-none z-10">
+                <div className="fixed left-0 top-0 w-[45vw] h-screen flex flex-col items-center justify-center pointer-events-none z-10">
                   <div className="absolute w-[320px] h-[320px] rounded-full bg-[radial-gradient(circle,rgba(255,107,53,0.15)_0%,rgba(255,107,53,0.05)_40%,transparent_70%)] blur-[40px]" />
                   <NexusOrb size="lg" state={getOrbState(step)} variant="plasma" />
-                  <div className="absolute bottom-[50px] text-[#444] text-[11px] tracking-[3px] uppercase">MATT</div>
+                  <div className="mt-6 text-[#444] text-[11px] tracking-[3px] uppercase">MATT</div>
                 </div>
               )}
 
               {/* Conversation zone — pushed right on desktop */}
-              <div className={isMobile ? "px-6 pb-12" : "ml-[45vw] min-h-screen flex flex-col justify-end pr-12 pl-4"}>
+              <div className={isMobile ? "px-6 pb-12" : "ml-[45vw] min-h-screen flex flex-col justify-center py-20 pr-12 pl-4"}>
                 <WizardThread
                   history={history}
                   currentStep={step}
