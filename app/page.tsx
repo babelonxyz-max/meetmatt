@@ -9,7 +9,7 @@ import { PaymentModal } from "./components/PaymentModal";
 import { WizardThread } from "./components/wizard/WizardThread";
 import { StepRole } from "./components/wizard/StepRole";
 import { StepFeatures } from "./components/wizard/StepFeatures";
-import { StepLogin } from "./components/wizard/StepLogin";
+
 import { StepToken } from "./components/wizard/StepToken";
 import { getOrbState, STEP_ORDER, ROLE_OPTIONS } from "./components/wizard/constants";
 import type { Step, StepRecord } from "./components/wizard/types";
@@ -70,6 +70,15 @@ export default function Home() {
   const isMobile = useIsMobile();
 
   const WIZARD_STORAGE_KEY = "meetmatt-wizard-state";
+
+  // Auto-open Privy when login step is reached — no intermediate UI
+  useEffect(() => {
+    if (step === "login") {
+      const state = { history, agentName, role, features };
+      sessionStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(state));
+      login();
+    }
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveWizardState = () => {
     const state = { history, agentName, role, features };
@@ -422,13 +431,7 @@ export default function Home() {
                     />
                   )}
                   {step === "login" && (
-                    <StepLogin
-                      agentName={agentName}
-                      onLogin={() => {
-                        saveWizardState();
-                        login();
-                      }}
-                    />
+                    <div className="text-[#666] text-sm">Opening sign-in...</div>
                   )}
                   {step === "token" && (
                     <StepToken
