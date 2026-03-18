@@ -38,7 +38,7 @@ type LaunchPricing = {
 export default function Home() {
   const { login, authenticated, getAccessToken } = usePrivy();
   const [pendingAgentId, setPendingAgentId] = useState<string | null>(null);
-  const [step, setStep] = useState<Step>("idle");
+  const [step, setStep] = useState<Step>("name");
   const [agentName, setAgentName] = useState("");
   const [deployStatus, setDeployStatus] = useState<DeployStatus>("deploying");
   const [deployProgress, setDeployProgress] = useState(0);
@@ -175,10 +175,7 @@ export default function Home() {
     }
   }, [authenticated]);
 
-  const handleWake = () => {
-    if (step !== "idle") return;
-    setStep("name");
-  };
+  // No idle state — wizard starts immediately
 
   const createPendingAgent = async (token: string) => {
     const response = await fetch("/api/agents", {
@@ -300,7 +297,7 @@ export default function Home() {
     }
   };
 
-  const isWizardActive = step !== "idle";
+  const isWizardActive = true; // always active — no idle hero
 
   useEffect(() => {
     const html = document.documentElement;
@@ -351,80 +348,8 @@ export default function Home() {
         />
       </div>
 
-      <main
-        className={`relative z-10 flex h-full w-full justify-center px-4 md:px-5 ${
-          isWizardActive ? "items-stretch py-0" : "items-center py-1.5"
-        }`}
-      >
-        <motion.div
-          className={
-            isWizardActive
-              ? "h-full min-h-0 w-full max-w-[96rem] overflow-hidden transition-all duration-700"
-              : "flex h-full max-h-full w-full max-w-6xl flex-col items-center justify-center gap-4 overflow-hidden transition-all duration-700"
-          }
-        >
-          {!isWizardActive ? (
-            <div className="relative flex shrink-0 flex-col items-center justify-center py-12 md:py-20">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="brand-pill mb-6"
-              >
-                <span className="brand-kicker">Matt relationship layer</span>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
-              >
-                <NexusOrb
-                  state={getOrbState(step)}
-                  variant="plasma"
-                  onClick={handleWake}
-                  className="mb-8 md:mb-10"
-                  orbClassName="h-[clamp(13rem,28vh,18rem)] w-[clamp(13rem,28vh,18rem)]"
-                />
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="flex max-w-4xl flex-col items-center text-center"
-              >
-                <h1 className="max-w-[11ch] text-[clamp(2rem,4.7vw,3.75rem)] font-bold leading-[0.92] tracking-tight text-white">
-                  Deploy AI agents <span className="gradient-text">in minutes.</span>
-                </h1>
-                <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed tracking-wide text-white/68 md:text-[15px]">
-                  Matt handles onboarding, payment, activation, and follow-through so the relationship doesn&apos;t end at deployment.
-                </p>
-                <div className="mt-6 flex w-full max-w-4xl flex-wrap justify-center gap-2.5">
-                  {[
-                    { label: "Deployment", value: "2 min launch" },
-                    { label: "Payments", value: "Card or crypto" },
-                    { label: "Continuity", value: "Matt stays on thread" },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="brand-panel brand-noise min-w-[11rem] rounded-full px-4 py-2.5 text-left shadow-[0_18px_60px_rgba(0,0,0,0.36)]"
-                    >
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffd3a7]/85">{item.label}</p>
-                      <p className="mt-1 text-sm font-medium leading-none text-white/90">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleWake}
-                  className="brand-button mt-6 px-7 py-3 text-sm font-semibold uppercase tracking-[0.18em]"
-                >
-                  Start With Matt
-                </button>
-              </motion.div>
-            </div>
-          ) : (
+      <main className="relative z-10 flex h-full w-full items-stretch py-0">
+        <div className="h-full min-h-0 w-full">
             <div className="min-h-full relative" data-home-wizard-active>
               {/* Orb + Chat as one centered composition */}
               {isMobile ? (
@@ -565,8 +490,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          )}
-        </motion.div>
+        </div>
       </main>
 
       <PaymentModal
